@@ -51,7 +51,7 @@
 <script>
 import api from '../services/api.js'
 export default {
-  name: 'Tab1Page',
+  name: 'TestApi',
   // Definimos las variables reactivas que vamos a usar
   data() {
     return {
