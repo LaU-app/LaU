@@ -51,6 +51,11 @@ const routes = [
       },
     ],
   },
+  {
+    path: "/perfilusuario",
+    name: "Perfil",
+    component: () => import("@/views/PerfilUsuario"),
+  },
 ];
 
 const router = createRouter({
