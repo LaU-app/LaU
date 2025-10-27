@@ -1,7 +1,7 @@
 //importaciones axios para hacer peticiones HTTP
 import axios from "axios";
 
-const API_URL = "https://tester.sivarsocial.com/api";
+const API_URL = "http://localhost:8000/api";
 
 //Creamos una instancia de axios para configuracion basica
 const api = axios.create({

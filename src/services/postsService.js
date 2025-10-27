@@ -2,7 +2,8 @@
  * Servicio para manejar las operaciones relacionadas con posts
  * Principio SOLID: Single Responsibility - Este servicio solo maneja posts
  */
-import api from "./api";
+import { api } from "./api";
+import { AuthService } from "./auth";
 
 class PostsService {
   constructor() {
@@ -10,27 +11,51 @@ class PostsService {
   }
 
   /**
-   * Obtiene los posts desde la API
+   * Obtiene los posts desde la API con feed personalizado
+   *
+   * LÓGICA DEL BACKEND:
+   * - Usuario autenticado: Posts públicos + posts privados de quien sigue + sus propios posts
+   * - Usuario NO autenticado: Solo posts públicos
+   *
    * @param {number} page - Número de página a cargar
    * @returns {Promise<Object>} Respuesta de la API
    */
   async fetchPosts(page = 1) {
     try {
+      // El backend detectará automáticamente si hay token en el header
+      // y devolverá el feed correspondiente (personalizado o público)
       const response = await api.get("/posts", {
         params: { page },
       });
 
       if (response.data.success && response.data.data) {
+        const posts = response.data.data.data || [];
+
+        // Enriquecer posts con información de autenticación
+        const enrichedPosts = posts.map((post) => ({
+          ...post,
+          // Verificar si el usuario actual dio like (viene del backend)
+          user_has_liked: post.user_has_liked || false,
+          // Contar likes (puede venir como count o array)
+          likes_count: post.likes_count || post.likes?.length || 0,
+          // Contar comentarios
+          comments_count: post.comentarios?.length || 0,
+        }));
+
         return {
           success: true,
-          data: response.data.data.data || [],
+          data: enrichedPosts,
           pagination: {
             currentPage: response.data.data.current_page || 1,
             lastPage: response.data.data.last_page || 1,
             hasMorePages:
               (response.data.data.current_page || 1) <
               (response.data.data.last_page || 1),
+            total: response.data.data.total || 0,
+            perPage: response.data.data.per_page || 6,
           },
+          // Información adicional sobre el tipo de feed
+          feedType: AuthService.isAuthenticated() ? "personalized" : "public",
         };
       }
 
@@ -42,14 +67,25 @@ class PostsService {
           currentPage: 1,
           lastPage: 1,
           hasMorePages: false,
+          total: 0,
+          perPage: 6,
         },
+        feedType: AuthService.isAuthenticated() ? "personalized" : "public",
       };
     } catch (err) {
       let errorMessage = "Error desconocido";
+
       if (err.response) {
-        errorMessage = `Error ${err.response.status}: ${
-          err.response.data?.message || "Error del servidor"
-        }`;
+        // Error de la API
+        if (err.response.status === 401) {
+          errorMessage = "Sesión expirada. Por favor, inicia sesión de nuevo.";
+          // Limpiar sesión si el token es inválido
+          await AuthService.logout();
+        } else {
+          errorMessage = `Error ${err.response.status}: ${
+            err.response.data?.message || "Error del servidor"
+          }`;
+        }
       } else if (err.request) {
         errorMessage =
           "No se pudo conectar con el servidor. Verifica tu conexión.";
@@ -65,7 +101,30 @@ class PostsService {
           currentPage: 1,
           lastPage: 1,
           hasMorePages: false,
+          total: 0,
+          perPage: 6,
         },
+        feedType: "error",
+      };
+    }
+  }
+
+  /**
+   * Obtiene un post específico por ID
+   * @param {number} postId - ID del post
+   * @returns {Promise<Object>} Respuesta de la API
+   */
+  async getPost(postId) {
+    try {
+      const response = await api.get(`/posts/${postId}`);
+      return {
+        success: true,
+        data: response.data?.data || response.data,
+      };
+    } catch (err) {
+      return {
+        success: false,
+        error: err.response?.data?.message || err.message,
       };
     }
   }

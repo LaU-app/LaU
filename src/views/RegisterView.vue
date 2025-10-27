@@ -31,17 +31,27 @@
                     <form @submit.prevent="handleRegister" class="register-form">
                         <!-- Nombre completo -->
                         <div class="input-wrapper" :class="{ 'focused': nameFocused, 'invalid': errors.name }">
-                            <ion-input v-model="formData.name" type="text" placeholder="Nombre completo"
+                            <ion-input v-model="formData.name" type="text" placeholder="Tú nombre"
                                 class="register-input" :class="{ 'ion-invalid': errors.name }"
                                 @ionFocus="nameFocused = true" @ionBlur="nameFocused = false"></ion-input>
                             <div class="input-line"></div>
                         </div>
 
+                        <!-- Nombre de usuario -->
+                        <div class="input-wrapper" :class="{ 'focused': usernameFocused, 'invalid': errors.username }">
+                            <ion-input v-model="formData.username" type="text"
+                                placeholder="Nombre de usuario (máx. 15 caracteres)" class="register-input"
+                                :class="{ 'ion-invalid': errors.username }" @ionFocus="usernameFocused = true"
+                                @ionBlur="usernameFocused = false" maxlength="15"></ion-input>
+                            <div class="input-line"></div>
+                        </div>
+
                         <!-- Correo institucional -->
                         <div class="input-wrapper" :class="{ 'focused': emailFocused, 'invalid': errors.email }">
-                            <ion-input v-model="formData.email" type="email" placeholder="Correo institucional"
-                                class="register-input" :class="{ 'ion-invalid': errors.email }"
-                                @ionFocus="emailFocused = true" @ionBlur="emailFocused = false"></ion-input>
+                            <ion-input v-model="formData.email" type="email"
+                                placeholder="Correo institucional (@itca.edu.sv)" class="register-input"
+                                :class="{ 'ion-invalid': errors.email }" @ionFocus="emailFocused = true"
+                                @ionBlur="emailFocused = false"></ion-input>
                             <div class="input-line"></div>
                         </div>
 
@@ -129,12 +139,14 @@ export default {
             eyeOffOutline,
             formData: {
                 name: '',
+                username: '',
                 email: '',
                 password: '',
                 password_confirmation: ''
             },
             errors: {
                 name: false,
+                username: false,
                 email: false,
                 password: false,
                 password_confirmation: false
@@ -144,6 +156,7 @@ export default {
             loading: false,
             errorMessage: '',
             nameFocused: false,
+            usernameFocused: false,
             emailFocused: false,
             passwordFocused: false,
             passwordConfirmFocused: false
@@ -151,40 +164,130 @@ export default {
     },
     methods: {
         validateForm() {
-            // Solo valida sin marcar errores visuales
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-            const isNameValid = this.formData.name && this.formData.name.trim().length >= 3
+            // Validación según el controlador de la API
+            const emailRegex = /^[^\s@]+@itca\.edu\.sv$/  // Solo acepta correos @itca.edu.sv
+            const isNameValid = this.formData.name && this.formData.name.trim().length > 0 && this.formData.name.length <= 255
+            const isUsernameValid = this.formData.username && this.formData.username.trim().length > 0 && this.formData.username.length <= 15
             const isEmailValid = this.formData.email && emailRegex.test(this.formData.email)
             const isPasswordValid = this.formData.password && this.formData.password.length >= 8
             const isPasswordConfirmValid = this.formData.password === this.formData.password_confirmation
 
-            return isNameValid && isEmailValid && isPasswordValid && isPasswordConfirmValid
+            return isNameValid && isUsernameValid && isEmailValid && isPasswordValid && isPasswordConfirmValid
         },
 
         async handleRegister() {
             this.errorMessage = ''
             // Resetear errores visuales
             this.errors.name = false
+            this.errors.username = false
             this.errors.email = false
             this.errors.password = false
             this.errors.password_confirmation = false
 
-            if (!this.validateForm()) {
-                this.errorMessage = 'Por favor, completa todos los campos correctamente'
+            // Validaciones específicas con mensajes claros
+            if (!this.formData.name || this.formData.name.trim().length === 0) {
+                this.errorMessage = 'Por favor, ingresa tu nombre'
+                this.errors.name = true
+                const toast = await toastController.create({
+                    message: this.errorMessage,
+                    duration: 3000,
+                    position: 'top',
+                    cssClass: 'danger-toast'
+                })
+                await toast.present()
+                return
+            }
+
+            if (!this.formData.username || this.formData.username.trim().length === 0) {
+                this.errorMessage = 'Por favor, ingresa un nombre de usuario'
+                this.errors.username = true
+                const toast = await toastController.create({
+                    message: this.errorMessage,
+                    duration: 3000,
+                    position: 'top',
+                    cssClass: 'danger-toast'
+                })
+                await toast.present()
+                return
+            }
+
+            if (this.formData.username.length > 15) {
+                this.errorMessage = 'El nombre de usuario no puede tener más de 15 caracteres'
+                this.errors.username = true
+                const toast = await toastController.create({
+                    message: this.errorMessage,
+                    duration: 3000,
+                    position: 'top',
+                    cssClass: 'danger-toast'
+                })
+                await toast.present()
+                return
+            }
+
+            if (!this.formData.email || this.formData.email.trim().length === 0) {
+                this.errorMessage = 'Por favor, ingresa tu correo institucional'
+                this.errors.email = true
+                const toast = await toastController.create({
+                    message: this.errorMessage,
+                    duration: 3000,
+                    position: 'top',
+                    cssClass: 'danger-toast'
+                })
+                await toast.present()
+                return
+            }
+
+            if (!this.formData.email.endsWith('@itca.edu.sv')) {
+                this.errorMessage = 'Solo se aceptan correos institucionales @itca.edu.sv'
+                this.errors.email = true
+                const toast = await toastController.create({
+                    message: this.errorMessage,
+                    duration: 3000,
+                    position: 'top',
+                    cssClass: 'danger-toast'
+                })
+                await toast.present()
+                return
+            }
+
+            if (!this.formData.password || this.formData.password.length < 8) {
+                this.errorMessage = 'La contraseña debe tener al menos 8 caracteres'
+                this.errors.password = true
+                const toast = await toastController.create({
+                    message: this.errorMessage,
+                    duration: 3000,
+                    position: 'top',
+                    cssClass: 'danger-toast'
+                })
+                await toast.present()
+                return
+            }
+
+            if (this.formData.password !== this.formData.password_confirmation) {
+                this.errorMessage = 'Las contraseñas no coinciden'
+                this.errors.password = true
+                this.errors.password_confirmation = true
+                const toast = await toastController.create({
+                    message: this.errorMessage,
+                    duration: 3000,
+                    position: 'top',
+                    cssClass: 'danger-toast'
+                })
+                await toast.present()
                 return
             }
 
             this.loading = true
 
             try {
-                const response = await AuthService.register(this.formData)
+                await AuthService.register(this.formData)
 
                 // Mostrar mensaje de éxito
                 const toast = await toastController.create({
                     message: '¡Registro exitoso! Bienvenido a LaÚ',
                     duration: 2000,
-                    color: 'success',
-                    position: 'top'
+                    position: 'top',
+                    cssClass: 'success-toast'
                 })
                 await toast.present()
 
@@ -195,6 +298,7 @@ export default {
 
                 // Marcar campos con error
                 this.errors.name = true
+                this.errors.username = true
                 this.errors.email = true
                 this.errors.password = true
                 this.errors.password_confirmation = true
@@ -205,8 +309,16 @@ export default {
                 } else if (error.response?.data?.errors) {
                     // Si hay errores de validación del backend
                     const errors = error.response.data.errors
-                    const firstError = Object.values(errors)[0]
-                    this.errorMessage = Array.isArray(firstError) ? firstError[0] : firstError
+
+                    // Manejar errores específicos del backend
+                    if (errors.email) {
+                        this.errorMessage = Array.isArray(errors.email) ? errors.email[0] : errors.email
+                    } else if (errors.username) {
+                        this.errorMessage = Array.isArray(errors.username) ? errors.username[0] : errors.username
+                    } else {
+                        const firstError = Object.values(errors)[0]
+                        this.errorMessage = Array.isArray(firstError) ? firstError[0] : firstError
+                    }
                 } else {
                     this.errorMessage = 'Error al registrarse. Por favor, intenta de nuevo.'
                 }
@@ -214,8 +326,8 @@ export default {
                 const toast = await toastController.create({
                     message: this.errorMessage,
                     duration: 3000,
-                    color: 'danger',
-                    position: 'top'
+                    position: 'top',
+                    cssClass: 'danger-toast'
                 })
                 await toast.present()
             } finally {

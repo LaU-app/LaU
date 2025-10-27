@@ -4,14 +4,14 @@
         <ion-content :fullscreen="true" class="welcome-page">
             <div class="welcome-container">
 
-                <div class="logo-container">
+                <div class="logo-container" @click="goToHome">
                     <img src="/LaU.png" alt="LaÚ" class="logo-img" />
                 </div>
 
                 <!-- Carousel de características -->
                 <swiper :modules="modules" :slides-per-view="1" :space-between="16"
-                    :autoplay="{ delay: 3000, disableOnInteraction: false }" @slideChange="onSlideChange"
-                    class="welcome-swiper">
+                    :autoplay="{ delay: 3000, disableOnInteraction: false }" :pagination="{ clickable: true }"
+                    @slideChange="onSlideChange" class="welcome-swiper">
                     <swiper-slide>
                         <div class="slide-content">
                             <div class="slide-image"
@@ -28,15 +28,12 @@
                     </swiper-slide>
                     <swiper-slide>
                         <div class="slide-content">
-                            <div class="slide-image" :style="{ backgroundImage: `url(https://res.cloudinary.com/dj848z4er/image/upload/v1761539611/bbe58127-5095-4028-872e-e45343abe39d.png)` }"></div>
+                            <div class="slide-image"
+                                :style="{ backgroundImage: `url(https://res.cloudinary.com/dj848z4er/image/upload/v1761539611/bbe58127-5095-4028-872e-e45343abe39d.png)` }">
+                            </div>
                         </div>
                     </swiper-slide>
                 </swiper>
-
-                <!-- Indicadores de slide -->
-                <div class="slide-indicators">
-                    <div v-for="i in 3" :key="i" :class="['indicator', { active: currentSlide === i - 1 }]"></div>
-                </div>
 
                 <!-- Título principal -->
                 <h2 class="main-title">Tu red universitaria. <br>Todo en un solo lugar.</h2>
@@ -135,10 +132,11 @@ import {
     IonButton
 } from '@ionic/vue'
 import { Swiper, SwiperSlide } from 'swiper/vue'
-import { Autoplay } from 'swiper/modules'
+import { Autoplay, Pagination } from 'swiper/modules'
 import WelcomeHeader from '@/components/WelcomeHeader.vue'
 import 'swiper/css'
 import 'swiper/css/autoplay'
+import 'swiper/css/pagination'
 
 export default {
     name: 'WelcomePage',
@@ -157,13 +155,17 @@ export default {
     },
     data() {
         return {
-            modules: [Autoplay],
-            currentSlide: 0,
+            modules: [Autoplay, Pagination],
+            currentSlide: 0
         }
     },
     methods: {
         onSlideChange(swiper) {
             this.currentSlide = swiper.activeIndex
+        },
+        goToHome() {
+            // Ir al feed principal sin importar si está autenticado o no
+            this.$router.push('/tabs/home')
         },
         goToRegister() {
             this.$router.push('/register')
@@ -203,6 +205,16 @@ ion-page {
     display: flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.logo-container:hover {
+    transform: scale(1.05);
+}
+
+.logo-container:active {
+    transform: scale(0.95);
 }
 
 .logo-img {
@@ -233,7 +245,7 @@ ion-page {
     width: 100%;
     height: auto;
     margin-bottom: 0.5rem;
-    padding: 1rem 0;
+    padding: 1rem 0 2.5rem 0;
 }
 
 .slide-content {
@@ -255,27 +267,32 @@ ion-page {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-/* Indicadores */
-.slide-indicators {
-    display: flex;
-    justify-content: center;
-    gap: 0.75rem;
-    padding: 0.75rem 0 1rem 0;
+/* Estilos para los indicadores de paginación del Swiper */
+:global(.welcome-swiper .swiper-pagination) {
+    bottom: 0 !important;
 }
 
-.indicator {
+:global(.welcome-swiper .swiper-pagination-bullet) {
     width: 8px;
     height: 8px;
-    border-radius: 50%;
-    background-color: #6B7280;
-    opacity: 0.3;
+    background: #D1D5DB;
+    opacity: 0.5;
     transition: all 0.3s ease;
 }
 
-.indicator.active {
-    background-color: #8A2BE2;
+:global(.welcome-swiper .swiper-pagination-bullet-active) {
+    background: #8A2BE2;
     opacity: 1;
-    transform: scale(1.2);
+    width: 24px;
+    border-radius: 4px;
+}
+
+:global(.ion-palette-dark .welcome-swiper .swiper-pagination-bullet) {
+    background: #6B7280;
+}
+
+:global(.ion-palette-dark .welcome-swiper .swiper-pagination-bullet-active) {
+    background: #8A2BE2;
 }
 
 /* Título principal */

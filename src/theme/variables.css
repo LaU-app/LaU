@@ -1,2 +1,56 @@
 /* For information on how to create your own theme, please see:
 http://ionicframework.com/docs/theming/ */
+
+/* ========================================
+   ESTILOS GLOBALES PARA ION-TOAST
+   ======================================== */
+
+/* Toast de éxito/confirmación - Morado sólido con borde morado */
+ion-toast.success-toast,
+ion-toast.custom-toast,
+ion-toast::part(container) {
+    --background: #8A2BE2;
+    --color: #FFFFFF;
+    --border-radius: 12px;
+    --border-width: 2px;
+    --border-style: solid;
+    --border-color: #7a24c7;
+    --box-shadow: 0 4px 12px rgba(138, 43, 226, 0.3);
+}
+
+/* Toast de error/danger - Rojo sólido con borde rojo oscuro */
+ion-toast.danger-toast,
+ion-toast.error-toast {
+    --background: #EF4444 !important;
+    --color: #FFFFFF !important;
+    --border-radius: 12px;
+    --border-width: 2px;
+    --border-style: solid;
+    --border-color: #DC2626 !important;
+    --box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* Ajustes para modo oscuro */
+.ion-palette-dark ion-toast.success-toast,
+.ion-palette-dark ion-toast.custom-toast {
+    --background: #9333EA;
+    --color: #FFFFFF;
+    --border-color: #7E22CE;
+}
+
+.ion-palette-dark ion-toast.danger-toast,
+.ion-palette-dark ion-toast.error-toast {
+    --background: #DC2626 !important;
+    --color: #FFFFFF !important;
+    --border-color: #B91C1C !important;
+}
+
+/* Estilos para el botón de cerrar del toast */
+ion-toast::part(button) {
+    color: #FFFFFF;
+    opacity: 0.9;
+}
+
+ion-toast::part(button):hover {
+    opacity: 1;
+}
