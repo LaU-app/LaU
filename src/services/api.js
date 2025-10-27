@@ -31,9 +31,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Solo eliminamos el token si es un error 401 (no autorizado)
+    // NO lo hacemos aquí para evitar conflictos, lo maneja el componente
     if (error.response?.status === 401) {
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("user");
+      console.warn("Error 401: Token inválido o expirado");
+      // No eliminamos aquí, dejamos que el componente lo maneje
     }
     return Promise.reject(error);
   }

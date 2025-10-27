@@ -48,8 +48,8 @@ import { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonI
 import AppHeader from '@/components/AppHeader.vue'
 import CreatePostCard from '@/components/CreatePostCard.vue'
 import PostCard from '@/components/PostCard.vue'
-import api from '@/services/api'
 import postsService from '@/services/postsService'
+import { AuthService } from '@/services/auth'
 
 export default {
     name: 'HomeView',
@@ -63,13 +63,10 @@ export default {
             lastPage: 1,
             hasMorePages: false,
             isDarkMode: false,
-            user: { imagen_url: null, name: 'Usuario', username: 'usuario' },
-            email: 'mateo.canales24@itca.edu.sv',
-            password: 'itca123'
+            user: { imagen_url: null, name: 'Usuario', username: 'usuario' }
         }
     },
     async created() {
-        await this.autoLogin()
         await this.loadCurrentUser()
         this.fetchPosts()
         this.loadDarkModePreference()
@@ -77,23 +74,39 @@ export default {
     methods: {
         async loadCurrentUser() {
             try {
-                const userStr = localStorage.getItem('user')
-                if (userStr) this.user = JSON.parse(userStr)
-            } catch (error) {
-                // Error silencioso
-            }
-        },
-        async autoLogin() {
-            try {
-                const response = await api.login(this.email, this.password)
-                if (response.data.success && response.data.data) {
-                    const { token, user } = response.data.data
-                    localStorage.setItem('auth_token', token)
-                    localStorage.setItem('user', JSON.stringify(user))
-                    this.user = user
+                // Primero intenta obtener el usuario del localStorage
+                const localUser = AuthService.getUser()
+                if (localUser) {
+                    this.user = localUser
+                }
+
+                // Luego valida el token con la API y actualiza los datos (en background, sin bloquear)
+                try {
+                    const apiUser = await AuthService.fetchProfile()
+                    if (apiUser) {
+                        this.user = apiUser
+                    }
+                } catch (apiError) {
+                    // Si falla la validación con la API
+                    console.warn('No se pudo validar el token con la API:', apiError)
+
+                    // Solo redirigimos al login si es un error 401 (token inválido)
+                    if (apiError.response?.status === 401) {
+                        AuthService.logout()
+                        this.$router.replace('/login')
+                    }
+                    // Si es otro tipo de error (red, servidor caído, etc.) y tenemos usuario local, continuamos
+                    else if (!localUser) {
+                        // Solo redirigimos si no hay usuario local tampoco
+                        this.$router.replace('/login')
+                    }
                 }
             } catch (error) {
-                // Error silencioso
+                console.error('Error cargando usuario:', error)
+                // Solo redirige si es un error crítico
+                if (!AuthService.isAuthenticated()) {
+                    this.$router.replace('/login')
+                }
             }
         },
         loadDarkModePreference() {
