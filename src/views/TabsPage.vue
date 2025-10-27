@@ -19,8 +19,8 @@
         </ion-tab-button>
 
         <ion-tab-button tab="tab3" href="/tabs/tab3">
-          <ion-icon aria-hidden="true" :icon="square" />
-          <ion-label>Tab 3</ion-label>
+          <ion-icon aria-hidden="true" :icon="person" />
+          <ion-label>Perfil</ion-label>
         </ion-tab-button>
       </ion-tab-bar>
     </ion-tabs>
@@ -29,7 +29,7 @@
 
 <script setup>
 import { IonTabBar, IonTabButton, IonTabs, IonLabel, IonIcon, IonPage, IonRouterOutlet } from '@ionic/vue';
-import { ellipse, square } from 'ionicons/icons';
+import { ellipse, person } from 'ionicons/icons';
 </script>
 
 <style scoped>

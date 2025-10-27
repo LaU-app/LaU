@@ -1,7 +1,7 @@
 //importaciones axios para hacer peticiones HTTP
 import axios from "axios";
 
-const API_URL = "http://localhost:8000/api";
+const API_URL = "https://tester.sivarsocial.com/api";
 
 //Creamos una instancia de axios para configuracion basica
 const api = axios.create({
@@ -31,9 +31,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Solo eliminamos el token si es un error 401 (no autorizado)
+    // NO lo hacemos aquí para evitar conflictos, lo maneja el componente
     if (error.response?.status === 401) {
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("user");
+      console.warn("Error 401: Token inválido o expirado");
+      // No eliminamos aquí, dejamos que el componente lo maneje
     }
     return Promise.reject(error);
   }
