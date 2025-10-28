@@ -1,156 +1,173 @@
 <template>
     <ion-page>
-        <AppHeader :isDarkMode="isDarkMode" :user="user" :isAuthenticated="isAuthenticated"
-            @toggleDarkMode="toggleDarkMode" />
-        <ion-content>
-            <div class="container centered">
-                <ion-card v-if="error && !loading" color="danger">
-                    <ion-card-content>
-                        <p>{{ error }}</p>
-                    </ion-card-content>
-                </ion-card>
-                <div v-if="loading" class="loading-container">
-                    <ion-spinner name="crescent"></ion-spinner>
-                    <ion-text centered>
-                        <p>Cargando perfil...</p>
-                    </ion-text>
-                </div>
-                <div v-if="!loading" class="profile-container">
-                    <ion-card>
-                        <ion-card-header>
-                            <ion-grid class="profile-header">
-                                <ion-row>
-                                    <ion-col size="4">
-                                        <ion-avatar class="profile-avatar">
-                                            <img v-if="user.imagen_url" :src="user.imagen_url" alt="Profile Picture" />
-                                            <ion-icon v-else :icon="personCircle"
-                                                class="profile-avatar-icon"></ion-icon>
-                                        </ion-avatar>
-                                    </ion-col>
-                                    <ion-col size="7">
-                                        <div class="username-container">
-                                            <ion-card-title>{{ user.name }}</ion-card-title>
-                                            <ion-card-subtitle class="ion-text-capitalize">@{{ user.username
-                                                }}</ion-card-subtitle>
-                                            <ion-card-subtitle style="font-style: italic"
-                                                class="ion-text-capitalize">Universidad de usuario</ion-card-subtitle>
-                                        </div>
-                                    </ion-col>
-                                    <ion-col size="1">
-                                        <ion-button fill="clear" @click="openMenu" id="open-menu-button">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                                stroke-linecap="round" stroke-linejoin="round"
-                                                class="icon icon-tabler icons-tabler-outline icon-tabler-dots-vertical">
-                                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                                <path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
-                                                <path d="M12 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
-                                                <path d="M12 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
-                                            </svg>
-                                        </ion-button>
-                                    </ion-col>
-                                </ion-row>
-                            </ion-grid>
-                        </ion-card-header>
+        <!-- Header del perfil -->
+        <ion-header>
+            <ion-toolbar color="light">
+                <ion-grid class="header-grid">
+                    <ion-row class="ion-align-items-center ion-justify-content-between">
+                        <ion-col size="auto">
+                            <img src="/LaU.png" alt="LaÚ" class="header-logo" />
+                        </ion-col>
+                        <ion-col size="auto">
+                            <ion-text class="username-purple">
+                                <strong>@{{ user.username }}</strong>
+                            </ion-text>
+                        </ion-col>
+                        <ion-col size="auto">
+                            <ion-button fill="clear">
+                                <ion-icon :icon="notifications" color="medium"></ion-icon>
+                            </ion-button>
+                        </ion-col>
+                    </ion-row>
+                </ion-grid>
+            </ion-toolbar>
+        </ion-header>
 
-                        <ion-card-content>
-                            <ion-grid class="stats-grid">
-                                <ion-row class="button-row">
-                                    <ion-col class="stat-col">
-                                        <ion-button id="seguir-button">Seguir</ion-button>
-                                    </ion-col>
-                                    <ion-col class="stat-col">
-                                        <ion-button id="ms-button">Enviar mensaje</ion-button>
-                                    </ion-col>
-                                </ion-row>
-                                <ion-row>
-                                    <ion-col class="stat-col">
-                                        <ion-text>
-                                            <h2>{{ posts.length }}</h2>
-                                            <p>Publicaciones</p>
-                                        </ion-text>
-                                    </ion-col>
-                                    <ion-col class="stat-col clickable" @click="openFollowers">
-                                        <ion-text>
-                                            <h2>{{ seguidores.length }}</h2>
-                                            <p>Seguidores</p>
-                                        </ion-text>
-                                    </ion-col>
-                                    <ion-col class="stat-col clickable" @click="openFollowing">
-                                        <ion-text>
-                                            <h2>{{ siguiendo.length }}</h2>
-                                            <p>Seguidos</p>
-                                        </ion-text>
-                                    </ion-col>
-                                </ion-row>
-                                <ion-row class="tab-row">
-                                    <ion-segment v-model="selectedTab">
-                                        <ion-segment-button value="1">
-                                            <ion-label><ion-icon :icon="grid"></ion-icon></ion-label>
-                                        </ion-segment-button>
-                                        <ion-segment-button value="2">
-                                            <ion-label><ion-icon :icon="folderOutline"></ion-icon></ion-label>
-                                        </ion-segment-button>
-                                        <ion-segment-button value="3">
-                                            <ion-label><ion-icon :icon="musicalNoteOutline"></ion-icon></ion-label>
-                                        </ion-segment-button>
-                                    </ion-segment>
-                                </ion-row>
-                            </ion-grid>
-                        </ion-card-content>
-                    </ion-card>
+        <ion-content class="ion-background-white">
+            <!-- Error message -->
+            <ion-card v-if="error && !loading" color="danger">
+                <ion-card-content>
+                    <p>{{ error }}</p>
+                </ion-card-content>
+            </ion-card>
+
+            <!-- Loading -->
+            <div v-if="loading" class="loading-container">
+                <ion-spinner name="crescent"></ion-spinner>
+                <ion-text>
+                    <p>Cargando perfil...</p>
+                </ion-text>
+            </div>
+
+            <!-- Perfil de usuario -->
+            <div v-if="!loading" class="profile-section ion-text-center ion-padding">
+                <!-- Avatar y botón de menú -->
+                <div class="profile-header-row">
+                    <ion-avatar class="profile-avatar">
+                        <img v-if="user.imagen_url" :src="user.imagen_url" alt="Profile Picture" />
+                        <ion-icon v-else :icon="personCircle" class="profile-avatar-icon"></ion-icon>
+                    </ion-avatar>
+                    <ion-button fill="clear" @click="openMenu" id="open-menu-button" class="menu-button-inline">
+                        <ion-icon :icon="ellipsisVerticalOutline" color="medium"></ion-icon>
+                    </ion-button>
                 </div>
+
+                <!-- Nombre y descripción -->
+                <h3 class="profile-name">{{ user.name }}</h3>
+                <p class="profile-description">
+                    ITCA FEPADE, Desarrollo de software
+                </p>
+
+                <!-- Botón Seguir -->
+                <div class="action-buttons">
+                    <ion-button color="primary">Seguir</ion-button>
+                    <!-- Descomentar para agregar botón de mensaje -->
+                    <!-- <ion-button color="light">Enviar Mensaje</ion-button> -->
+                </div>
+
+                <!-- Contadores -->
+                <ion-grid class="stats-grid">
+                    <ion-row class="ion-text-center">
+                        <ion-col size="4">
+                            <div class="stat-number">{{ posts.length }}</div>
+                            <div class="stat-label">Publicaciones</div>
+                        </ion-col>
+                        <ion-col size="4" class="clickable" @click="openFollowers">
+                            <div class="stat-number">{{ seguidores.length }}</div>
+                            <div class="stat-label">Seguidores</div>
+                        </ion-col>
+                        <ion-col size="4" class="clickable" @click="openFollowing">
+                            <div class="stat-number">{{ siguiendo.length }}</div>
+                            <div class="stat-label">Seguidos</div>
+                        </ion-col>
+                    </ion-row>
+                </ion-grid>
+
+                <!-- Divider -->
+                <div class="divider"></div>
+
+                <!-- Tabs -->
+                <ion-segment v-model="selectedTab" mode="md" color="primary">
+                    <ion-segment-button value="1">
+                        <ion-label class="tab-label">
+                            <ion-icon :icon="grid"></ion-icon>
+                            <span>Posts</span>
+                        </ion-label>
+                    </ion-segment-button>
+                    <ion-segment-button value="2">
+                        <ion-label class="tab-label">
+                            <ion-icon :icon="folderOutline"></ion-icon>
+                            <span>Folders</span>
+                        </ion-label>
+                    </ion-segment-button>
+                    <ion-segment-button value="3">
+                        <ion-label class="tab-label">
+                            <ion-icon :icon="musicalNoteOutline"></ion-icon>
+                            <span>Playlist</span>
+                        </ion-label>
+                    </ion-segment-button>
+                </ion-segment>
+
+                <!-- Contenido de los tabs -->
+                <div class="tabs-content">
+                    <!-- Posts Tab -->
+                    <div v-if="selectedTab === '1'">
+                        <ion-grid>
+                            <ion-row>
+                                <ion-col v-for="(pub, index) in posts" :key="index" size="6">
+                                    <div class="post-card">
+                                        <ion-icon :icon="documentOutline" size="large" color="medium"></ion-icon>
+                                        <p class="post-title">{{ pub.titulo }}</p>
+                                    </div>
+                                </ion-col>
+                            </ion-row>
+                        </ion-grid>
+                        <div v-if="posts.length === 0" class="empty-message">
+                            Aún no hay publicaciones
+                        </div>
+                    </div>
+
+                    <!-- Folders Tab -->
+                    <div v-else-if="selectedTab === '2'">
+                        <ion-grid>
+                            <ion-row>
+                                <ion-col v-for="(archivo, index) in archivos" :key="index" size="6">
+                                    <div class="post-card">
+                                        <ion-icon :icon="folderOutline" size="large" color="medium"></ion-icon>
+                                        <p class="post-title">{{ archivo.nombre }}</p>
+                                    </div>
+                                </ion-col>
+                            </ion-row>
+                        </ion-grid>
+                        <div v-if="archivos.length === 0" class="empty-message">
+                            Sin carpetas todavía
+                        </div>
+                    </div>
+
+                    <!-- Playlist Tab -->
+                    <div v-else>
+                        <ion-grid>
+                            <ion-row>
+                                <ion-col v-for="(cancion, index) in canciones" :key="index" size="6">
+                                    <div class="post-card">
+                                        <ion-icon :icon="musicalNoteOutline" size="large" color="medium"></ion-icon>
+                                        <p class="post-title">{{ cancion.titulo }}</p>
+                                    </div>
+                                </ion-col>
+                            </ion-row>
+                        </ion-grid>
+                        <div v-if="canciones.length === 0" class="empty-message">
+                            No hay playlists creadas
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Infinite Scroll -->
                 <ion-infinite-scroll v-if="!loading && hasMorePages" @ionInfinite="loadMorePosts" threshold="100px">
                     <ion-infinite-scroll-content loading-spinner="bubbles" loading-text="Cargando más posts...">
                     </ion-infinite-scroll-content>
                 </ion-infinite-scroll>
             </div>
-            <ion-card class="centered tab-content">
-                <div v-if="selectedTab === '1'">
-                    <ion-grid>
-                        <ion-row>
-                            <ion-col v-for="(pub, index) in posts" :key="index" size="4">
-                                <ion-card>
-                                    <ion-card-content>{{ pub.titulo }}</ion-card-content>
-                                </ion-card>
-                            </ion-col>
-                        </ion-row>
-                        <div v-if="posts.length === 0" class="empty-message">
-                            Aún no hay publicaciones
-                        </div>
-                    </ion-grid>
-                </div>
-
-                <div v-else-if="selectedTab === '2'">
-                    <ion-grid>
-                        <ion-row>
-                            <ion-col v-for="(archivo, index) in archivos" :key="index" size="4">
-                                <ion-card>
-                                    <ion-card-content>{{ archivo.nombre }}</ion-card-content>
-                                </ion-card>
-                            </ion-col>
-                        </ion-row>
-                        <div v-if="archivos.length === 0" class="empty-message">
-                            Aún no hay archivos
-                        </div>
-                    </ion-grid>
-                </div>
-
-                <div v-else>
-                    <ion-grid>
-                        <ion-row>
-                            <ion-col v-for="(cancion, index) in canciones" :key="index" size="4">
-                                <ion-card>
-                                    <ion-card-content>{{ cancion.titulo }}</ion-card-content>
-                                </ion-card>
-                            </ion-col>
-                        </ion-row>
-                        <div v-if="canciones.length === 0" class="empty-message">
-                            Aún no hay canciones
-                        </div>
-                    </ion-grid>
-                </div>
-            </ion-card>
 
             <!-- Modal Seguidores -->
             <ion-modal :is-open="showFollowersModal" @didDismiss="closeFollowers">
@@ -237,9 +254,6 @@ import {
     IonContent,
     IonCard,
     IonCardContent,
-    IonCardHeader,
-    IonCardTitle,
-    IonCardSubtitle,
     IonSpinner,
     IonSegment,
     IonSegmentButton,
@@ -262,7 +276,6 @@ import {
     IonCol,
     IonPopover,
 } from "@ionic/vue";
-import AppHeader from "@/components/AppHeader.vue";
 import {
     ellipsisVerticalOutline,
     grid,
@@ -270,6 +283,8 @@ import {
     musicalNoteOutline,
     logOutOutline,
     personCircle,
+    documentOutline,
+    notifications,
 } from "ionicons/icons";
 
 import postsService from "@/services/postsService";
@@ -282,9 +297,6 @@ export default {
         IonContent,
         IonCard,
         IonCardContent,
-        IonCardHeader,
-        IonCardTitle,
-        IonCardSubtitle,
         IonIcon,
         IonSpinner,
         IonSegment,
@@ -306,7 +318,6 @@ export default {
         IonRow,
         IonCol,
         IonPopover,
-        AppHeader,
     },
     data() {
         return {
@@ -330,6 +341,8 @@ export default {
             musicalNoteOutline,
             logOutOutline,
             personCircle,
+            documentOutline,
+            notifications,
             // modals
             showFollowersModal: false,
             showFollowingModal: false,
@@ -520,145 +533,212 @@ export default {
 </script>
 
 <style scoped>
-.container {
+/* Header */
+ion-header ion-toolbar {
+    --background: white;
+    --border-width: 0;
+}
+
+.header-grid {
     padding: 0;
+    margin: 0;
 }
 
-ion-avatar {
-    width: 100px;
-    height: 100px;
+.header-grid ion-row {
+    padding: 8px 16px;
+}
+
+.header-logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+
+.username-purple {
+    color: #7b2ff7;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Content background */
+ion-content {
+    --background: #ffffff;
+}
+
+/* Profile Section */
+.profile-section {
+    background: #ffffff;
+    padding: 24px 16px 16px 16px;
+}
+
+.profile-header-row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
+    position: relative;
+    margin-bottom: 12px;
 }
 
-ion-avatar img {
+.profile-avatar {
+    width: 80px;
+    height: 80px;
+}
+
+.profile-avatar img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
 .profile-avatar-icon {
-    width: 100px !important;
-    height: 100px !important;
-    font-size: 100px !important;
+    width: 80px !important;
+    height: 80px !important;
+    font-size: 80px !important;
     color: #9CA3AF;
 }
 
-.username-container {
-    align-items: center;
-    padding-top: 20px;
-    padding-left: 20px;
-}
-
-.username-container ion-card-subtitle {
-    font-weight: normal;
-    color: gray;
-}
-
-ion-grid {
-    margin: 0;
-    padding: 0;
-}
-
-ion-icon {
-    color: gray;
-    font-size: 24px;
+.menu-button-inline {
+    position: absolute;
+    right: 16px;
+    top: 0;
 }
 
 #open-menu-button {
-    --padding-start: 0;
-    --padding-end: 0;
+    --padding-start: 8px;
+    --padding-end: 8px;
     margin: 0;
 }
 
-#open-menu-button svg {
-    width: 24px;
-    height: 24px;
-    color: gray;
-    stroke: gray;
+.profile-name {
+    margin-top: 0;
+    margin-bottom: 4px;
+    font-size: 20px;
+    font-weight: 600;
+    color: #000000;
 }
 
-.button-row {
-    text-align: center;
+.profile-description {
+    font-size: 12px;
+    color: #6B7280;
+    margin: 0;
 }
 
-ion-segment-button ion-label {
+/* Action Buttons */
+.action-buttons {
     display: flex;
-    align-items: center;
     justify-content: center;
-    height: 100%;
+    gap: 8px;
+    margin-top: 16px;
 }
 
+.action-buttons ion-button {
+    text-transform: none;
+    font-weight: 600;
+}
+
+/* Stats */
+.stats-grid {
+    margin-top: 24px;
+    margin-bottom: 0;
+    padding: 0;
+}
+
+.stat-number {
+    font-size: 16px;
+    font-weight: 600;
+    color: #000000;
+    margin-bottom: 4px;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #6B7280;
+}
+
+.clickable {
+    cursor: pointer;
+}
+
+/* Divider */
+.divider {
+    height: 1px;
+    background-color: #E5E7EB;
+    margin: 16px 0;
+}
+
+/* Tabs */
 ion-segment {
-    background-color: white !important;
-    border-radius: 0px;
-    height: 65px;
-    box-shadow: none !important;
-    border-bottom: 1px solid #e0e0e0 !important;
+    --background: white;
+    margin-bottom: 8px;
 }
 
 ion-segment-button {
-    --background: white !important;
-    --background-checked: white !important;
-    --color: black !important;
-    --color-checked: black !important;
-    --indicator-color: transparent !important;
-    --indicator-box-shadow: none;
-    border: none !important;
-    --border-color: none;
-    border-bottom: 1px solid transparent !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
     text-transform: none;
-    font-weight: normal;
+    font-size: 14px;
+    font-weight: 500;
 }
 
-ion-segment-button.segment-button-checked ion-label {
-    border-bottom: 2px solid #137fec !important;
+.tab-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
 }
 
-ion-segment-button.segment-button-checked ion-icon {
-    color: #137fec !important;
+.tab-label ion-icon {
+    font-size: 20px;
 }
 
-.tab-content ion-grid {
-    padding: 5px;
+.tab-label span {
+    font-size: 12px;
+}
+
+/* Tabs Content */
+.tabs-content {
+    padding: 8px 0;
+}
+
+.post-card {
+    background-color: #F3F4F6;
+    border-radius: 12px;
+    height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    transition: background-color 0.2s;
+}
+
+.post-card:active {
+    background-color: #E5E7EB;
+}
+
+.post-card ion-icon {
+    font-size: 40px;
+    color: #6B7280;
+    margin-bottom: 8px;
+}
+
+.post-title {
+    margin: 0;
+    font-size: 11px;
     text-align: center;
-}
-
-.button-row ion-button {
-    width: 100%;
-    --padding-top: 1px;
-    --padding-bottom: 1px;
-    --padding-start: 1px;
-    --padding-end: 1px;
-    font-size: 15px;
-    min-height: 35px;
-    font-weight: bold;
-}
-
-#seguir-button {
-    --ion-color-primary: #3880ff;
-    --ion-color-primary-contrast: #ffffff;
-}
-
-#ms-button {
-    --ion-color-primary: #d0e5fb;
-    --ion-color-primary-contrast: #137fec;
-}
-
-.stat-col ion-text {
-    text-align: center;
+    color: #374151;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
 }
 
 .empty-message {
     text-align: center;
-    padding: 20px;
-    color: gray;
-    font-style: italic;
+    padding: 40px 20px;
+    color: #6B7280;
+    font-style: normal;
 }
 
+/* Loading */
 .loading-container {
     display: flex;
     flex-direction: column;
@@ -667,44 +747,16 @@ ion-segment-button.segment-button-checked ion-icon {
     min-height: 200px;
 }
 
-@media (min-width: 600px) {
-    .tab-content {
-        position: relative;
-        margin: 0;
-        left: 50%;
-        margin-top: 10px;
-        padding: 5px;
-        transform: translateX(-50%);
-    }
-
-    ion-card {
-        margin: 0 20px;
-        max-width: 50vw;
-    }
-
-    .centered {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-    }
-
-    .button-row {
-        width: 50%;
-    }
-
-    .button-row ion-button {
-        font-size: 16px;
-        letter-spacing: 0.05cap;
-        text-transform: initial;
-    }
-}
-
-.clickable {
-    cursor: pointer;
-}
-
-ion-avatar img {
+/* Modal styles */
+ion-modal ion-avatar img {
     object-fit: cover;
+}
+
+/* Responsive */
+@media (min-width: 600px) {
+    .profile-section {
+        max-width: 600px;
+        margin: 0 auto;
+    }
 }
 </style>
