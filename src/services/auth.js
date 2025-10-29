@@ -2,9 +2,11 @@ import { api } from "./api";
 
 const TOKEN_KEY = "auth_token";
 const USER_KEY = "user";
+const REMEMBER_KEY = "remember_me";
+const TOKEN_EXPIRY_KEY = "token_expiry";
 
 export const AuthService = {
-  async login(credentials) {
+  async login(credentials, rememberMe = false) {
     try {
       // POST /auth/login con email y password
       const res = await api.post("/auth/login", credentials);
@@ -13,17 +15,51 @@ export const AuthService = {
       const data = res.data?.data || res.data;
 
       if (data?.token) {
-        localStorage.setItem(TOKEN_KEY, data.token);
+        // Guardar token según la opción "Recuérdame"
+        this.setToken(data.token, rememberMe);
       }
 
       if (data?.user) {
-        localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+        this.setUser(data.user, rememberMe);
       }
 
       return data;
     } catch (error) {
       console.error("Error en login:", error);
       throw error;
+    }
+  },
+
+  /**
+   * Guarda el token con o sin persistencia según "Recuérdame"
+   */
+  setToken(token, rememberMe = false) {
+    const storage = rememberMe ? localStorage : sessionStorage;
+    const expiryTime = rememberMe
+      ? Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 días
+      : Date.now() + 24 * 60 * 60 * 1000; // 24 horas
+
+    storage.setItem(TOKEN_KEY, token);
+    storage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
+    storage.setItem(REMEMBER_KEY, rememberMe.toString());
+
+    // Si es rememberMe, también guardar en localStorage para persistencia
+    if (rememberMe) {
+      localStorage.setItem(TOKEN_KEY, token);
+      localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
+      localStorage.setItem(REMEMBER_KEY, "true");
+    }
+  },
+
+  /**
+   * Guarda el usuario con o sin persistencia
+   */
+  setUser(user, rememberMe = false) {
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem(USER_KEY, JSON.stringify(user));
+
+    if (rememberMe) {
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
     }
   },
 
@@ -59,17 +95,36 @@ export const AuthService = {
       console.warn("Error al hacer logout en API:", e);
     }
 
-    // Limpia los datos locales
+    // Limpia los datos de ambos storages
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(REMEMBER_KEY);
+    localStorage.removeItem(TOKEN_EXPIRY_KEY);
+
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(USER_KEY);
+    sessionStorage.removeItem(REMEMBER_KEY);
+    sessionStorage.removeItem(TOKEN_EXPIRY_KEY);
   },
 
   getToken() {
-    return localStorage.getItem(TOKEN_KEY);
+    // Primero verifica si el token expiró
+    const expiry =
+      localStorage.getItem(TOKEN_EXPIRY_KEY) ||
+      sessionStorage.getItem(TOKEN_EXPIRY_KEY);
+    if (expiry && Date.now() > parseInt(expiry)) {
+      // Token expirado, limpia todo
+      this.logout();
+      return null;
+    }
+
+    // Intenta obtener de localStorage primero, luego sessionStorage
+    return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
   },
 
   getUser() {
-    const userStr = localStorage.getItem(USER_KEY);
+    const userStr =
+      localStorage.getItem(USER_KEY) || sessionStorage.getItem(USER_KEY);
     if (userStr) {
       try {
         return JSON.parse(userStr);

@@ -1,6 +1,7 @@
 <template>
     <ion-page>
-        <AppHeader :isDarkMode="isDarkMode" :user="user" @toggleDarkMode="toggleDarkMode" />
+        <AppHeader :isDarkMode="isDarkMode" :user="user" :isAuthenticated="isAuthenticated"
+            @toggleDarkMode="toggleDarkMode" />
 
         <ion-content>
             <div class="container">
@@ -18,7 +19,8 @@
                 </ion-card>
 
                 <div v-if="!loading" class="feed-container">
-                    <CreatePostCard :user="user" />
+                    <!-- Card para crear post (solo para autenticados) -->
+                    <CreatePostCard v-if="isAuthenticated" :user="user" />
 
                     <ion-accordion-group>
                         <PostCard v-for="post in posts" :key="post.id" :post="post" @like="handleLike"
@@ -35,7 +37,7 @@
                 </div>
 
                 <ion-infinite-scroll v-if="!loading && hasMorePages" @ionInfinite="loadMorePosts" threshold="100px">
-                    <ion-infinite-scroll-content loading-spinner="bubbles" loading-text="Cargando m�s posts...">
+                    <ion-infinite-scroll-content loading-spinner="bubbles" loading-text="Cargando más posts...">
                     </ion-infinite-scroll-content>
                 </ion-infinite-scroll>
             </div>
@@ -44,7 +46,7 @@
 </template>
 
 <script>
-import { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonAccordionGroup } from '@ionic/vue'
+import { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonAccordionGroup, alertController } from '@ionic/vue'
 import AppHeader from '@/components/AppHeader.vue'
 import CreatePostCard from '@/components/CreatePostCard.vue'
 import PostCard from '@/components/PostCard.vue'
@@ -63,13 +65,58 @@ export default {
             lastPage: 1,
             hasMorePages: false,
             isDarkMode: false,
-            user: { imagen_url: null, name: 'Usuario', username: 'usuario' }
+            user: { imagen_url: null, name: 'Usuario', username: 'usuario' },
+            feedType: 'public', // 'public', 'personalized', o 'error'
+            totalPosts: 0,
+            alertTimer: null,
+            isAuthenticated: false
         }
     },
     async created() {
-        await this.loadCurrentUser()
+        // Verificar autenticación y actualizar estado
+        this.isAuthenticated = AuthService.isAuthenticated()
+
+        // Cargar usuario solo si está autenticado
+        if (this.isAuthenticated) {
+            await this.loadCurrentUser()
+        } else {
+            // Usuario no autenticado, usar valores por defecto
+            this.user = { imagen_url: null, name: 'Invitado', username: 'invitado' }
+        }
+
         this.fetchPosts()
         this.loadDarkModePreference()
+    },
+    ionViewWillEnter() {
+        // Actualizar estado de autenticación cada vez que se entra a la vista
+        this.isAuthenticated = AuthService.isAuthenticated()
+
+        // Si el usuario acaba de iniciar sesión, recargar datos
+        if (this.isAuthenticated && this.user.username === 'invitado') {
+            this.loadCurrentUser()
+            this.fetchPosts()
+        }
+
+        // Programar el alert solo si NO está autenticado y no hay timer activo
+        if (!this.isAuthenticated && !this.alertTimer) {
+            this.alertTimer = setTimeout(() => {
+                this.showLoginAlert()
+            }, 15000) // 15 segundos
+        }
+    },
+    ionViewWillLeave() {
+        // Cancelar el timer cuando el usuario salga de la vista (por ejemplo, al ir a login)
+        if (this.alertTimer) {
+            clearTimeout(this.alertTimer)
+            this.alertTimer = null
+        }
+    },
+    beforeUnmount() {
+        // Limpiar el timer si el componente se desmonta antes
+        if (this.alertTimer) {
+            clearTimeout(this.alertTimer)
+            this.alertTimer = null
+        }
     },
     methods: {
         async loadCurrentUser() {
@@ -140,7 +187,9 @@ export default {
         async fetchPosts(page = 1) {
             this.loading = page === 1
             this.error = null
+
             const result = await postsService.fetchPosts(page)
+
             if (result.success) {
                 if (page === 1) {
                     this.posts = result.data
@@ -150,10 +199,28 @@ export default {
                 this.currentPage = result.pagination.currentPage
                 this.lastPage = result.pagination.lastPage
                 this.hasMorePages = result.pagination.hasMorePages
+                this.totalPosts = result.pagination.total || 0
+                this.feedType = result.feedType || 'public'
+
+                // Log para debugging
+                console.log(`Feed cargado: ${this.feedType}`, {
+                    posts: result.data.length,
+                    total: this.totalPosts,
+                    page: this.currentPage,
+                    isAuthenticated: AuthService.isAuthenticated()
+                })
             } else {
                 this.error = result.error
+                this.feedType = result.feedType || 'error'
+
                 if (page === 1) this.posts = []
+
+                // Si es error 401, redirigir al login
+                if (result.error.includes('Sesión expirada')) {
+                    this.$router.replace('/login')
+                }
             }
+
             this.loading = false
         },
         async handleLike(postId) {
@@ -183,6 +250,33 @@ export default {
             this.currentPage = 1
             await this.fetchPosts(1)
             event.target.complete()
+        },
+        async showLoginAlert() {
+            // Solo mostrar si el usuario NO está autenticado Y está en la ruta del feed
+            const currentRoute = this.$route.path
+            if (!this.isAuthenticated && currentRoute === '/tabs/home') {
+                const alert = await alertController.create({
+                    header: '¡Únete a LaÚ! 🎓',
+                    message: 'Inicia sesión para seguir viendo el feed y aprovechar al máximo todas las funciones de LaÚ: conecta con estudiantes, comparte material y descubre eventos.',
+                    buttons: [
+                        {
+                            text: 'Más tarde',
+                            role: 'cancel',
+                            cssClass: 'alert-button-cancel'
+                        },
+                        {
+                            text: 'Iniciar Sesión',
+                            cssClass: 'alert-button-confirm',
+                            handler: () => {
+                                this.$router.push('/login')
+                            }
+                        }
+                    ],
+                    cssClass: 'custom-alert'
+                })
+
+                await alert.present()
+            }
         }
     }
 }
@@ -191,4 +285,64 @@ export default {
 <style scoped>
 @import '../theme/colors.css';
 @import '../theme/home.css';
+
+/* Estilos personalizados para el alert */
+:global(.custom-alert) {
+    --backdrop-opacity: 0.6;
+}
+
+:global(.custom-alert .alert-wrapper) {
+    border-radius: 16px;
+    padding: 0;
+    background: #FFFFFF;
+}
+
+:global(.custom-alert .alert-head) {
+    padding: 20px 20px 12px 20px;
+}
+
+:global(.custom-alert .alert-title) {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1F2937;
+}
+
+:global(.custom-alert .alert-message) {
+    color: #4B5563;
+    line-height: 1.6;
+    padding: 0 20px 20px 20px;
+    font-size: 0.95rem;
+}
+
+:global(.custom-alert .alert-button-group) {
+    padding: 0;
+    border-top: 1px solid #E5E7EB;
+}
+
+:global(.alert-button-cancel) {
+    color: #6B7280 !important;
+    font-weight: 500 !important;
+}
+
+:global(.alert-button-confirm) {
+    color: #8A2BE2 !important;
+    font-weight: 700 !important;
+}
+
+/* Dark mode para el alert */
+:global(.ion-palette-dark .custom-alert .alert-wrapper) {
+    background: #1E1E1E;
+}
+
+:global(.ion-palette-dark .custom-alert .alert-title) {
+    color: #E5E7EB;
+}
+
+:global(.ion-palette-dark .custom-alert .alert-message) {
+    color: #9CA3AF;
+}
+
+:global(.ion-palette-dark .custom-alert .alert-button-group) {
+    border-top-color: #374151;
+}
 </style>

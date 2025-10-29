@@ -11,7 +11,7 @@ const routes = [
     path: "/welcome",
     name: "Welcome",
     component: () => import("@/views/WelcomeView.vue"),
-    meta: { requiresGuest: true },
+    // Permitir acceso a welcome siempre (sin meta)
   },
   {
     path: "/login",
@@ -28,7 +28,6 @@ const routes = [
   {
     path: "/tabs/",
     component: TabsPage,
-    meta: { requiresAuth: true },
     children: [
       {
         path: "",
@@ -37,7 +36,7 @@ const routes = [
       {
         path: "home",
         component: () => import("@/views/HomeView.vue"),
-        meta: { requiresAuth: true },
+        // Sin meta: permite acceso público (feed público) y autenticado (feed personalizado)
       },
       {
         path: "tab2",
@@ -65,25 +64,19 @@ router.beforeEach(async (to, from, next) => {
   // Si la ruta requiere autenticación
   if (to.meta.requiresAuth) {
     if (!isAuthenticated) {
-      // No hay token, redirigir al welcome (no al login)
+      // No hay token, redirigir al welcome para invitar a login
       next("/welcome");
       return;
     }
 
-    // Hay token, permitir acceso (la validación se hará en background en el componente)
+    // Hay token, permitir acceso
     next();
   }
-  // Si la ruta es para invitados (login/register/welcome) y ya está autenticado
+  // Si la ruta es para invitados (login/register) y ya está autenticado
   else if (to.meta.requiresGuest && isAuthenticated) {
-    // Solo redirigir si NO es welcome, para permitir logout
-    if (to.path !== "/welcome") {
-      next("/tabs/home");
-    } else {
-      // Si está autenticado pero va a /welcome, permitir acceso (para logout)
-      next();
-    }
+    next("/tabs/home");
   }
-  // Caso normal
+  // Caso normal (incluye /welcome y /tabs/home sin autenticación)
   else {
     next();
   }

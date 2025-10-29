@@ -48,6 +48,9 @@
 
                         <!-- Olvidaste tu contraseña -->
                         <div class="forgot-password-container">
+                            <ion-checkbox v-model="rememberMe" class="remember-checkbox">
+                                <span class="remember-text">Recuérdame</span>
+                            </ion-checkbox>
                             <a href="#" class="forgot-password-link">¿Olvidaste tu contraseña?</a>
                         </div>
 
@@ -80,6 +83,7 @@ import {
     IonInput,
     IonIcon,
     IonSpinner,
+    IonCheckbox,
     toastController
 } from '@ionic/vue'
 import { arrowBack, eyeOutline, eyeOffOutline } from 'ionicons/icons'
@@ -93,7 +97,8 @@ export default {
         IonButton,
         IonInput,
         IonIcon,
-        IonSpinner
+        IonSpinner,
+        IonCheckbox
     },
     data() {
         return {
@@ -112,12 +117,13 @@ export default {
             loading: false,
             errorMessage: '',
             emailFocused: false,
-            passwordFocused: false
+            passwordFocused: false,
+            rememberMe: false
         }
     },
     methods: {
         validateForm() {
-            // Solo valida sin marcar errores visuales
+            // Validación del email y contraseña según el controlador
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
             const isEmailValid = this.formData.email && emailRegex.test(this.formData.email)
             const isPasswordValid = this.formData.password && this.formData.password.length >= 1
@@ -132,21 +138,22 @@ export default {
             this.errors.password = false
 
             if (!this.validateForm()) {
-                this.errorMessage = 'Por favor, completa todos los campos correctamente'
+                this.errorMessage = 'Por favor, ingresa un correo y contraseña válidos'
                 return
             }
 
             this.loading = true
 
             try {
-                await AuthService.login(this.formData)
+                // Pasar rememberMe al servicio de autenticación
+                await AuthService.login(this.formData, this.rememberMe)
 
                 // Mostrar mensaje de éxito
                 const toast = await toastController.create({
                     message: '¡Bienvenido de nuevo!',
                     duration: 2000,
-                    color: 'success',
-                    position: 'top'
+                    position: 'top',
+                    cssClass: 'success-toast'
                 })
                 await toast.present()
 
@@ -159,11 +166,11 @@ export default {
                 this.errors.email = true
                 this.errors.password = true
 
-                // Mostrar mensaje de error específico de la API
+                // Mostrar mensaje de error específico de la API (Las credenciales son incorrectas)
                 if (error.response?.data?.message) {
                     this.errorMessage = error.response.data.message
                 } else if (error.response?.status === 401) {
-                    this.errorMessage = 'Credenciales incorrectas. Verifica tu correo y contraseña.'
+                    this.errorMessage = 'Las credenciales son incorrectas.'
                 } else {
                     this.errorMessage = 'Error al iniciar sesión. Por favor, intenta de nuevo.'
                 }
@@ -171,8 +178,8 @@ export default {
                 const toast = await toastController.create({
                     message: this.errorMessage,
                     duration: 3000,
-                    color: 'danger',
-                    position: 'top'
+                    position: 'top',
+                    cssClass: 'danger-toast'
                 })
                 await toast.present()
             } finally {
@@ -366,8 +373,24 @@ export default {
 
 .forgot-password-container {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    align-items: center;
     margin-top: -0.5rem;
+}
+
+.remember-checkbox {
+    --size: 20px;
+    --checkbox-background-checked: #8A2BE2;
+    --border-color: rgba(255, 255, 255, 0.4);
+    --border-color-checked: #8A2BE2;
+    margin-right: 0.5rem;
+}
+
+.remember-text {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.875rem;
+    font-weight: 400;
+    margin-left: 0.5rem;
 }
 
 .forgot-password-link {

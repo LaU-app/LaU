@@ -2,6 +2,9 @@
     <ion-header class="ion-no-border welcome-header">
         <ion-toolbar>
             <div class="welcome-header-content">
+                <ion-button v-if="showLoginButton" @click="goToLogin" fill="clear" class="login-toggle-btn">
+                    <ion-icon :icon="logIn" class="login-icon"></ion-icon>
+                </ion-button>
                 <ion-button @click="toggleDarkMode" fill="clear" class="theme-toggle-btn">
                     <ion-icon :icon="isDarkMode ? sunny : moon" class="theme-icon"></ion-icon>
                 </ion-button>
@@ -12,7 +15,7 @@
 
 <script>
 import { IonHeader, IonToolbar, IonButton, IonIcon } from '@ionic/vue'
-import { moon, sunny } from 'ionicons/icons'
+import { moon, sunny, logIn } from 'ionicons/icons'
 
 export default {
     name: 'WelcomeHeader',
@@ -22,10 +25,17 @@ export default {
         IonButton,
         IonIcon
     },
+    props: {
+        showLoginButton: {
+            type: Boolean,
+            default: false
+        }
+    },
     data() {
         return {
             moon,
             sunny,
+            logIn,
             isDarkMode: false
         }
     },
@@ -40,6 +50,9 @@ export default {
 
             // Guardar preferencia en localStorage
             localStorage.setItem('darkMode', this.isDarkMode ? 'true' : 'false')
+        },
+        goToLogin() {
+            this.$router.push('/login')
         }
     }
 }
@@ -71,14 +84,23 @@ ion-toolbar {
 .welcome-header-content {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
+    gap: 8px;
     position: relative;
     width: 100%;
 }
 
+.login-toggle-btn {
+    --padding-start: 8px;
+    --padding-end: 8px;
+}
+
+.login-icon {
+    font-size: 26px;
+    color: #8A2BE2;
+}
+
 .theme-toggle-btn {
-    position: absolute;
-    right: 0;
     --padding-start: 8px;
     --padding-end: 8px;
 }

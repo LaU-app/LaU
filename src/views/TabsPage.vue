@@ -2,7 +2,8 @@
   <ion-page>
     <ion-tabs>
       <ion-router-outlet></ion-router-outlet>
-      <ion-tab-bar slot="bottom">
+      <!-- Tabs solo para usuarios autenticados -->
+      <ion-tab-bar v-if="isAuthenticated" slot="bottom">
         <ion-tab-button tab="tab1" href="/tabs/home">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"
             class="icon icon-tabler icons-tabler-filled icon-tabler-home">
@@ -30,6 +31,24 @@
 <script setup>
 import { IonTabBar, IonTabButton, IonTabs, IonLabel, IonIcon, IonPage, IonRouterOutlet } from '@ionic/vue';
 import { ellipse, person } from 'ionicons/icons';
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { AuthService } from '@/services/auth';
+
+const router = useRouter();
+
+// Estado reactivo de autenticación
+const isAuthenticated = ref(AuthService.isAuthenticated());
+
+// Actualizar cuando el componente se monta
+onMounted(() => {
+  isAuthenticated.value = AuthService.isAuthenticated();
+});
+
+// Escuchar cambios de ruta para actualizar el estado
+router.afterEach(() => {
+  isAuthenticated.value = AuthService.isAuthenticated();
+});
 </script>
 
 <style scoped>
