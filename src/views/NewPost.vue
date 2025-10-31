@@ -238,14 +238,14 @@ export default {
         // Validar si se puede publicar
         const canPost = computed(() => {
             if (postType.value === 'normal') {
-                return normalPost.value.title.trim() ||
-                    normalPost.value.description.trim() ||
-                    normalPost.value.image
+                // Para posts tipo 'imagen', la imagen ES OBLIGATORIA según el backend
+                // Pero título y descripción son opcionales
+                return normalPost.value.image !== null
             } else {
+                // Para posts tipo 'musica', todo es opcional
                 return musicPost.value.title.trim() ||
                     musicPost.value.description.trim() ||
-                    musicPost.value.image ||
-                    musicPost.value.musicUrl.trim()
+                    musicPost.value.image
             }
         })
 
@@ -328,6 +328,18 @@ export default {
 
         // Manejar publicación
         const handlePost = async () => {
+            // Validación previa antes de enviar
+            if (postType.value === 'normal' && !normalPost.value.image) {
+                const toast = await toastController.create({
+                    message: 'Debes seleccionar una imagen para publicar',
+                    duration: 3000,
+                    color: 'warning',
+                    position: 'top'
+                })
+                await toast.present()
+                return
+            }
+
             const loading = await loadingController.create({
                 message: 'Publicando...',
             })
@@ -339,26 +351,54 @@ export default {
                 const formData = new FormData()
 
                 if (postType.value === 'normal') {
-                    // Preparar datos del post normal
-                    if (normalPost.value.title) formData.append('title', normalPost.value.title)
-                    if (normalPost.value.description) formData.append('description', normalPost.value.description)
-                    if (normalPost.value.image) formData.append('image', normalPost.value.image)
-                    formData.append('type', 'normal')
+                    // Post tipo imagen/normal
+                    // Título es opcional en el backend
+                    if (normalPost.value.title) {
+                        formData.append('titulo', normalPost.value.title)
+                    }
+                    // Descripción es opcional (max 500 caracteres)
+                    if (normalPost.value.description) {
+                        formData.append('descripcion', normalPost.value.description)
+                    }
+                    // Imagen es requerida si tipo='imagen'
+                    if (normalPost.value.image) {
+                        formData.append('imagen', normalPost.value.image)
+                    }
+                    // Tipo es REQUERIDO
+                    formData.append('tipo', 'imagen')
                 } else {
-                    // Preparar datos del post música
-                    if (musicPost.value.title) formData.append('title', musicPost.value.title)
-                    if (musicPost.value.description) formData.append('description', musicPost.value.description)
-                    if (musicPost.value.image) formData.append('image', musicPost.value.image)
-                    if (musicPost.value.musicUrl) formData.append('music_url', musicPost.value.musicUrl)
-                    formData.append('type', 'music')
+                    // Post tipo música
+                    // Título (título de la canción) es opcional
+                    if (musicPost.value.title) {
+                        formData.append('titulo', musicPost.value.title)
+                    }
+                    // Descripción es opcional (max 500 caracteres)
+                    if (musicPost.value.description) {
+                        formData.append('descripcion', musicPost.value.description)
+                    }
+                    // Imagen (portada) es opcional para posts de música
+                    if (musicPost.value.image) {
+                        formData.append('imagen', musicPost.value.image)
+                    }
+                    // Tipo es REQUERIDO
+                    formData.append('tipo', 'musica')
+                    // Campos opcionales de música según el backend
+                    // artista, titulo (ya enviado arriba), album
+                    // Por ahora no tenemos campos para artista/album en el formulario
                 }
 
-                // Enviar a la API
-                const response = await api.post('/posts', formData, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data'
-                    }
-                })
+                // DEBUG: Ver qué estamos enviando
+                console.log('=== FormData a enviar ===')
+                const token = AuthService.getToken()
+                console.log('Token:', token ? 'Presente ✓' : 'Ausente ✗')
+                console.log('Token completo:', token)
+                console.log('Usuario local:', AuthService.getUser())
+                for (let pair of formData.entries()) {
+                    console.log(pair[0] + ':', pair[1])
+                }
+
+                // Enviar a la API usando el método específico
+                const response = await api.createPost(formData)
 
                 await loading.dismiss()
 
@@ -384,10 +424,33 @@ export default {
             } catch (error) {
                 await loading.dismiss()
                 console.error('Error al publicar:', error)
+                console.error('Respuesta del servidor:', error.response?.data)
+                console.error('Error completo:', JSON.stringify(error.response?.data, null, 2))
+
+                // Extraer el mensaje de error específico del servidor
+                let errorMessage = 'Error al crear la publicación'
+
+                if (error.response?.data) {
+                    const errorData = error.response.data
+
+                    // Si el error es de SQL (columna no encontrada), mostrar mensaje específico
+                    if (errorData.error && errorData.error.includes('Column not found')) {
+                        errorMessage = '⚠️ Error del servidor: La base de datos no está actualizada. Contacta al administrador del backend.'
+                    }
+                    // Laravel devuelve errores de validación en el campo 'errors'
+                    else if (errorData.errors) {
+                        const firstErrorKey = Object.keys(errorData.errors)[0]
+                        errorMessage = errorData.errors[firstErrorKey][0]
+                    } else if (errorData.message) {
+                        errorMessage = errorData.message
+                    } else if (errorData.error) {
+                        errorMessage = errorData.error
+                    }
+                }
 
                 const toast = await toastController.create({
-                    message: error.response?.data?.message || 'Error al crear la publicación',
-                    duration: 3000,
+                    message: errorMessage,
+                    duration: 5000,
                     color: 'danger',
                     position: 'top'
                 })

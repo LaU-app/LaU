@@ -21,6 +21,9 @@ api.interceptors.request.use(
       sessionStorage.getItem("auth_token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('[API] Token agregado al request:', token.substring(0, 20) + '...');
+    } else {
+      console.warn('[API] No hay token disponible');
     }
     return config;
   },
@@ -68,6 +71,15 @@ export default {
   //funciones para obtener los posts (ya no necesitan token manualmente)
   getPost: () => {
     return api.get("/posts"); // GET http://localhost:8000/api/posts
+  },
+
+  // Crear un nuevo post (imagen o normal)
+  createPost: (formData) => {
+    return api.post("/posts", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
   },
 
   getUsers: () => {
