@@ -32,6 +32,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/new-post",
+    name: "NewPost",
+    component: () => import("@/views/NewPost.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/tabs/",
     component: TabsPage,
     children: [
