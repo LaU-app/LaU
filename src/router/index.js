@@ -51,6 +51,12 @@ const routes = [
         // Sin meta: permite acceso público (feed público) y autenticado (feed personalizado)
       },
       {
+        path: "/new-post",
+        name: "NewPost",
+        component: () => import("@/views/NewPost.vue"),
+        meta: { requiresAuth: true },
+      },
+      {
         path: "tab2",
         component: () => import("@/views/TestApi.vue"),
         meta: { requiresAuth: true },

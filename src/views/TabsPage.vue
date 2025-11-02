@@ -2,8 +2,10 @@
   <ion-page>
     <ion-tabs>
       <ion-router-outlet></ion-router-outlet>
+
       <!-- Tabs solo para usuarios autenticados -->
       <ion-tab-bar v-if="isAuthenticated" slot="bottom">
+        <!-- Home -->
         <ion-tab-button tab="tab1" href="/tabs/home">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"
             class="icon icon-tabler icons-tabler-filled icon-tabler-home">
@@ -14,16 +16,25 @@
           <ion-label>Home</ion-label>
         </ion-tab-button>
 
+        <!-- Tab 2 -->
         <ion-tab-button tab="tab2" href="/tabs/tab2">
           <ion-icon aria-hidden="true" :icon="ellipse" />
           <ion-label>Tab 2</ion-label>
         </ion-tab-button>
 
+        <!-- Agregar Post (+) --> 
+        <ion-tab-button @click="$router.push('/new-post')">
+          <ion-icon aria-hidden="true" :icon="addCircle" size="large" />
+          <ion-label>Agregar Post</ion-label>
+        </ion-tab-button>
+
+        <!-- Usuarios -->
         <ion-tab-button @click="openUsers">
           <ion-icon aria-hidden="true" :icon="peopleSharp" />
           <ion-label>Usuarios</ion-label>
         </ion-tab-button>
 
+        <!-- Perfil -->
         <ion-tab-button tab="perfil" href="/tabs/perfil">
           <ion-icon aria-hidden="true" :icon="person" />
           <ion-label>Perfil</ion-label>
@@ -35,7 +46,7 @@
 
 <script setup>
 import { IonTabBar, IonTabButton, IonTabs, IonLabel, IonIcon, IonPage, IonRouterOutlet } from '@ionic/vue';
-import { ellipse, people, peopleSharp, person } from 'ionicons/icons';
+import { ellipse, peopleSharp, person, addCircle  } from 'ionicons/icons';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { AuthService } from '@/services/auth';
@@ -69,6 +80,12 @@ ion-tab-button svg {
 }
 
 ion-tab-button.tab-selected svg {
+  color: var(--ion-color-primary);
+}
+
+/* Opcional: hacer que el + sea más visible */
+ion-tab-button[tab="add"] ion-icon {
+  font-size: 28px;
   color: var(--ion-color-primary);
 }
 </style>
