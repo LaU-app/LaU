@@ -178,7 +178,8 @@ import {
     IonRadioGroup,
     IonRadio,
     alertController,
-    toastController
+    toastController,
+    loadingController
 } from '@ionic/vue'
 import {
     cloudUploadOutline,
@@ -188,6 +189,8 @@ import {
     arrowBack,
     closeCircle
 } from 'ionicons/icons'
+import api from '../services/api'
+import { AuthService } from '../services/auth'
 
 const router = useRouter()
 const route = useRoute()
@@ -393,17 +396,134 @@ const cancelar = () => {
 const publicar = async () => {
     if (!puedePublicar.value) return
 
-    const alert = await alertController.create({
-        header: '¡Publicación creada!',
-        message: 'Tu contenido ha sido publicado correctamente.',
-        buttons: [{
-            text: 'OK',
-            handler: () => {
-                cancelar()
-            }
-        }]
+    // Validación previa específica para tipo foto
+    if (tipo.value === 'foto' && !archivo.value) {
+        const toast = await toastController.create({
+            message: 'Debes seleccionar una imagen para publicar',
+            duration: 3000,
+            color: 'warning',
+            position: 'top'
+        })
+        await toast.present()
+        return
+    }
+
+    const loading = await loadingController.create({
+        message: 'Publicando...',
     })
-    await alert.present()
+    await loading.present()
+
+    try {
+        const formData = new FormData()
+
+        // Mapear el tipo de CreatePost a los tipos del backend
+        // foto -> imagen, musica -> musica, archivo -> no implementado todavía
+        let tipoBackend = 'imagen' // Por defecto
+        if (tipo.value === 'foto') {
+            tipoBackend = 'imagen'
+        } else if (tipo.value === 'musica') {
+            tipoBackend = 'musica'
+        } else if (tipo.value === 'archivo') {
+            // Por ahora no soportado en el backend
+            await loading.dismiss()
+            const toast = await toastController.create({
+                message: 'La publicación de archivos no está disponible aún',
+                duration: 3000,
+                color: 'warning',
+                position: 'top'
+            })
+            await toast.present()
+            return
+        }
+
+        // Campos opcionales: título y descripción
+        if (titulo.value) {
+            formData.append('titulo', titulo.value)
+        }
+        if (descripcion.value) {
+            formData.append('descripcion', descripcion.value)
+        }
+
+        // Imagen es requerida para tipo 'imagen'
+        if (tipo.value === 'foto' && archivo.value) {
+            formData.append('imagen', archivo.value)
+        }
+
+        // Tipo es REQUERIDO
+        formData.append('tipo', tipoBackend)
+
+        // DEBUG: Ver qué estamos enviando
+        console.log('=== FormData a enviar desde CreatePost ===')
+        const token = AuthService.getToken()
+        console.log('Token:', token ? 'Presente ✓' : 'Ausente ✗')
+        console.log('Usuario local:', AuthService.getUser())
+        for (let pair of formData.entries()) {
+            console.log(pair[0] + ':', pair[1])
+        }
+
+        // Enviar a la API usando el método específico
+        const response = await api.createPost(formData)
+
+        await loading.dismiss()
+
+        if (response.data.success) {
+            const toast = await toastController.create({
+                message: '¡Publicación creada exitosamente!',
+                duration: 2000,
+                color: 'success',
+                position: 'top'
+            })
+            await toast.present()
+
+            // Limpiar formulario
+            titulo.value = ''
+            descripcion.value = ''
+            archivo.value = null
+            imagenPreview.value = null
+            busqueda.value = ''
+            visibilidad.value = 'publico'
+
+            // Navegar al feed
+            router.push('/tabs/tab1')
+        } else {
+            throw new Error(response.data.message || 'Error al crear publicación')
+        }
+
+    } catch (error) {
+        await loading.dismiss()
+        console.error('Error al publicar:', error)
+        console.error('Respuesta del servidor:', error.response?.data)
+        console.error('Error completo:', JSON.stringify(error.response?.data, null, 2))
+
+        // Extraer el mensaje de error específico del servidor
+        let errorMessage = 'Error al crear la publicación'
+
+        if (error.response?.data) {
+            const errorData = error.response.data
+
+            // Si el error es de SQL (columna no encontrada), mostrar mensaje específico
+            if (errorData.error && errorData.error.includes('Column not found')) {
+                errorMessage = '⚠️ Error del servidor: La base de datos no está actualizada. Contacta al administrador del backend.'
+            }
+            // Laravel devuelve errores de validación en el campo 'errors'
+            else if (errorData.errors) {
+                const firstErrorKey = Object.keys(errorData.errors)[0]
+                errorMessage = errorData.errors[firstErrorKey][0]
+            } else if (errorData.message) {
+                errorMessage = errorData.message
+            } else if (errorData.error) {
+                errorMessage = errorData.error
+            }
+        }
+
+        const toast = await toastController.create({
+            message: errorMessage,
+            duration: 4000,
+            color: 'danger',
+            position: 'top'
+        })
+        await toast.present()
+    }
 }
 </script>
 
