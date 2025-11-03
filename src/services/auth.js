@@ -141,25 +141,16 @@ export const AuthService = {
 
   async fetchProfile() {
     try {
-      // GET /me o /profile para validar token y obtener user actualizado
-      // Intenta primero con /me, si falla intenta con /profile
-      let res;
-      try {
-        res = await api.get("/me");
-      } catch (error) {
-        // Si /me no existe, intenta con /profile
-        if (error.response?.status === 404) {
-          res = await api.get("/profile");
-        } else {
-          throw error;
-        }
-      }
+      // GET /auth/user para validar token y obtener user actualizado
+      // Este endpoint está dentro del grupo middleware auth:sanctum
+      const res = await api.get("/auth/user");
 
       // Adaptarse a la estructura de respuesta
       const userData = res.data?.data || res.data;
 
       if (userData) {
-        localStorage.setItem(USER_KEY, JSON.stringify(userData));
+        const rememberMe = localStorage.getItem(REMEMBER_KEY) === "true";
+        this.setUser(userData, rememberMe);
       }
 
       return userData;

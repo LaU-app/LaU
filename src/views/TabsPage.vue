@@ -25,7 +25,12 @@
           <ion-label>Crear</ion-label>
         </ion-tab-button>
 
-        <ion-tab-button tab="tab3" href="/tabs/tab3">
+        <ion-tab-button @click="openUsers">
+          <ion-icon aria-hidden="true" :icon="peopleSharp" />
+          <ion-label>Usuarios</ion-label>
+        </ion-tab-button>
+
+        <ion-tab-button tab="perfil" href="/tabs/perfil">
           <ion-icon aria-hidden="true" :icon="person" />
           <ion-label>Perfil</ion-label>
         </ion-tab-button>
@@ -36,7 +41,7 @@
 
 <script setup>
 import { IonTabBar, IonTabButton, IonTabs, IonLabel, IonIcon, IonPage, IonRouterOutlet } from '@ionic/vue';
-import { person } from 'ionicons/icons';
+import { ellipse, people, peopleSharp, person } from 'ionicons/icons';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { AuthService } from '@/services/auth';
@@ -55,6 +60,11 @@ onMounted(() => {
 router.afterEach(() => {
   isAuthenticated.value = AuthService.isAuthenticated();
 });
+
+// Función para abrir la vista de usuarios como modal
+const openUsers = () => {
+  router.push('/users');
+};
 </script>
 
 <style scoped>

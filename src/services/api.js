@@ -1,7 +1,7 @@
 //importaciones axios para hacer peticiones HTTP
 import axios from "axios";
 
-const API_URL = "http://localhost:8000/api";
+const API_URL = "https://tester.sivarsocial.com/api"; // NO TOCAR O SI NO ANTES DE HACER PR CAMBIAR A LA URL CORRECTA
 
 //Creamos una instancia de axios para configuracion basica
 const api = axios.create({
@@ -16,9 +16,14 @@ const api = axios.create({
 // Interceptor para agregar el token automáticamente a todas las peticiones
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("auth_token");
+    const token =
+      localStorage.getItem("auth_token") ||
+      sessionStorage.getItem("auth_token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('[API] Token agregado al request:', token.substring(0, 20) + '...');
+    } else {
+      console.warn('[API] No hay token disponible');
     }
     return config;
   },
@@ -66,6 +71,15 @@ export default {
   //funciones para obtener los posts (ya no necesitan token manualmente)
   getPost: () => {
     return api.get("/posts"); // GET http://localhost:8000/api/posts
+  },
+
+  // Crear un nuevo post (imagen o normal)
+  createPost: (formData) => {
+    return api.post("/posts", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
   },
 
   getUsers: () => {

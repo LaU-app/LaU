@@ -26,6 +26,18 @@ const routes = [
     meta: { requiresGuest: true },
   },
   {
+    path: "/users",
+    name: "Users",
+    component: () => import("@/views/UsersView.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/new-post",
+    name: "NewPost",
+    component: () => import("@/views/NewPost.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/tabs/",
     component: TabsPage,
     children: [
@@ -48,6 +60,7 @@ const routes = [
       {
         path: "tab3",
         name: "Perfil",
+        path: "perfil",
         component: () => import("@/views/PerfilView.vue"),
         meta: { requiresAuth: true },
       },
