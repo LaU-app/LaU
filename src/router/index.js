@@ -32,9 +32,9 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/new-post",
-    name: "NewPost",
-    component: () => import("@/views/NewPost.vue"),
+    path: "/notifications",
+    name: "Notifications",
+    component: () => import("@/views/NotificationsView.vue"),
     meta: { requiresAuth: true },
   },
   {
@@ -52,6 +52,12 @@ const routes = [
         // Sin meta: permite acceso público (feed público) y autenticado (feed personalizado)
       },
       {
+        path: "post/:id",
+        name: "PostDetail",
+        component: () => import("@/views/PostDetailView.vue"),
+        // Sin meta: permite ver posts públicos sin login
+      },
+      {
         path: "tab2/:tipo?",
         name: "CreatePost",
         component: () => import("@/views/CreatePost.vue"),
@@ -62,6 +68,12 @@ const routes = [
         name: "Perfil",
         path: "perfil",
         component: () => import("@/views/PerfilView.vue"),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: "notifications",
+        name: "TabNotifications",
+        component: () => import("@/views/NotificationsView.vue"),
         meta: { requiresAuth: true },
       },
     ],

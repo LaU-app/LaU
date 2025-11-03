@@ -22,10 +22,11 @@
                     <!-- Card para crear post (solo para autenticados) -->
                     <CreatePostCard v-if="isAuthenticated" :user="user" />
 
-                    <ion-accordion-group>
+                    <!-- Lista de posts -->
+                    <div class="posts-list">
                         <PostCard v-for="post in posts" :key="post.id" :post="post" @like="handleLike"
                             @comment="handleComment" @share="handleShare" @imageError="handleImageError" />
-                    </ion-accordion-group>
+                    </div>
 
                     <ion-card v-if="!loading && !error && posts.length === 0">
                         <ion-card-content class="text-center">
@@ -46,7 +47,7 @@
 </template>
 
 <script>
-import { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonAccordionGroup, alertController } from '@ionic/vue'
+import { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, alertController } from '@ionic/vue'
 import AppHeader from '@/components/AppHeader.vue'
 import CreatePostCard from '@/components/CreatePostCard.vue'
 import PostCard from '@/components/PostCard.vue'
@@ -55,7 +56,7 @@ import { AuthService } from '@/services/auth'
 
 export default {
     name: 'HomeView',
-    components: { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonAccordionGroup, AppHeader, CreatePostCard, PostCard },
+    components: { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, AppHeader, CreatePostCard, PostCard },
     data() {
         return {
             posts: [],
@@ -285,6 +286,12 @@ export default {
 <style scoped>
 @import '../theme/colors.css';
 @import '../theme/home.css';
+
+.posts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
 
 /* Estilos personalizados para el alert */
 :global(.custom-alert) {

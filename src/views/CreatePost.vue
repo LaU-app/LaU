@@ -2,7 +2,7 @@
     <ion-page>
         <ion-header>
             <ion-toolbar>
-                <ion-buttons v-if="fromCard" slot="start">
+                <ion-buttons slot="start">
                     <ion-button @click="goBack">
                         <ion-icon :icon="arrowBack"></ion-icon>
                     </ion-button>

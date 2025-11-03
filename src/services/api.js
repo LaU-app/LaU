@@ -1,7 +1,7 @@
 //importaciones axios para hacer peticiones HTTP
 import axios from "axios";
 
-const API_URL = "https://tester.sivarsocial.com/api"; // NO TOCAR O SI NO ANTES DE HACER PR CAMBIAR A LA URL CORRECTA
+const API_URL = "http://127.0.0.1:8000/api"; // NO TOCAR O SI NO ANTES DE HACER PR CAMBIAR A LA URL CORRECTA
 
 //Creamos una instancia de axios para configuracion basica
 const api = axios.create({
@@ -71,6 +71,11 @@ export default {
   //funciones para obtener los posts (ya no necesitan token manualmente)
   getPost: () => {
     return api.get("/posts"); // GET http://localhost:8000/api/posts
+  },
+
+  // Obtener un post específico por ID
+  getPostById: (postId) => {
+    return api.get(`/posts/${postId}`); // GET http://localhost:8000/api/posts/{id}
   },
 
   // Crear un nuevo post (imagen o normal)

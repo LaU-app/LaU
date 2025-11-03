@@ -10,15 +10,8 @@
             <ion-grid class="post-actions-grid">
                 <ion-row>
                     <ion-col size="4">
-                        <ion-button fill="clear" size="small" class="action-btn" @click="$router.push('/new-post')">
-                            <div class="action-btn-content">
-                                <ion-icon :icon="documentAttachOutline" slot="start" color="primary"></ion-icon>
-                                <ion-label>Archivo</ion-label>
-                            </div>
-                        </ion-button>
-                    </ion-col>
-                    <ion-col size="4">
-                        <ion-button fill="clear" size="small" class="action-btn" @click="$router.push('/new-post')">
+                        <ion-button fill="clear" size="small" class="action-btn"
+                            @click="$router.push('/tabs/tab2/foto')">
                             <div class="action-btn-content">
                                 <ion-icon :icon="imageOutline" slot="start" color="success"></ion-icon>
                                 <ion-label>Imagen</ion-label>
@@ -26,13 +19,24 @@
                         </ion-button>
                     </ion-col>
                     <ion-col size="4">
-                        <ion-button fill="clear" size="small" class="action-btn" @click="$router.push('/new-post')">
+                        <ion-button fill="clear" size="small" class="action-btn"
+                            @click="$router.push('/tabs/tab2/musica')">
                             <div class="action-btn-content">
                                 <ion-icon :icon="musicalNotesOutline" slot="start" color="warning"></ion-icon>
                                 <ion-label>Musica</ion-label>
                             </div>
                         </ion-button>
                     </ion-col>
+                    <ion-col size="4">
+                        <ion-button fill="clear" size="small" class="action-btn"
+                            @click="$router.push('/tabs/tab2/archivo')">
+                            <div class="action-btn-content">
+                                <ion-icon :icon="documentAttachOutline" slot="start" color="primary"></ion-icon>
+                                <ion-label>Archivo</ion-label>
+                            </div>
+                        </ion-button>
+                    </ion-col>
+
                 </ion-row>
             </ion-grid>
         </ion-card-content>
