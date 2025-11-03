@@ -254,7 +254,7 @@ export default {
         async showLoginAlert() {
             // Solo mostrar si el usuario NO está autenticado Y está en la ruta del feed
             const currentRoute = this.$route.path
-            if (!this.isAuthenticated && currentRoute === '/tabs/tab1') {
+            if (!this.isAuthenticated && currentRoute === '/tabs/home') {
                 const alert = await alertController.create({
                     header: '¡Únete a LaÚ! 🎓',
                     message: 'Inicia sesión para seguir viendo el feed y aprovechar al máximo todas las funciones de LaÚ: conecta con estudiantes, comparte material y descubre eventos.',

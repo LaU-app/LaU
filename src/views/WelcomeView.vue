@@ -165,7 +165,7 @@ export default {
         },
         goToHome() {
             // Ir al feed principal sin importar si está autenticado o no
-            this.$router.push('/tabs/tab1')
+            this.$router.push('/tabs/home')
         },
         goToRegister() {
             this.$router.push('/register')
