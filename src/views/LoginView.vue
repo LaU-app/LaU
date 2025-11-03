@@ -158,7 +158,7 @@ export default {
                 await toast.present()
 
                 // Redirigir al home o dashboard
-                this.$router.replace('/tabs/home')
+                this.$router.replace('/tabs/tab1')
             } catch (error) {
                 console.error('Error en login:', error)
 

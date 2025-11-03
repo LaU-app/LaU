@@ -43,19 +43,23 @@ const routes = [
     children: [
       {
         path: "",
-        redirect: "/tabs/home",
+        redirect: "/tabs/tab1",
       },
       {
-        path: "home",
+        path: "tab1",
+        name: "Home",
         component: () => import("@/views/HomeView.vue"),
         // Sin meta: permite acceso público (feed público) y autenticado (feed personalizado)
       },
       {
-        path: "tab2",
-        component: () => import("@/views/TestApi.vue"),
+        path: "tab2/:tipo?",
+        name: "CreatePost",
+        component: () => import("@/views/CreatePost.vue"),
         meta: { requiresAuth: true },
       },
       {
+        path: "tab3",
+        name: "Perfil",
         path: "perfil",
         component: () => import("@/views/PerfilView.vue"),
         meta: { requiresAuth: true },
@@ -86,9 +90,9 @@ router.beforeEach(async (to, from, next) => {
   }
   // Si la ruta es para invitados (login/register) y ya está autenticado
   else if (to.meta.requiresGuest && isAuthenticated) {
-    next("/tabs/home");
+    next("/tabs/tab1");
   }
-  // Caso normal (incluye /welcome y /tabs/home sin autenticación)
+  // Caso normal (incluye /welcome y /tabs/tab1 sin autenticación)
   else {
     next();
   }

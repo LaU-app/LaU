@@ -10,6 +10,7 @@
             <ion-grid class="post-actions-grid">
                 <ion-row>
                     <ion-col size="4">
+                        <ion-button fill="clear" size="small" class="action-btn" @click="goToCreatePost('foto')">
                         <ion-button fill="clear" size="small" class="action-btn" @click="$router.push('/new-post')">
                             <div class="action-btn-content">
                                 <ion-icon :icon="documentAttachOutline" slot="start" color="primary"></ion-icon>
@@ -75,4 +76,8 @@ export default {
 <style scoped>
 @import '../theme/colors.css';
 @import '../theme/home.css';
+
+.action-btn {
+    width: 100%;
+}
 </style>
