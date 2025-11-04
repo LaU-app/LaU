@@ -22,10 +22,11 @@
 
         <!-- Post Content -->
         <ion-card-content>
-            <!-- Título y/o Descripción (Dinámico) -->
-            <ion-text v-if="post.titulo || post.descripcion">
+            <!-- Título y/o Descripción o Texto (Dinámico) -->
+            <ion-text v-if="post.titulo || post.descripcion || post.texto">
                 <h2 v-if="post.titulo" class="post-title">{{ post.titulo }}</h2>
                 <p v-if="post.descripcion" class="post-text">{{ post.descripcion }}</p>
+                <p v-if="post.texto && !post.descripcion" class="post-text post-text-only">{{ post.texto }}</p>
             </ion-text>
 
             <!-- Imagen Post -->
@@ -145,6 +146,12 @@ export default {
     color: var(--ion-color-step-600);
 }
 
+.post-text-only {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--ion-color-dark);
+}
+
 .comments-preview {
     padding-top: 0.5rem;
     padding-bottom: 0.75rem;
@@ -156,7 +163,6 @@ export default {
     margin: 0;
     cursor: pointer;
 }
-
 .comments-count:hover {
     text-decoration: underline;
 }

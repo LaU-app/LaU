@@ -173,6 +173,45 @@ class PostsService {
       return { success: false, error: err.message };
     }
   }
+
+  /**
+   * Crea un nuevo post de solo texto
+   * @param {string} texto - Contenido del post
+   * @returns {Promise<Object>} Respuesta de la API
+   */
+  async createTextPost(texto) {
+    try {
+      const payload = {
+        tipo: "texto",
+        texto: texto,
+      };
+
+      const response = await api.post("/posts", payload);
+
+      return {
+        success: true,
+        data: response.data?.data || response.data,
+      };
+    } catch (err) {
+      let errorMessage = "Error al crear el post";
+
+      if (err.response) {
+        if (err.response.status === 401) {
+          errorMessage = "Debes iniciar sesión para publicar";
+        } else if (err.response.status === 422) {
+          errorMessage =
+            err.response.data?.message || "Datos inválidos para el post";
+        } else {
+          errorMessage =
+            err.response.data?.message || "Error del servidor al crear post";
+        }
+      } else if (err.request) {
+        errorMessage = "No se pudo conectar con el servidor";
+      }
+
+      return { success: false, error: errorMessage };
+    }
+  }
 }
 
 // Exportar instancia singleton del servicio

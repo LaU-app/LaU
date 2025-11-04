@@ -6,15 +6,28 @@
                     <img v-if="user.imagen_url" :src="user.imagen_url" alt="Usuario" />
                     <ion-icon v-else :icon="personCircle" size="large"></ion-icon>
                 </ion-avatar>
-                <ion-input placeholder="¿Qué estás estudiando?" class="post-input">
-                    <svg slot="end" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-bubble">
-                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                        <path
-                            d="M12.4 3a5.34 5.34 0 0 1 4.906 3.239a5.333 5.333 0 0 1 -1.195 10.6a4.26 4.26 0 0 1 -5.28 1.863l-3.831 2.298v-3.134a2.668 2.668 0 0 1 -1.795 -3.773a4.8 4.8 0 0 1 2.908 -8.933a5.33 5.33 0 0 1 4.287 -2.16" />
-                    </svg>
-                </ion-input>
+                <div class="input-container">
+                    <ion-input v-model="postText" placeholder="¿Qué estás estudiando?" class="post-input"
+                        @ionInput="onTextInput" :disabled="isPosting">
+                    </ion-input>
+                    <div class="input-icon-wrapper">
+                        <transition name="fade-slide">
+                            <ion-button v-if="hasText" key="button" fill="solid" shape="round" size="small"
+                                color="primary" @click="handlePublishText" :disabled="isPosting">
+                                <ion-icon v-if="!isPosting" :icon="sendIcon" slot="icon-only"></ion-icon>
+                                <ion-spinner v-else name="crescent" slot="icon-only"></ion-spinner>
+                            </ion-button>
+                            <svg v-else key="icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round"
+                                class="icon icon-tabler icons-tabler-outline icon-tabler-bubble bubble-icon">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path
+                                    d="M12.4 3a5.34 5.34 0 0 1 4.906 3.239a5.333 5.333 0 0 1 -1.195 10.6a4.26 4.26 0 0 1 -5.28 1.863l-3.831 2.298v-3.134a2.668 2.668 0 0 1 -1.795 -3.773a4.8 4.8 0 0 1 2.908 -8.933a5.33 5.33 0 0 1 4.287 -2.16" />
+                            </svg>
+                        </transition>
+                    </div>
+                </div>
             </div>
             <ion-grid class="post-actions-grid">
                 <ion-row>
@@ -73,8 +86,9 @@
 </template>
 
 <script>
-import { IonCard, IonCardContent, IonAvatar, IonInput, IonGrid, IonRow, IonCol, IonButton, IonLabel, IonIcon } from '@ionic/vue'
-import { personCircle } from 'ionicons/icons'
+import { IonCard, IonCardContent, IonAvatar, IonInput, IonGrid, IonRow, IonCol, IonButton, IonLabel, IonIcon, IonSpinner, toastController } from '@ionic/vue'
+import { personCircle, send } from 'ionicons/icons'
+import PostsService from '../services/postsService'
 
 export default {
     name: 'CreatePostCard',
@@ -88,7 +102,8 @@ export default {
         IonCol,
         IonButton,
         IonLabel,
-        IonIcon
+        IonIcon,
+        IonSpinner
     },
     props: {
         user: {
@@ -98,7 +113,61 @@ export default {
     },
     data() {
         return {
-            personCircle
+            personCircle,
+            sendIcon: send,
+            postText: '',
+            isPosting: false
+        }
+    },
+    computed: {
+        hasText() {
+            return this.postText && this.postText.trim().length > 0
+        }
+    },
+    methods: {
+        onTextInput(event) {
+            // Input handler para eventos futuros si es necesario
+        },
+        async handlePublishText() {
+            if (!this.postText || this.postText.trim() === '') {
+                return
+            }
+
+            this.isPosting = true
+
+            try {
+                const result = await PostsService.createTextPost(this.postText.trim())
+
+                if (result.success) {
+                    // Mostrar mensaje de éxito
+                    const toast = await toastController.create({
+                        message: '¡Post publicado exitosamente!',
+                        duration: 2000,
+                        color: 'success',
+                        position: 'top'
+                    })
+                    await toast.present()
+
+                    // Limpiar el input
+                    this.postText = ''
+
+                    // Emitir evento para que el componente padre recargue los posts
+                    this.$emit('post-created', result.data)
+                } else {
+                    throw new Error(result.error || 'Error al publicar')
+                }
+            } catch (error) {
+                console.error('Error al publicar post:', error)
+                const toast = await toastController.create({
+                    message: error.message || 'Error al publicar el post',
+                    duration: 3000,
+                    color: 'danger',
+                    position: 'top'
+                })
+                await toast.present()
+            } finally {
+                this.isPosting = false
+            }
         }
     }
 }
@@ -107,4 +176,86 @@ export default {
 <style scoped>
 @import '../theme/colors.css';
 @import '../theme/home.css';
+
+.input-container {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+/* Ocultar la línea por defecto de Ionic */
+.input-container ion-input {
+    --highlight-height: 0px;
+}
+
+.input-container ion-input::part(native) {
+    border-radius: 20px;
+}
+
+/* Crear un borde azul que rodea todo el input */
+.input-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 2px solid transparent;
+    border-radius: 20px;
+    transition: border-color 0.3s ease;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.input-container:focus-within::after {
+    border-color: var(--ion-color-primary);
+}
+
+.input-icon-wrapper {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.bubble-icon {
+    color: var(--ion-color-medium);
+}
+
+.input-icon-wrapper ion-button {
+    position: absolute;
+    right: -12px;
+    --padding-start: 10px;
+    --padding-end: 10px;
+    margin: 0;
+    width: 44px;
+    height: 44px;
+}
+
+/* Transiciones suaves */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+    transition: all 0.3s ease;
+}
+
+.fade-slide-enter-from {
+    opacity: 0;
+    transform: scale(0.8) translateX(10px);
+}
+
+.fade-slide-leave-to {
+    opacity: 0;
+    transform: scale(0.8) translateX(-10px);
+}
+
+.fade-slide-enter-to,
+.fade-slide-leave-from {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+}
 </style>

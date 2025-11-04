@@ -51,10 +51,12 @@
 
                     <!-- Post Content -->
                     <ion-card-content>
-                        <!-- Título y/o Descripción (Dinámico) -->
-                        <ion-text v-if="post.titulo || post.descripcion">
+                        <!-- Título y/o Descripción o Texto (Dinámico) -->
+                        <ion-text v-if="post.titulo || post.descripcion || post.texto">
                             <h2 v-if="post.titulo" class="post-title">{{ post.titulo }}</h2>
                             <p v-if="post.descripcion" class="post-description">{{ post.descripcion }}</p>
+                            <p v-if="post.texto && !post.descripcion" class="post-description post-text-only">{{
+                                post.texto }}</p>
                         </ion-text>
 
                         <!-- Imagen Post -->
@@ -360,6 +362,12 @@ const submitComment = async () => {
     line-height: 1.5;
     margin: 0.5rem 0 1rem 0;
     color: var(--ion-color-step-600);
+}
+
+.post-text-only {
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: var(--ion-color-dark);
 }
 
 .post-media {

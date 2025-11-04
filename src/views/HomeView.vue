@@ -20,7 +20,7 @@
 
                 <div v-if="!loading" class="feed-container">
                     <!-- Card para crear post (solo para autenticados) -->
-                    <CreatePostCard v-if="isAuthenticated" :user="user" />
+                    <CreatePostCard v-if="isAuthenticated" :user="user" @post-created="handlePostCreated" />
 
                     <!-- Lista de posts -->
                     <div class="posts-list">
@@ -251,6 +251,11 @@ export default {
             this.currentPage = 1
             await this.fetchPosts(1)
             event.target.complete()
+        },
+        handlePostCreated(newPost) {
+            console.log('Nuevo post creado:', newPost)
+            // Recargar los posts para mostrar el nuevo
+            this.fetchPosts(1)
         },
         async showLoginAlert() {
             // Solo mostrar si el usuario NO está autenticado Y está en la ruta del feed
