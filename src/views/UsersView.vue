@@ -363,18 +363,25 @@ ion-avatar {
     color: #9CA3AF;
 }
 
+ion-list {
+    background: #ffffff;
+    padding: 8px;
+}
+
 ion-list ion-item {
-    --ion-item-background: var(--ion-card-background);
+    --ion-item-background: #ffffff;
     --min-height: 100px;
-    margin: 10px;
+    margin: 8px 0;
     border-radius: 8px;
+    border: 1px solid #F3F4F6;
 }
 
 .filters {
-    background: var(--ion-card-background);
+    background: #F9FAFB;
     padding: 0;
     margin: 0;
     --ion-grid-padding: 0;
+    border-bottom: 1px solid #E5E7EB;
 }
 
 .filters ion-row {
@@ -447,7 +454,7 @@ ion-toolbar ion-icon {
 }
 
 ion-searchbar {
-    --background: #f3f4f6;
+    --background: #F9FAFB;
     --border-radius: 10px;
     --box-shadow: none;
     --placeholder-color: #9ca3af;
@@ -457,6 +464,6 @@ ion-searchbar {
 }
 
 ion-content {
-    --background: #f9fafb;
+    --background: #ffffff;
 }
 </style>

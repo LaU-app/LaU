@@ -125,21 +125,23 @@ const handlePostImageError = (event) => {
 
 <style scoped>
 .notification-item {
+    --background: #ffffff;
     --padding-start: 16px;
     --padding-end: 16px;
     --min-height: 80px;
     margin-bottom: 8px;
     cursor: pointer;
     transition: background-color 0.2s ease;
+    border-bottom: 1px solid #F3F4F6;
 }
 
 .notification-item.unread {
-    background-color: rgba(var(--ion-color-primary-rgb), 0.05);
+    background-color: #F0F9FF;
     border-left: 3px solid var(--ion-color-primary);
 }
 
 .notification-item:hover {
-    background-color: rgba(var(--ion-color-medium-rgb), 0.1);
+    background-color: #F9FAFB;
 }
 
 ion-avatar {

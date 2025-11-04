@@ -1,17 +1,16 @@
 <template>
   <ion-page>
-    <ion-header :translucent="true">
+    <ion-header>
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button default-href="/tabs/tab1"></ion-back-button>
+          <ion-button @click="goBack">
+            <ion-icon slot="icon-only" :icon="closeOutline"></ion-icon>
+          </ion-button>
         </ion-buttons>
         <ion-title>Notificaciones</ion-title>
         <ion-buttons slot="end">
           <!-- Botón para marcar todas como leídas -->
-          <ion-button 
-            @click="markAllAsRead" 
-            :disabled="unreadCount === 0"
-          >
+          <ion-button @click="markAllAsRead" :disabled="unreadCount === 0">
             <ion-icon :icon="checkmarkDone" slot="icon-only" />
           </ion-button>
           <!-- Botón de opciones -->
@@ -58,24 +57,12 @@
 
       <!-- Lista de notificaciones -->
       <ion-list v-else-if="notifications.length > 0" class="notifications-list">
-        <NotificationItem
-          v-for="notification in notifications"
-          :key="notification.id"
-          :notification="notification"
-          @read="handleMarkAsRead"
-          @click="handleNotificationClick"
-        />
+        <NotificationItem v-for="notification in notifications" :key="notification.id" :notification="notification"
+          @read="handleMarkAsRead" @click="handleNotificationClick" />
 
         <!-- Infinite scroll para cargar más -->
-        <ion-infinite-scroll
-          v-if="hasMorePages"
-          @ionInfinite="loadMoreNotifications($event)"
-          threshold="100px"
-        >
-          <ion-infinite-scroll-content
-            loading-spinner="crescent"
-            loading-text="Cargando más notificaciones..."
-          >
+        <ion-infinite-scroll v-if="hasMorePages" @ionInfinite="loadMoreNotifications($event)" threshold="100px">
+          <ion-infinite-scroll-content loading-spinner="crescent" loading-text="Cargando más notificaciones...">
           </ion-infinite-scroll-content>
         </ion-infinite-scroll>
       </ion-list>
@@ -98,7 +85,6 @@ import {
   IonTitle,
   IonContent,
   IonButtons,
-  IonBackButton,
   IonButton,
   IonIcon,
   IonSegment,
@@ -115,19 +101,23 @@ import {
   toastController,
   alertController
 } from '@ionic/vue';
-import { 
-  notificationsOutline, 
-  ellipsisVertical, 
-  checkmarkDone, 
-  heart, 
-  chatbubble, 
+import {
+  notificationsOutline,
+  ellipsisVertical,
+  checkmarkDone,
+  heart,
+  chatbubble,
   personAdd,
   trashOutline,
-  checkmarkCircleOutline
+  checkmarkCircleOutline,
+  closeOutline
 } from 'ionicons/icons';
 import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { notificationsService } from '@/services/notificationsService';
 import NotificationItem from '@/components/NotificationItem.vue';
+
+const router = useRouter();
 
 // Estado
 const notifications = ref([]);
@@ -141,7 +131,7 @@ const hasMorePages = ref(true);
 const loadNotifications = async (page = 1, append = false) => {
   try {
     isLoading.value = true;
-    
+
     let response;
     if (selectedType.value === 'all') {
       response = await notificationsService.getNotifications(page);
@@ -151,7 +141,7 @@ const loadNotifications = async (page = 1, append = false) => {
 
     if (response.success) {
       const newNotifications = response.data.data || [];
-      
+
       if (append) {
         notifications.value = [...notifications.value, ...newNotifications];
       } else {
@@ -193,7 +183,7 @@ const filterByType = () => {
 const handleMarkAsRead = async (notificationId) => {
   try {
     await notificationsService.markAsRead(notificationId);
-    
+
     // Actualizar en el array local
     const notification = notifications.value.find(n => n.id === notificationId);
     if (notification) {
@@ -209,13 +199,13 @@ const handleMarkAsRead = async (notificationId) => {
 const markAllAsRead = async () => {
   try {
     const response = await notificationsService.markAllAsRead();
-    
+
     if (response.success) {
       // Actualizar todas en el array local
       notifications.value.forEach(notification => {
         notification.read_at = new Date().toISOString();
       });
-      
+
       unreadCount.value = 0;
       showToast('Todas las notificaciones marcadas como leídas', 'success');
     }
@@ -241,7 +231,7 @@ const clearReadNotifications = async () => {
         handler: async () => {
           try {
             const response = await notificationsService.clearReadNotifications();
-            
+
             if (response.success) {
               // Filtrar notificaciones leídas del array local
               notifications.value = notifications.value.filter(n => !n.read_at);
@@ -319,22 +309,56 @@ const showToast = async (message, color = 'primary') => {
   await toast.present();
 };
 
+// Función para cerrar la vista
+const goBack = () => {
+  router.back();
+};
+
 // Lifecycle
 onMounted(() => {
   loadNotifications();
   loadUnreadCount();
-  
+
   // Opcional: polling para actualizar el contador cada 30 segundos
   const interval = setInterval(loadUnreadCount, 30000);
-  
+
   // Limpiar interval al desmontar
   return () => clearInterval(interval);
 });
 </script>
 
 <style scoped>
+/* Toolbar styles */
+ion-header {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+ion-toolbar {
+  --background: #ffffff;
+  --border-width: 0;
+}
+
+ion-toolbar ion-title {
+  font-weight: bold;
+  font-size: 18px;
+  color: #1f2937;
+}
+
+ion-toolbar ion-button {
+  --color: #6b7280;
+}
+
+ion-toolbar ion-icon {
+  font-size: 24px;
+}
+
+ion-content {
+  --background: #ffffff;
+}
+
 .notifications-list {
-  padding: 16px 8px;
+  padding: 8px;
+  background: #ffffff;
 }
 
 .loading-container {
@@ -383,7 +407,8 @@ onMounted(() => {
 
 /* Estilos para el segmento */
 ion-segment {
-  --background: var(--ion-color-light);
+  --background: #F9FAFB;
+  margin: 0;
 }
 
 ion-segment-button {

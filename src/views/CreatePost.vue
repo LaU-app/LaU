@@ -4,26 +4,49 @@
             <ion-toolbar>
                 <ion-buttons slot="start">
                     <ion-button @click="goBack">
-                        <ion-icon :icon="arrowBack"></ion-icon>
+                        <ion-icon slot="icon-only" :icon="closeOutline"></ion-icon>
                     </ion-button>
                 </ion-buttons>
                 <ion-title>Nueva publicación</ion-title>
             </ion-toolbar>
         </ion-header>
 
-        <ion-content class="ion-padding">
+        <ion-content>
             <!-- Selector de tipo -->
             <ion-segment :value="tipo" @ionChange="handleSegmentChange" class="segmento-personalizado">
                 <ion-segment-button value="foto">
-                    <ion-icon :icon="cameraOutline" />
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="custom-icon">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path
+                            d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2" />
+                        <path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+                    </svg>
                     <ion-label>Foto</ion-label>
                 </ion-segment-button>
                 <ion-segment-button value="musica">
-                    <ion-icon :icon="musicalNotesOutline" />
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="custom-icon">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M3 17a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+                        <path d="M9 17v-13h10v8" />
+                        <path d="M9 8h10" />
+                        <path d="M19 22v-6" />
+                        <path d="M22 19l-3 -3l-3 3" />
+                    </svg>
                     <ion-label>Música</ion-label>
                 </ion-segment-button>
                 <ion-segment-button value="archivo">
-                    <ion-icon :icon="documentOutline" />
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="custom-icon">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+                        <path
+                            d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2zm-7 -7h.01m3.99 0h.01m-4.01 3h4" />
+                    </svg>
                     <ion-label>Archivo</ion-label>
                 </ion-segment-button>
             </ion-segment>
@@ -183,11 +206,9 @@ import {
 } from '@ionic/vue'
 import {
     cloudUploadOutline,
-    cameraOutline,
-    musicalNotesOutline,
-    documentOutline,
-    arrowBack,
-    closeCircle
+    closeOutline,
+    closeCircle,
+    documentOutline
 } from 'ionicons/icons'
 import api from '../services/api'
 import { AuthService } from '../services/auth'
@@ -207,17 +228,6 @@ const fileInput = ref(null)
 const fileInputArchivo = ref(null)
 const contenedorContenidoRef = ref(null)
 
-// Detectar si viene del CreatePostCard o del Tab Menu directo
-// Verificamos si la página anterior era tab1 (feed/home)
-const fromCard = computed(() => {
-    const historyState = window.history.state
-    const fromTab1 = historyState?.back?.includes('/tabs/tab1')
-    const position = historyState?.position
-
-    // Si hay posición en el historial y viene de tab1, mostrar flecha
-    return fromTab1 && position > 0
-})
-
 // Inicializar el tipo desde la ruta
 onMounted(() => {
     const tipoParam = route.params.tipo
@@ -225,8 +235,8 @@ onMounted(() => {
         tipo.value = tipoParam
     } else {
         tipo.value = 'foto'
-        // No usar replace, usar push para mantener el historial correcto
-        router.push(`/tabs/tab2/foto`)
+        // Actualizar la URL para que coincida con la ruta independiente
+        router.replace(`/create-post/foto`)
     }
 })
 
@@ -235,10 +245,10 @@ watch(tipo, (nuevoTipo, tipoAnterior) => {
     if (tipoAnterior && route.params.tipo !== nuevoTipo) {
         // Actualizar la URL sin disparar animaciones de Ionic
         // Usamos history.replaceState directamente para evitar animaciones
-        const newPath = `/tabs/tab2/${nuevoTipo}`
+        const newPath = `/create-post/${nuevoTipo}`
         const currentState = window.history.state
 
-        // Mantener el estado del historial para que fromCard siga funcionando
+        // Mantener el estado del historial
         window.history.replaceState(
             {
                 ...currentState,
@@ -368,7 +378,7 @@ const showToast = async (message, color = 'primary') => {
     await toast.present()
 }
 
-// Función para volver (solo cuando viene de tarjeta) - siempre va a tab1
+// Función para volver - usa router.back() para la transición nativa de Ionic
 const goBack = () => {
     // Limpiar el formulario
     busqueda.value = ''
@@ -528,8 +538,56 @@ const publicar = async () => {
 </script>
 
 <style scoped>
+/* Custom SVG icons */
+.custom-icon {
+    width: 24px;
+    height: 24px;
+    color: currentColor;
+}
+
+/* Toolbar styles */
+ion-header {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+ion-toolbar {
+    --background: #ffffff;
+    --border-width: 0;
+}
+
+ion-toolbar ion-title {
+    font-weight: bold;
+    font-size: 18px;
+    color: #1f2937;
+}
+
+ion-toolbar ion-button {
+    --color: #6b7280;
+}
+
+ion-toolbar ion-icon {
+    font-size: 24px;
+}
+
+ion-content {
+    --background: #ffffff;
+}
+
 .segmento-personalizado {
-    margin-bottom: 1.5rem;
+    margin: 16px;
+    margin-bottom: 24px;
+    width: calc(100% - 32px);
+}
+
+.segmento-personalizado ion-segment-button {
+    flex: 1;
+    max-width: none;
+    min-width: 0;
+}
+
+.segmento-personalizado ion-label {
+    margin-top: 4px;
+    font-size: 12px;
 }
 
 /* Contenedor de las secciones con animación */
@@ -538,6 +596,7 @@ const publicar = async () => {
     min-height: 300px;
     overflow: hidden;
     transition: opacity 0.3s ease-in-out;
+    padding: 0 16px;
 }
 
 /* Animación del contenedor durante el cambio */
@@ -554,7 +613,7 @@ const publicar = async () => {
 }
 
 .contenido-interno {
-    padding: 0.5rem 0.25rem 1rem 0.25rem;
+    padding: 0;
     min-height: 200px;
 }
 
@@ -576,17 +635,18 @@ const publicar = async () => {
 }
 
 .caja-subida {
-    border: 2px dashed var(--ion-color-medium);
+    border: 2px dashed #E5E7EB;
     border-radius: 12px;
     padding: 2rem;
     text-align: center;
     cursor: pointer;
     transition: all 0.3s;
+    background: #ffffff;
 }
 
 .caja-subida:hover {
     border-color: var(--ion-color-primary);
-    background: var(--ion-color-light);
+    background: #F9FAFB;
 }
 
 .caja-subida h3 {
@@ -650,12 +710,14 @@ const publicar = async () => {
 
 .caja-busqueda {
     border-radius: 12px;
-    --background: var(--ion-color-light);
+    --background: #ffffff;
     margin-bottom: 1rem;
+    border: 1px solid #E5E7EB;
 }
 
 .seccion-formulario {
     margin: 1.5rem 0;
+    padding: 0 16px;
 }
 
 .etiqueta-seccion {
@@ -677,7 +739,7 @@ ion-item p {
 }
 
 .boton-publicar {
-    margin: 2rem 0 1rem 0;
+    margin: 2rem 16px 1rem 16px;
 }
 
 .texto-ayuda {
@@ -685,5 +747,16 @@ ion-item p {
     font-size: 0.875rem;
     color: var(--ion-color-medium);
     margin: 0;
+    padding: 0 16px;
+}
+
+/* Estilos para ion-item sin fondo */
+ion-item {
+    --background: #ffffff;
+    --border-color: #E5E7EB;
+}
+
+.vista-previa-archivo {
+    background: #ffffff;
 }
 </style>
