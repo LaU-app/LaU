@@ -85,7 +85,7 @@
                             </svg>
                             <h3>Tomar o seleccionar foto</h3>
                             <p class="texto-pequeno">Usa tu cámara o elige de la galería</p>
-                            <p class="texto-pequeno">JPG, PNG. Máximo 5MB</p>
+                            <p class="texto-pequeno">JPG, PNG. Máximo 20MB</p>
                             <ion-button fill="outline">Elegir</ion-button>
                         </div>
                         <input ref="fileInput" type="file" hidden accept="image/jpeg,image/png,image/jpg"
@@ -117,7 +117,8 @@
                         <!-- Preview del archivo -->
                         <div v-if="archivo && tipo === 'archivo'" class="vista-previa-archivo">
                             <div class="info-archivo">
-                                <ion-icon :icon="documentOutline" size="large" color="success"></ion-icon>
+                                <!-- Ícono dinámico según tipo de archivo -->
+                                <div class="file-icon-container" v-html="getFileIcon(archivo.name)"></div>
                                 <div class="detalles-archivo">
                                     <h4>{{ archivo.name }}</h4>
                                     <p>{{ formatFileSize(archivo.size) }}</p>
@@ -140,10 +141,10 @@
                                 <path d="M10 17a3.5 3.5 0 0 0 4 0" />
                             </svg>
                             <h3>Subir archivo</h3>
-                            <p class="texto-pequeno">PDF, DOCX, ZIP. Máximo 10MB</p>
+                            <p class="texto-pequeno">PDF, DOC, DOCX, ZIP. Máximo 5MB</p>
                             <ion-button fill="outline">Seleccionar archivo</ion-button>
                         </div>
-                        <input ref="fileInputArchivo" type="file" hidden accept=".pdf,.doc,.docx,.zip,.rar"
+                        <input ref="fileInputArchivo" type="file" hidden accept=".pdf,.doc,.docx,.zip"
                             @change="handleFileUpload" />
                     </div>
                 </div>
@@ -397,9 +398,9 @@ const processImage = async (image) => {
         const fileName = `photo_${Date.now()}.${image.format || 'jpg'}`
         const file = new File([blob], fileName, { type: `image/${image.format || 'jpeg'}` })
 
-        // Validar tamaño (5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            showToast('La imagen no debe superar 5MB', 'warning')
+        // Validar tamaño (20MB según el backend)
+        if (file.size > 20 * 1024 * 1024) {
+            showToast('La imagen no debe superar 20MB', 'warning')
             imagenPreview.value = null
             return
         }
@@ -416,9 +417,9 @@ const handleFileUpload = (e) => {
     if (!file) return
 
     if (tipo.value === 'foto') {
-        // Validar tamaño (5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            showToast('La imagen no debe superar 5MB', 'warning')
+        // Validar tamaño (20MB según el backend)
+        if (file.size > 20 * 1024 * 1024) {
+            showToast('La imagen no debe superar 20MB', 'warning')
             return
         }
 
@@ -430,11 +431,21 @@ const handleFileUpload = (e) => {
         reader.readAsDataURL(file)
         archivo.value = file
     } else if (tipo.value === 'archivo') {
-        // Validar tamaño (10MB)
-        if (file.size > 10 * 1024 * 1024) {
-            showToast('El archivo no debe superar 10MB', 'warning')
+        // Validar tamaño (5MB según el backend)
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('El archivo no debe superar 5MB', 'warning')
             return
         }
+
+        // Validar extensión
+        const validExtensions = ['.pdf', '.doc', '.docx', '.zip']
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase()
+
+        if (!validExtensions.includes(fileExtension)) {
+            showToast('Solo se permiten archivos PDF, DOC, DOCX y ZIP', 'warning')
+            return
+        }
+
         archivo.value = file
     }
 }
@@ -460,6 +471,20 @@ const formatFileSize = (bytes) => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+}
+
+const getFileIcon = (fileName) => {
+    if (!fileName) return ''
+    const extension = fileName.split('.').pop().toLowerCase()
+
+    const icons = {
+        'pdf': `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4" /><path d="M5 18h1.5a1.5 1.5 0 0 0 0 -3h-1.5v6" /><path d="M17 18h2" /><path d="M20 15h-3v6" /><path d="M11 15v6h1a2 2 0 0 0 2 -2v-2a2 2 0 0 0 -2 -2h-1z" /></svg>`,
+        'doc': `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4" /><path d="M5 15v6h1a2 2 0 0 0 2 -2v-2a2 2 0 0 0 -2 -2h-1z" /><path d="M20 16.5a1.5 1.5 0 0 0 -3 0v3a1.5 1.5 0 0 0 3 0" /><path d="M12.5 15a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1 -3 0v-3a1.5 1.5 0 0 1 1.5 -1.5z" /></svg>`,
+        'docx': `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4" /><path d="M2 15v6h1a2 2 0 0 0 2 -2v-2a2 2 0 0 0 -2 -2h-1z" /><path d="M17 16.5a1.5 1.5 0 0 0 -3 0v3a1.5 1.5 0 0 0 3 0" /><path d="M9.5 15a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1 -3 0v-3a1.5 1.5 0 0 1 1.5 -1.5z" /><path d="M19.5 15l3 6" /><path d="M19.5 21l3 -6" /></svg>`,
+        'zip': `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4" /><path d="M16 18h1.5a1.5 1.5 0 0 0 0 -3h-1.5v6" /><path d="M12 15v6" /><path d="M5 15h3l-3 6h3" /></svg>`
+    }
+
+    return icons[extension] || icons['pdf']
 }
 
 const puedePublicar = computed(() => {
@@ -534,6 +559,18 @@ const publicar = async () => {
         return
     }
 
+    // Validación previa específica para tipo archivo
+    if (tipo.value === 'archivo' && !archivo.value) {
+        const toast = await toastController.create({
+            message: 'Debes seleccionar un archivo para publicar',
+            duration: 3000,
+            color: 'warning',
+            position: 'top'
+        })
+        await toast.present()
+        return
+    }
+
     const loading = await loadingController.create({
         message: 'Publicando...',
     })
@@ -543,23 +580,22 @@ const publicar = async () => {
         const formData = new FormData()
 
         // Mapear el tipo de CreatePost a los tipos del backend
-        // foto -> imagen, musica -> musica, archivo -> no implementado todavía
-        let tipoBackend = 'imagen' // Por defecto
+        let tipoBackend = 'archivo' // Por defecto para archivos
         if (tipo.value === 'foto') {
             tipoBackend = 'imagen'
+            // Imagen es requerida para tipo 'imagen' (foto)
+            if (archivo.value) {
+                formData.append('imagen', archivo.value)
+            }
         } else if (tipo.value === 'musica') {
             tipoBackend = 'musica'
         } else if (tipo.value === 'archivo') {
-            // Por ahora no soportado en el backend
-            await loading.dismiss()
-            const toast = await toastController.create({
-                message: 'La publicación de archivos no está disponible aún',
-                duration: 3000,
-                color: 'warning',
-                position: 'top'
-            })
-            await toast.present()
-            return
+            // Para archivos, usamos tipo "archivo" en el backend
+            tipoBackend = 'archivo'
+            // Archivo es requerido para tipo 'archivo'
+            if (archivo.value) {
+                formData.append('archivo', archivo.value)
+            }
         }
 
         // Campos opcionales: título y descripción
@@ -568,11 +604,6 @@ const publicar = async () => {
         }
         if (descripcion.value) {
             formData.append('descripcion', descripcion.value)
-        }
-
-        // Imagen es requerida para tipo 'imagen'
-        if (tipo.value === 'foto' && archivo.value) {
-            formData.append('imagen', archivo.value)
         }
 
         // Tipo es REQUERIDO
@@ -825,10 +856,19 @@ ion-content {
     gap: 1rem;
 }
 
+.file-icon-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+}
+
 .detalles-archivo h4 {
     margin: 0;
     font-size: 1rem;
     font-weight: 600;
+    word-break: break-word;
 }
 
 .detalles-archivo p {
