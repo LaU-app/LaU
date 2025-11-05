@@ -72,7 +72,7 @@
                         <!-- Caja de subida -->
                         <div v-else class="caja-subida" @click="triggerFileInput">
                             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"
                                 stroke-linejoin="round" class="icon-medium icon-primary">
                                 <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                                 <path d="M15 8h.01" />
