@@ -71,11 +71,22 @@
 
                         <!-- Caja de subida -->
                         <div v-else class="caja-subida" @click="triggerFileInput">
-                            <ion-icon :icon="cameraOutline" size="large" color="primary" />
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="icon-medium icon-primary">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path d="M15 8h.01" />
+                                <path d="M6 13l2.644 -2.644a1.21 1.21 0 0 1 1.712 0l3.644 3.644" />
+                                <path d="M13 13l1.644 -1.644a1.21 1.21 0 0 1 1.712 0l1.644 1.644" />
+                                <path d="M4 8v-2a2 2 0 0 1 2 -2h2" />
+                                <path d="M4 16v2a2 2 0 0 0 2 2h2" />
+                                <path d="M16 4h2a2 2 0 0 1 2 2v2" />
+                                <path d="M16 20h2a2 2 0 0 0 2 -2v-2" />
+                            </svg>
                             <h3>Tomar o seleccionar foto</h3>
                             <p class="texto-pequeno">Usa tu cámara o elige de la galería</p>
                             <p class="texto-pequeno">JPG, PNG. Máximo 5MB</p>
-                            <ion-button fill="outline">Seleccionar</ion-button>
+                            <ion-button fill="outline">Elegir</ion-button>
                         </div>
                         <input ref="fileInput" type="file" hidden accept="image/jpeg,image/png,image/jpg"
                             @change="handleFileUpload" />
@@ -119,7 +130,15 @@
 
                         <!-- Caja de subida -->
                         <div v-else class="caja-subida" @click="triggerFileInput">
-                            <ion-icon :icon="cloudUploadOutline" size="large" color="success" />
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="icon-medium icon-success">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+                                <path
+                                    d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2zm-7 -7h.01m3.99 0h.01" />
+                                <path d="M10 17a3.5 3.5 0 0 0 4 0" />
+                            </svg>
                             <h3>Subir archivo</h3>
                             <p class="texto-pequeno">PDF, DOCX, ZIP. Máximo 10MB</p>
                             <ion-button fill="outline">Seleccionar archivo</ion-button>
@@ -640,6 +659,19 @@ const publicar = async () => {
     width: 24px;
     height: 24px;
     color: currentColor;
+}
+
+.icon-medium {
+    width: 48px;
+    height: 48px;
+}
+
+.icon-primary {
+    color: var(--ion-color-primary);
+}
+
+.icon-success {
+    color: var(--ion-color-success);
 }
 
 /* Toolbar styles */
