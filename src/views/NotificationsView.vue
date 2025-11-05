@@ -115,6 +115,7 @@ import {
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { notificationsService } from '@/services/notificationsService';
+import { pushNotificationsService } from '@/services/pushNotificationsService';
 import NotificationItem from '@/components/NotificationItem.vue';
 
 const router = useRouter();
@@ -319,11 +320,29 @@ onMounted(() => {
   loadNotifications();
   loadUnreadCount();
 
+  // Listener para cuando se recibe una notificación push en foreground
+  const handlePushNotification = (event) => {
+    const notification = event.detail;
+    console.log('Nueva notificación push recibida:', notification);
+
+    // Recargar notificaciones
+    loadNotifications(1, false);
+    loadUnreadCount();
+
+    // Mostrar un toast
+    showToast(notification.title || 'Nueva notificación', 'primary');
+  };
+
+  window.addEventListener('pushNotificationReceived', handlePushNotification);
+
   // Opcional: polling para actualizar el contador cada 30 segundos
   const interval = setInterval(loadUnreadCount, 30000);
 
-  // Limpiar interval al desmontar
-  return () => clearInterval(interval);
+  // Limpiar listeners al desmontar
+  return () => {
+    clearInterval(interval);
+    window.removeEventListener('pushNotificationReceived', handlePushNotification);
+  };
 });
 </script>
 

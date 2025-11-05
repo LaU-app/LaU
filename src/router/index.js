@@ -38,6 +38,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/notification-settings",
+    name: "NotificationSettings",
+    component: () => import("@/views/NotificationSettingsView.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/create-post/:tipo?",
     name: "CreatePost",
     component: () => import("@/views/CreatePost.vue"),
@@ -77,6 +83,29 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
+});
+
+// Manejar navegación desde notificaciones push
+window.addEventListener("pushNotificationAction", (event) => {
+  const { type, postId, userId, notificationId } = event.detail;
+
+  if (type === "like" || type === "comment") {
+    // Navegar al detalle del post
+    if (postId) {
+      router.push(`/tabs/post/${postId}`);
+    }
+  } else if (type === "follow") {
+    // Navegar al perfil del usuario que siguió
+    if (userId) {
+      // Aquí puedes navegar al perfil del usuario si tienes esa ruta
+      // router.push(`/profile/${userId}`);
+      // Por ahora, navegar a notificaciones
+      router.push("/notifications");
+    }
+  } else {
+    // Por defecto, navegar a la página de notificaciones
+    router.push("/notifications");
+  }
 });
 
 // Navigation Guard
