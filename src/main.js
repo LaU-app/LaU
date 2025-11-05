@@ -34,8 +34,19 @@ import "@ionic/vue/css/palettes/dark.class.css";
 /* Theme variables */
 import "./theme/variables.css";
 
+/* Push Notifications Service */
+import { pushNotificationsService } from "./services/pushNotificationsService";
+
 const app = createApp(App).use(IonicVue).use(router);
 
 router.isReady().then(() => {
   app.mount("#app");
+
+  // Inicializar notificaciones push si el usuario está autenticado
+  const token = localStorage.getItem("token");
+  if (token) {
+    pushNotificationsService.initialize().catch((err) => {
+      console.error("Failed to initialize push notifications:", err);
+    });
+  }
 });

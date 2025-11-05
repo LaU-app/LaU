@@ -1,4 +1,5 @@
 import { api } from "./api";
+import { pushNotificationsService } from "./pushNotificationsService";
 
 const TOKEN_KEY = "auth_token";
 const USER_KEY = "user";
@@ -21,6 +22,16 @@ export const AuthService = {
 
       if (data?.user) {
         this.setUser(data.user, rememberMe);
+      }
+
+      // Inicializar notificaciones push después del login exitoso
+      if (pushNotificationsService.isAvailable()) {
+        pushNotificationsService.initialize().catch((err) => {
+          console.error(
+            "Failed to initialize push notifications after login:",
+            err
+          );
+        });
       }
 
       return data;
@@ -88,6 +99,11 @@ export const AuthService = {
 
   async logout() {
     try {
+      // Desregistrar notificaciones push antes del logout
+      if (pushNotificationsService.isAvailable()) {
+        await pushNotificationsService.unregister();
+      }
+
       // Intenta hacer logout en la API
       await api.post("/auth/logout");
     } catch (e) {
