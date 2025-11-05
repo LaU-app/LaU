@@ -71,10 +71,11 @@
 
                         <!-- Caja de subida -->
                         <div v-else class="caja-subida" @click="triggerFileInput">
-                            <ion-icon :icon="cloudUploadOutline" size="large" color="primary" />
-                            <h3>Subir foto</h3>
+                            <ion-icon :icon="cameraOutline" size="large" color="primary" />
+                            <h3>Tomar o seleccionar foto</h3>
+                            <p class="texto-pequeno">Usa tu cámara o elige de la galería</p>
                             <p class="texto-pequeno">JPG, PNG. Máximo 5MB</p>
-                            <ion-button fill="outline">Seleccionar archivo</ion-button>
+                            <ion-button fill="outline">Seleccionar</ion-button>
                         </div>
                         <input ref="fileInput" type="file" hidden accept="image/jpeg,image/png,image/jpg"
                             @change="handleFileUpload" />
@@ -202,14 +203,18 @@ import {
     IonRadio,
     alertController,
     toastController,
-    loadingController
+    loadingController,
+    actionSheetController
 } from '@ionic/vue'
 import {
     cloudUploadOutline,
     closeOutline,
     closeCircle,
-    documentOutline
+    documentOutline,
+    cameraOutline,
+    imagesOutline
 } from 'ionicons/icons'
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import api from '../services/api'
 import { AuthService } from '../services/auth'
 
@@ -287,11 +292,103 @@ const handleSegmentChange = (e) => {
     }
 }
 
-const triggerFileInput = () => {
+const triggerFileInput = async () => {
     if (tipo.value === 'foto') {
-        fileInput.value?.click()
+        // Mostrar action sheet para elegir entre cámara y galería
+        await showPhotoActionSheet()
     } else if (tipo.value === 'archivo') {
         fileInputArchivo.value?.click()
+    }
+}
+
+const showPhotoActionSheet = async () => {
+    const actionSheet = await actionSheetController.create({
+        header: 'Seleccionar foto',
+        buttons: [
+            {
+                text: 'Tomar foto',
+                icon: cameraOutline,
+                handler: () => {
+                    takePicture()
+                }
+            },
+            {
+                text: 'Elegir de la galería',
+                icon: imagesOutline,
+                handler: () => {
+                    pickFromGallery()
+                }
+            },
+            {
+                text: 'Cancelar',
+                icon: closeOutline,
+                role: 'cancel'
+            }
+        ]
+    })
+    await actionSheet.present()
+}
+
+const takePicture = async () => {
+    try {
+        const image = await Camera.getPhoto({
+            quality: 90,
+            allowEditing: true,
+            resultType: CameraResultType.Uri,
+            source: CameraSource.Camera
+        })
+
+        await processImage(image)
+    } catch (error) {
+        console.error('Error al tomar foto:', error)
+        if (error.message !== 'User cancelled photos app') {
+            showToast('Error al acceder a la cámara', 'danger')
+        }
+    }
+}
+
+const pickFromGallery = async () => {
+    try {
+        const image = await Camera.getPhoto({
+            quality: 90,
+            allowEditing: true,
+            resultType: CameraResultType.Uri,
+            source: CameraSource.Photos
+        })
+
+        await processImage(image)
+    } catch (error) {
+        console.error('Error al seleccionar foto:', error)
+        if (error.message !== 'User cancelled photos app') {
+            showToast('Error al acceder a la galería', 'danger')
+        }
+    }
+}
+
+const processImage = async (image) => {
+    try {
+        // Mostrar preview
+        imagenPreview.value = image.webPath
+
+        // Convertir la imagen a un archivo Blob para enviar al servidor
+        const response = await fetch(image.webPath)
+        const blob = await response.blob()
+
+        // Crear un File a partir del Blob
+        const fileName = `photo_${Date.now()}.${image.format || 'jpg'}`
+        const file = new File([blob], fileName, { type: `image/${image.format || 'jpeg'}` })
+
+        // Validar tamaño (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('La imagen no debe superar 5MB', 'warning')
+            imagenPreview.value = null
+            return
+        }
+
+        archivo.value = file
+    } catch (error) {
+        console.error('Error al procesar imagen:', error)
+        showToast('Error al procesar la imagen', 'danger')
     }
 }
 
