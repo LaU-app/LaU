@@ -53,6 +53,7 @@ import CreatePostCard from '@/components/CreatePostCard.vue'
 import PostCard from '@/components/PostCard.vue'
 import postsService from '@/services/postsService'
 import { AuthService } from '@/services/auth'
+import { useDarkMode } from '@/utils/useDarkMode'
 
 export default {
     name: 'HomeView',
@@ -65,13 +66,17 @@ export default {
             currentPage: 1,
             lastPage: 1,
             hasMorePages: false,
-            isDarkMode: false,
             user: { imagen_url: null, name: 'Usuario', username: 'usuario' },
             feedType: 'public', // 'public', 'personalized', o 'error'
             totalPosts: 0,
             alertTimer: null,
             isAuthenticated: false
         }
+    },
+    setup() {
+        // Usar composable de modo oscuro
+        const { isDarkMode, toggleDarkMode } = useDarkMode()
+        return { isDarkMode, toggleDarkMode }
     },
     async created() {
         // Verificar autenticación y actualizar estado
@@ -86,7 +91,6 @@ export default {
         }
 
         this.fetchPosts()
-        this.loadDarkModePreference()
     },
     ionViewWillEnter() {
         // Actualizar estado de autenticación cada vez que se entra a la vista
@@ -157,31 +161,6 @@ export default {
                 }
             }
         },
-        loadDarkModePreference() {
-            const savedMode = localStorage.getItem('darkMode')
-            if (savedMode !== null) {
-                this.isDarkMode = savedMode === 'true'
-            } else {
-                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)')
-                this.isDarkMode = prefersDark.matches
-            }
-            this.applyDarkMode()
-        },
-        toggleDarkMode() {
-            this.isDarkMode = !this.isDarkMode
-            localStorage.setItem('darkMode', this.isDarkMode.toString())
-            this.applyDarkMode()
-        },
-        applyDarkMode() {
-            document.documentElement.classList.toggle('ion-palette-dark', this.isDarkMode)
-            if (this.isDarkMode) {
-                document.documentElement.style.setProperty('--ion-background-color', '#121212')
-                document.documentElement.style.setProperty('--ion-card-background', '#1E1E1E')
-            } else {
-                document.documentElement.style.setProperty('--ion-background-color', '#F3F4F6')
-                document.documentElement.style.setProperty('--ion-card-background', '#FFFFFF')
-            }
-        },
         handleImageError(event) {
             console.warn('Error al cargar imagen:', event.target?.src)
         },
@@ -235,7 +214,8 @@ export default {
             }
         },
         async handleComment(postId) {
-            console.log('Comment post:', postId)
+            // Navegar a la vista de detalle donde se pueden ver y agregar comentarios
+            this.$router.push(`/tabs/post/${postId}`)
         },
         async handleShare(postId) {
             const result = await postsService.sharePost(postId)

@@ -1,7 +1,7 @@
 //importaciones axios para hacer peticiones HTTP
 import axios from "axios";
 
-const API_URL = "https://tester.sivarsocial.com/api"; // Verifcar URL base de la API
+const API_URL = "http://127.0.0.1:8000/api"; // Verifcar URL base de la API
 
 //Creamos una instancia de axios para configuracion basica
 const api = axios.create({
@@ -89,6 +89,31 @@ export default {
 
   getUsers: () => {
     return api.get("/users"); // GET http://localhost:8000/api/users
+  },
+
+  // Endpoints de búsqueda de música
+  searchMusic: (query, limit = 20, country = "US") => {
+    return api.get("/music/search", {
+      params: { query, limit, country },
+    });
+  },
+
+  getMusicTrack: (trackId) => {
+    return api.get("/music/track", {
+      params: { trackId },
+    });
+  },
+
+  searchMusicByGenre: (genre, limit = 10) => {
+    return api.get("/music/genre", {
+      params: { genre, limit },
+    });
+  },
+
+  getPopularMusic: (limit = 20, country = "US") => {
+    return api.get("/music/popular", {
+      params: { limit, country },
+    });
   },
 
   // Métodos HTTP genéricos para usar en otros servicios

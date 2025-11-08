@@ -129,6 +129,7 @@ import {
 import api from "@/services/api";
 import { closeOutline, chevronDownOutline, personCircle, searchOutline } from "ionicons/icons";
 import { AuthService } from "@/services/auth";
+import { useDarkMode } from '@/utils/useDarkMode';
 
 export default {
     name: "UsersView",
@@ -156,6 +157,10 @@ export default {
         IonSelect,
         IonSelectOption,
     },
+    setup() {
+        const { isDarkMode } = useDarkMode();
+        return { isDarkMode };
+    },
     data() {
         return {
             filteredUsers: [],
@@ -166,7 +171,6 @@ export default {
             },
             users: [],
             user: { imagen_url: null, name: "Usuario", username: "usuario" },
-            isDarkMode: false,
             closeOutline,
             chevronDownOutline,
             personCircle,
@@ -176,8 +180,6 @@ export default {
         };
     },
     async created() {
-        this.loadDarkModePreference();
-
         // Verificar autenticación
         this.isAuthenticated = AuthService.isAuthenticated();
 
@@ -263,46 +265,6 @@ export default {
                 );
             });
         },
-        loadDarkModePreference() {
-            const savedMode = localStorage.getItem("darkMode");
-            if (savedMode !== null) {
-                this.isDarkMode = savedMode === "true";
-            } else {
-                const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
-                this.isDarkMode = prefersDark.matches;
-            }
-            this.applyDarkMode();
-        },
-        toggleDarkMode() {
-            this.isDarkMode = !this.isDarkMode;
-            localStorage.setItem("darkMode", this.isDarkMode.toString());
-            this.applyDarkMode();
-        },
-        applyDarkMode() {
-            document.documentElement.classList.toggle(
-                "ion-palette-dark",
-                this.isDarkMode
-            );
-            if (this.isDarkMode) {
-                document.documentElement.style.setProperty(
-                    "--ion-background-color",
-                    "#121212"
-                );
-                document.documentElement.style.setProperty(
-                    "--ion-card-background",
-                    "#1E1E1E"
-                );
-            } else {
-                document.documentElement.style.setProperty(
-                    "--ion-background-color",
-                    "#F3F4F6"
-                );
-                document.documentElement.style.setProperty(
-                    "--ion-card-background",
-                    "#FFFFFF"
-                );
-            }
-        },
         handleImageError(ev) {
             // evita errores en consola si la imagen falla
             ev.target.src = "https://www.gravatar.com/avatar/?d=mp&f=y";
@@ -364,24 +326,25 @@ ion-avatar {
 }
 
 ion-list {
-    background: #ffffff;
+    background: var(--ion-background-color);
     padding: 8px;
 }
 
 ion-list ion-item {
-    --ion-item-background: #ffffff;
+    --ion-item-background: var(--ion-card-background);
+    --color: var(--ion-text-color);
     --min-height: 100px;
     margin: 8px 0;
     border-radius: 8px;
-    border: 1px solid #F3F4F6;
+    border: 1px solid var(--ion-border-color);
 }
 
 .filters {
-    background: #F9FAFB;
+    background: var(--ion-background-color);
     padding: 0;
     margin: 0;
     --ion-grid-padding: 0;
-    border-bottom: 1px solid #E5E7EB;
+    border-bottom: 1px solid var(--ion-border-color);
 }
 
 .filters ion-row {
@@ -425,7 +388,7 @@ ion-list ion-item {
 }
 
 .loading-container p {
-    color: var(--ion-color-medium);
+    color: var(--ion-text-color-secondary);
     font-size: 14px;
 }
 
@@ -435,18 +398,18 @@ ion-header {
 }
 
 ion-toolbar {
-    --background: #ffffff;
+    --background: var(--ion-toolbar-background);
     --border-width: 0;
 }
 
 ion-toolbar ion-title {
     font-weight: bold;
     font-size: 18px;
-    color: #1f2937;
+    color: var(--ion-text-color);
 }
 
 ion-toolbar ion-button {
-    --color: #6b7280;
+    --color: var(--ion-text-color-secondary);
 }
 
 ion-toolbar ion-icon {
@@ -454,16 +417,17 @@ ion-toolbar ion-icon {
 }
 
 ion-searchbar {
-    --background: #F9FAFB;
+    --background: var(--ion-background-color);
+    --color: var(--ion-text-color);
     --border-radius: 10px;
     --box-shadow: none;
-    --placeholder-color: #9ca3af;
+    --placeholder-color: var(--ion-text-color-secondary);
     --placeholder-font-style: normal;
-    --icon-color: #6b7280;
+    --icon-color: var(--ion-text-color-secondary);
     padding: 8px 16px;
 }
 
 ion-content {
-    --background: #ffffff;
+    --background: var(--ion-background-color);
 }
 </style>

@@ -125,23 +125,24 @@ const handlePostImageError = (event) => {
 
 <style scoped>
 .notification-item {
-    --background: #ffffff;
+    --background: var(--ion-card-background);
+    --color: var(--ion-text-color);
     --padding-start: 16px;
     --padding-end: 16px;
     --min-height: 80px;
     margin-bottom: 8px;
     cursor: pointer;
     transition: background-color 0.2s ease;
-    border-bottom: 1px solid #F3F4F6;
+    border-bottom: 1px solid var(--ion-border-color);
 }
 
 .notification-item.unread {
-    background-color: #F0F9FF;
+    --background: var(--ion-color-primary-tint);
     border-left: 3px solid var(--ion-color-primary);
 }
 
 .notification-item:hover {
-    background-color: #F9FAFB;
+    --background: var(--ion-background-hover);
 }
 
 ion-avatar {
@@ -182,7 +183,7 @@ ion-avatar img {
 }
 
 .username {
-    color: var(--ion-color-dark);
+    color: var(--ion-text-color);
 }
 
 .user-badge {
@@ -197,7 +198,7 @@ ion-avatar img {
 .notification-message {
     margin: 4px 0;
     font-size: 14px;
-    color: var(--ion-color-medium);
+    color: var(--ion-text-color-secondary);
     line-height: 1.4;
 }
 

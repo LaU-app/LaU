@@ -562,12 +562,12 @@ ion-header ion-toolbar {
 
 /* Content background */
 ion-content {
-    --background: #ffffff;
+    --background: var(--ion-background-color);
 }
 
 /* Profile Section */
 .profile-section {
-    background: #ffffff;
+    background: var(--ion-card-background);
     padding: 24px 16px 16px 16px;
 }
 

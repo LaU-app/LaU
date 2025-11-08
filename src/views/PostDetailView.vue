@@ -92,7 +92,7 @@
                             </ion-button>
                         </div>
                     </ion-card-content>
-
+                    <br>
                     <!-- Post Actions -->
                     <ion-card-content class="post-footer">
                         <PostActions :post="post" />
@@ -110,20 +110,7 @@
                     <ion-card-content class="comments-content">
                         <!-- Comments List -->
                         <div v-if="post.comentarios && post.comentarios.length > 0" class="comments-list">
-                            <div v-for="comment in post.comentarios" :key="comment.id" class="comment-item">
-                                <ion-avatar class="comment-avatar">
-                                    <img v-if="comment.user?.imagen_url" :src="comment.user.imagen_url"
-                                        :alt="comment.user?.name || 'Usuario'" @error="handleImageError" />
-                                    <ion-icon v-else :icon="personCircle"></ion-icon>
-                                </ion-avatar>
-                                <div class="comment-content">
-                                    <div class="comment-bubble">
-                                        <h4 class="comment-user">{{ comment.user?.name || 'Usuario' }}</h4>
-                                        <p class="comment-text">{{ comment.comentario }}</p>
-                                    </div>
-                                    <p class="comment-meta">{{ timeAgo(comment.created_at) }}</p>
-                                </div>
-                            </div>
+                            <CommentItem v-for="comment in post.comentarios" :key="comment.id" :comment="comment" />
                         </div>
 
                         <!-- No Comments State -->
@@ -190,6 +177,7 @@ import {
 } from 'ionicons/icons'
 import MusicPlayer from '@/components/MusicPlayer.vue'
 import PostActions from '@/components/PostActions.vue'
+import CommentItem from '@/components/CommentItem.vue'
 import { timeAgo } from '@/utils/timeUtils'
 import api from '@/services/api'
 import { AuthService } from '@/services/auth'
@@ -320,28 +308,89 @@ const focusCommentInput = () => {
 const submitComment = async () => {
     if (!newComment.value.trim()) return
 
-    try {
-        // TODO: Implementar envío de comentario a la API
-        console.log('Enviando comentario:', newComment.value)
-
+    // Verificar autenticación
+    if (!AuthService.isAuthenticated()) {
         const toast = await toastController.create({
-            message: 'Comentario agregado',
-            duration: 1500,
+            message: 'Debes iniciar sesión para comentar',
+            duration: 2000,
             position: 'bottom',
-            color: 'success'
+            color: 'warning'
         })
         await toast.present()
+        return
+    }
 
-        // Limpiar input
-        newComment.value = ''
+    try {
+        const comentarioTexto = newComment.value.trim()
 
-        // Recargar post para obtener comentarios actualizados
-        await loadPost()
+        // Intentar diferentes endpoints que el backend podría tener configurados
+        let response
+        let success = false
+        const endpoints = [
+            { url: `/posts/${post.value.id}/comments`, method: 'post' },
+            { url: `/posts/${post.value.id}/comentarios`, method: 'post' },
+            { url: `/comentarios`, method: 'post', body: { post_id: post.value.id } },
+            { url: `/comments`, method: 'post', body: { post_id: post.value.id } }
+        ]
+
+        for (const endpoint of endpoints) {
+            try {
+                const requestBody = endpoint.body
+                    ? { ...endpoint.body, comentario: comentarioTexto }
+                    : { comentario: comentarioTexto }
+
+                response = await api.post(endpoint.url, requestBody)
+                success = true
+                console.log(`✅ Comentario enviado exitosamente usando: ${endpoint.url}`)
+                break
+            } catch (endpointError) {
+                if (endpointError.response?.status === 404) {
+                    console.log(`❌ Endpoint no encontrado: ${endpoint.url}`)
+                    continue // Probar siguiente endpoint
+                }
+                // Si es otro tipo de error (no 404), lanzarlo
+                throw endpointError
+            }
+        }
+
+        if (!success) {
+            throw new Error('No se encontró un endpoint válido para comentarios. Contacta al administrador del backend.')
+        }
+
+        if (response.data.success !== false) {
+            const toast = await toastController.create({
+                message: 'Comentario agregado',
+                duration: 1500,
+                position: 'bottom',
+                color: 'success'
+            })
+            await toast.present()
+
+            // Limpiar input
+            newComment.value = ''
+
+            // Recargar post para obtener comentarios actualizados
+            await loadPost()
+        } else {
+            throw new Error(response.data.message || 'Error al agregar comentario')
+        }
     } catch (err) {
         console.error('Error al enviar comentario:', err)
+        let errorMessage = 'Error al enviar comentario'
+
+        if (err.response?.status === 404) {
+            errorMessage = 'La funcionalidad de comentarios no está disponible en el servidor'
+        } else if (err.response?.status === 401) {
+            errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente'
+        } else if (err.response?.status === 422) {
+            errorMessage = err.response?.data?.message || 'Datos inválidos para el comentario'
+        } else {
+            errorMessage = err.response?.data?.message || err.message || errorMessage
+        }
+
         const toast = await toastController.create({
-            message: 'Error al enviar comentario',
-            duration: 2000,
+            message: errorMessage,
+            duration: 3000,
             position: 'bottom',
             color: 'danger'
         })

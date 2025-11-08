@@ -4,7 +4,7 @@
 :root {
   /* Colores primarios */
   --app-primary: #8A2BE2;
-  
+
   /* LIGHT MODE (por defecto) */
   --app-background: #F3F4F6;
   --app-card: #FFFFFF;
@@ -12,10 +12,10 @@
   --app-text-secondary: #6B7280;
   --app-input-bg: #F3F4F6;
   --app-border: #E5E7EB;
-  
+
   /* Sombras */
   --app-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  
+
   /* Border radius */
   --app-radius-lg: 16px;
   --app-radius-md: 12px;

@@ -7,7 +7,7 @@
                     <ion-icon v-else :icon="personCircle" size="large"></ion-icon>
                 </ion-avatar>
                 <div class="input-container">
-                    <ion-input v-model="postText" placeholder="¿Qué estás estudiando?" class="post-input"
+                    <ion-input v-model="postText" placeholder="¿Qué estás pensando?" class="post-input"
                         @ionInput="onTextInput" :disabled="isPosting">
                     </ion-input>
                     <div class="input-icon-wrapper">
@@ -42,7 +42,7 @@
                                     <path
                                         d="M8.813 11.612c.457 -.38 .918 -.38 1.386 .011l.108 .098l4.986 4.986l.094 .083a1 1 0 0 0 1.403 -1.403l-.083 -.094l-1.292 -1.293l.292 -.293l.106 -.095c.457 -.38 .918 -.38 1.386 .011l.108 .098l4.674 4.675a4 4 0 0 1 -3.775 3.599l-.206 .005h-12a4 4 0 0 1 -3.98 -3.603l6.687 -6.69l.106 -.095zm9.187 -9.612a4 4 0 0 1 3.995 3.8l.005 .2v9.585l-3.293 -3.292l-.15 -.137c-1.256 -1.095 -2.85 -1.097 -4.096 -.017l-.154 .14l-.307 .306l-2.293 -2.292l-.15 -.137c-1.256 -1.095 -2.85 -1.097 -4.096 -.017l-.154 .14l-5.307 5.306v-9.585a4 4 0 0 1 3.8 -3.995l.2 -.005h12zm-2.99 5l-.127 .007a1 1 0 0 0 0 1.986l.117 .007l.127 -.007a1 1 0 0 0 0 -1.986l-.117 -.007z" />
                                 </svg>
-                                <ion-label>Foto/Video</ion-label>
+                                <ion-label>Foto</ion-label>
                             </div>
                         </ion-button>
                     </ion-col>
@@ -58,7 +58,7 @@
                                     <path
                                         d="M21 18a3 3 0 0 1 -2.824 2.995l-.176 .005h-1a3 3 0 0 1 -2.995 -2.824l-.005 -.176v-3a3 3 0 0 1 2.824 -2.995l.176 -.005h1c.351 0 .688 .06 1 .171v-.171a7 7 0 0 0 -13.996 -.24l-.004 .24v.17c.25 -.088 .516 -.144 .791 -.163l.209 -.007h1a3 3 0 0 1 2.995 2.824l.005 .176v3a3 3 0 0 1 -2.824 2.995l-.176 .005h-1a3 3 0 0 1 -2.995 -2.824l-.005 -.176v-6a9 9 0 0 1 17.996 -.265l.004 .265v6z" />
                                 </svg>
-                                <ion-label>Playlist</ion-label>
+                                <ion-label>Musica</ion-label>
                             </div>
                         </ion-button>
                     </ion-col>

@@ -61,10 +61,10 @@
                 </ion-button>
             </div>
         </ion-card-content>
-
+        <br>
         <!-- Post Actions -->
         <ion-card-content class="post-footer">
-            <PostActions :post="post" />
+            <PostActions :post="post" @like="handleLike" @comment="handleComment" />
         </ion-card-content>
 
     </ion-card>
@@ -115,9 +115,12 @@ export default {
             router.push(`/tabs/post/${props.post.id}`)
         }
 
-        const handleLike = (event) => {
-            event.stopPropagation() // Evitar navegación al hacer like
-            emit('like', props.post.id)
+        const handleLike = (postId) => {
+            emit('like', postId)
+        }
+
+        const handleComment = (postId) => {
+            emit('comment', postId)
         }
 
         const handleShare = (event) => {
@@ -168,6 +171,7 @@ export default {
             downloadOutline,
             goToPostDetail,
             handleLike,
+            handleComment,
             handleShare,
             handleImageError,
             getFileName,

@@ -353,18 +353,18 @@ ion-header {
 }
 
 ion-toolbar {
-  --background: #ffffff;
+  --background: var(--ion-toolbar-background);
   --border-width: 0;
 }
 
 ion-toolbar ion-title {
   font-weight: bold;
   font-size: 18px;
-  color: #1f2937;
+  color: var(--ion-text-color);
 }
 
 ion-toolbar ion-button {
-  --color: #6b7280;
+  --color: var(--ion-color-medium);
 }
 
 ion-toolbar ion-icon {
@@ -372,12 +372,12 @@ ion-toolbar ion-icon {
 }
 
 ion-content {
-  --background: #ffffff;
+  --background: var(--ion-background-color);
 }
 
 .notifications-list {
   padding: 8px;
-  background: #ffffff;
+  background: var(--ion-background-color);
 }
 
 .loading-container {
@@ -390,7 +390,7 @@ ion-content {
 }
 
 .loading-container p {
-  color: var(--ion-color-medium);
+  color: var(--ion-text-color-secondary);
   font-size: 14px;
 }
 
@@ -411,14 +411,14 @@ ion-content {
 }
 
 .empty-state h2 {
-  color: var(--ion-color-dark);
+  color: var(--ion-text-color);
   font-size: 20px;
   font-weight: 600;
   margin: 0 0 8px 0;
 }
 
 .empty-state p {
-  color: var(--ion-color-medium);
+  color: var(--ion-text-color-secondary);
   font-size: 14px;
   line-height: 1.5;
   margin: 0;
@@ -426,12 +426,13 @@ ion-content {
 
 /* Estilos para el segmento */
 ion-segment {
-  --background: #F9FAFB;
+  --background: var(--ion-background-color);
   margin: 0;
 }
 
 ion-segment-button {
   --indicator-color: var(--ion-color-primary);
+  --color: var(--ion-text-color-secondary);
   --color-checked: var(--ion-color-primary);
   font-size: 13px;
   min-height: 48px;

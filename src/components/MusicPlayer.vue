@@ -55,6 +55,7 @@ export default {
 .music-card {
     margin: 16px;
     border-radius: 16px;
+    --background: var(--ion-card-background);
 }
 
 .music-content {
@@ -88,7 +89,7 @@ export default {
 
 .placeholder-art ion-icon {
     font-size: 48px;
-    color: white;
+    color: var(--ion-color-medium, #92949c);
 }
 
 .music-info {
@@ -104,6 +105,7 @@ export default {
     margin: 0;
     font-size: 18px;
     font-weight: 600;
+    color: var(--ion-text-color, #000000);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -112,6 +114,7 @@ export default {
 .artist-name {
     margin: 0;
     font-size: 14px;
+    color: var(--ion-color-medium, #92949c);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -126,22 +129,6 @@ export default {
     height: 40px;
     border-radius: 20px;
     outline: none;
-}
-
-/* Modo Oscuro */
-@media (prefers-color-scheme: dark) {
-
-    .song-title {
-        color: var(--ion-text-color, #fff);
-    }
-
-    .artist-name {
-        color: var(--ion-color-medium, #999);
-    }
-
-    .album-art {
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-    }
 }
 
 /* Responsive */

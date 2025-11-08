@@ -82,9 +82,8 @@ class PostsService {
           // Limpiar sesión si el token es inválido
           await AuthService.logout();
         } else {
-          errorMessage = `Error ${err.response.status}: ${
-            err.response.data?.message || "Error del servidor"
-          }`;
+          errorMessage = `Error ${err.response.status}: ${err.response.data?.message || "Error del servidor"
+            }`;
         }
       } else if (err.request) {
         errorMessage =
@@ -145,19 +144,51 @@ class PostsService {
 
   /**
    * Comenta en un post
+   * Intenta múltiples endpoints hasta encontrar uno que funcione
    * @param {number} postId - ID del post
    * @param {string} comentario - Texto del comentario
    * @returns {Promise<Object>} Respuesta de la API
    */
   async commentPost(postId, comentario) {
-    try {
-      const response = await api.post(`/posts/${postId}/comments`, {
-        comentario,
-      });
-      return { success: true, data: response.data };
-    } catch (err) {
-      return { success: false, error: err.message };
+    // Lista de endpoints posibles que el backend podría tener
+    const endpoints = [
+      { url: `/posts/${postId}/comments`, body: { comentario } },
+      { url: `/posts/${postId}/comentarios`, body: { comentario } },
+      { url: `/comentarios`, body: { post_id: postId, comentario } },
+      { url: `/comments`, body: { post_id: postId, comentario } },
+    ];
+
+    let lastError = null;
+
+    // Intentar cada endpoint hasta que uno funcione
+    for (const endpoint of endpoints) {
+      try {
+        const response = await api.post(endpoint.url, endpoint.body);
+        console.log(`✅ Comentario enviado usando: ${endpoint.url}`);
+        return { success: true, data: response.data };
+      } catch (err) {
+        lastError = err;
+        // Si es 404, intentar el siguiente endpoint
+        if (err.response?.status === 404) {
+          console.log(`❌ Endpoint no encontrado: ${endpoint.url}`);
+          continue;
+        }
+        // Si es otro error, retornarlo inmediatamente
+        return {
+          success: false,
+          error: err.response?.data?.message || err.message,
+        };
+      }
     }
+
+    // Si ningún endpoint funcionó
+    return {
+      success: false,
+      error:
+        lastError?.response?.data?.message ||
+        lastError?.message ||
+        "No se encontró un endpoint válido para comentarios",
+    };
   }
 
   /**

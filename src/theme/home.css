@@ -286,22 +286,39 @@ ion-label {
     border-top: 1px solid var(--app-border);
 }
 
-/* Music Card - SIEMPRE gray-800 */
+/* Music Card - Adaptable a modo claro y oscuro */
 .music-card {
-    background: #1F2937 !important;
+    background: #F3F4F6 !important;
     margin: 0 !important;
 }
 
 .song-title {
-    color: #FFFFFF;
+    color: #1F2937;
     font-weight: 600;
 }
 
 .artist-name {
-    color: #D1D5DB;
+    color: #6B7280;
 }
 
 .play-btn {
+    color: #1F2937;
+}
+
+/* Music Card - Modo oscuro */
+.ion-palette-dark .music-card {
+    background: #262729 !important;
+}
+
+.ion-palette-dark .song-title {
+    color: #FFFFFF;
+}
+
+.ion-palette-dark .artist-name {
+    color: #D1D5DB;
+}
+
+.ion-palette-dark .play-btn {
     color: #FFFFFF;
 }
 

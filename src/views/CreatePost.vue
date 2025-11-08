@@ -100,9 +100,26 @@
                             <h2>Buscar música</h2>
                             <p>Encuentra y comparte una canción</p>
                         </div>
-                        <ion-item class="caja-busqueda">
-                            <ion-input v-model="busqueda" placeholder="¿Qué canción quieres compartir?"></ion-input>
-                        </ion-item>
+
+                        <!-- Canción seleccionada -->
+                        <MusicTrackPreview v-if="selectedTrack" :track="selectedTrack" @remove="removeTrack"
+                            ref="trackPreviewRef" />
+
+                        <!-- Botón para buscar -->
+                        <div v-else class="caja-subida" @click="openMusicSearch">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"
+                                stroke-linejoin="round" class="icon-medium icon-primary">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path d="M3 17a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+                                <path d="M13 17a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+                                <path d="M9 17v-13h10v13" />
+                                <path d="M9 8h10" />
+                            </svg>
+                            <h3>Buscar música</h3>
+                            <p class="texto-pequeno">Encuentra canciones de iTunes</p>
+                            <ion-button fill="outline">Buscar canción</ion-button>
+                        </div>
                     </div>
                 </div>
 
@@ -153,7 +170,9 @@
             <!-- Título y descripción (común para todos) -->
             <div class="seccion-formulario">
                 <ion-item>
-                    <ion-label position="stacked">Título</ion-label>
+                    <ion-label position="stacked">
+                        {{ tipo === 'musica' ? 'Título (Opcional)' : 'Título' }}
+                    </ion-label>
                     <ion-input v-model="titulo" :placeholder="tituloPlaceholder" />
                 </ion-item>
 
@@ -192,17 +211,20 @@
 
             <!-- Mensajes de ayuda -->
             <p v-if="!puedePublicar" class="texto-ayuda">
-                <span v-if="tipo === 'musica' && !busqueda">Busca una canción para continuar</span>
+                <span v-if="tipo === 'musica' && !selectedTrack">Busca una canción para continuar</span>
                 <span v-else-if="tipo === 'foto' && !imagenPreview">Selecciona una foto para continuar</span>
                 <span v-else-if="tipo === 'archivo' && !archivo">Selecciona un archivo para continuar</span>
-                <span v-else-if="!titulo">Agrega un título para continuar</span>
+                <span v-else-if="tipo !== 'musica' && !titulo">Agrega un título para continuar</span>
             </p>
         </ion-content>
+
+        <!-- Modal de búsqueda de música -->
+        <MusicSearchModal :isOpen="showMusicSearch" @close="closeMusicSearch" @select="handleTrackSelect" />
     </ion-page>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
     IonPage,
@@ -221,6 +243,7 @@ import {
     IonTextarea,
     IonRadioGroup,
     IonRadio,
+    IonBadge,
     alertController,
     toastController,
     loadingController,
@@ -235,6 +258,9 @@ import {
     imagesOutline
 } from 'ionicons/icons'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
+import MusicSearchModal from '@/components/MusicSearchModal.vue'
+import MusicTrackPreview from '@/components/MusicTrackPreview.vue'
+import musicService from '@/services/musicService'
 import api from '../services/api'
 import { AuthService } from '../services/auth'
 
@@ -253,6 +279,11 @@ const fileInput = ref(null)
 const fileInputArchivo = ref(null)
 const contenedorContenidoRef = ref(null)
 
+// Estado para música
+const showMusicSearch = ref(false)
+const selectedTrack = ref(null)
+const trackPreviewRef = ref(null)
+
 // Inicializar el tipo desde la ruta
 onMounted(() => {
     const tipoParam = route.params.tipo
@@ -268,6 +299,11 @@ onMounted(() => {
 // Actualizar la ruta cuando cambia el tipo (sin agregar al historial y SIN animación de página)
 watch(tipo, (nuevoTipo, tipoAnterior) => {
     if (tipoAnterior && route.params.tipo !== nuevoTipo) {
+        // Detener audio si está reproduciéndose al cambiar de tipo
+        if (trackPreviewRef.value) {
+            trackPreviewRef.value.stopAudio()
+        }
+
         // Actualizar la URL sin disparar animaciones de Ionic
         // Usamos history.replaceState directamente para evitar animaciones
         const newPath = `/create-post/${nuevoTipo}`
@@ -286,6 +322,13 @@ watch(tipo, (nuevoTipo, tipoAnterior) => {
         router.currentRoute.value.params.tipo = nuevoTipo
     }
 }, { flush: 'post' })
+
+// Limpiar el reproductor al desmontar el componente
+onBeforeUnmount(() => {
+    if (trackPreviewRef.value) {
+        trackPreviewRef.value.stopAudio()
+    }
+})
 
 // Manejar cambio de segmento con animación suave
 const handleSegmentChange = (e) => {
@@ -465,6 +508,28 @@ const removeFile = () => {
     }
 }
 
+// Funciones para música
+const openMusicSearch = () => {
+    showMusicSearch.value = true
+}
+
+const closeMusicSearch = () => {
+    showMusicSearch.value = false
+}
+
+const handleTrackSelect = (track) => {
+    selectedTrack.value = track
+    // NO auto-rellenar campos - el usuario escribe lo que quiera
+}
+
+const removeTrack = () => {
+    // Detener el audio si está reproduciéndose
+    if (trackPreviewRef.value) {
+        trackPreviewRef.value.stopAudio()
+    }
+    selectedTrack.value = null
+}
+
 const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes'
     const k = 1024
@@ -488,18 +553,19 @@ const getFileIcon = (fileName) => {
 }
 
 const puedePublicar = computed(() => {
-    if (!titulo.value.trim()) return false
-
     if (tipo.value === 'musica') {
-        return busqueda.value.trim().length > 0
-    } else {
-        return archivo.value !== null
+        // Para música, solo necesita la canción seleccionada (título es opcional)
+        return selectedTrack.value !== null
     }
+
+    // Para foto y archivo, sí requiere título
+    if (!titulo.value.trim()) return false
+    return archivo.value !== null
 })
 
 const tituloPlaceholder = computed(() => {
     return tipo.value === 'musica'
-        ? 'Nombre de la canción'
+        ? 'Título personalizado (opcional)'
         : `Título de tu ${tipo.value === 'foto' ? 'foto' : 'archivo'}`
 })
 
@@ -571,6 +637,18 @@ const publicar = async () => {
         return
     }
 
+    // Validación para música
+    if (tipo.value === 'musica' && !selectedTrack.value) {
+        const toast = await toastController.create({
+            message: 'Debes seleccionar una canción para publicar',
+            duration: 3000,
+            color: 'warning',
+            position: 'top'
+        })
+        await toast.present()
+        return
+    }
+
     const loading = await loadingController.create({
         message: 'Publicando...',
     })
@@ -589,6 +667,33 @@ const publicar = async () => {
             }
         } else if (tipo.value === 'musica') {
             tipoBackend = 'musica'
+            // Agregar datos de la canción con los nombres correctos de la BD
+            if (selectedTrack.value) {
+                // Campos de iTunes con los nombres exactos de la BD
+                formData.append('itunes_track_id', selectedTrack.value.trackId || '')
+                formData.append('itunes_track_name', selectedTrack.value.trackName || '')
+                formData.append('itunes_artist_name', selectedTrack.value.artistName || '')
+                formData.append('itunes_collection_name', selectedTrack.value.collectionName || '')
+                // Obtener portada en alta resolución (600x600)
+                const artworkUrl = selectedTrack.value.artworkUrl100
+                    ? selectedTrack.value.artworkUrl100.replace('100x100bb', '600x600bb')
+                    : ''
+                formData.append('itunes_artwork_url', artworkUrl)
+                formData.append('itunes_preview_url', selectedTrack.value.previewUrl || '')
+                formData.append('itunes_track_view_url', selectedTrack.value.trackViewUrl || '')
+                formData.append('itunes_track_time_millis', selectedTrack.value.trackTimeMillis || '')
+                formData.append('itunes_primary_genre_name', selectedTrack.value.primaryGenreName || '')
+
+                // 🎵 Generar enlace de Spotify para compartir (cross-platform)
+                const artist = selectedTrack.value.artistName || ''
+                const track = selectedTrack.value.trackName || ''
+                const spotifyUrl = `https://open.spotify.com/search/${encodeURIComponent(`${track} ${artist}`)}`
+                formData.append('spotify_web_url', spotifyUrl)
+
+                // 📱 Agregar términos de búsqueda para apps móviles
+                formData.append('artist_search_term', artist)
+                formData.append('track_search_term', track)
+            }
         } else if (tipo.value === 'archivo') {
             // Para archivos, usamos tipo "archivo" en el backend
             tipoBackend = 'archivo'
@@ -608,6 +713,9 @@ const publicar = async () => {
 
         // Tipo es REQUERIDO
         formData.append('tipo', tipoBackend)
+
+        // Visibilidad
+        formData.append('visibilidad', visibilidad.value)
 
         // DEBUG: Ver qué estamos enviando
         console.log('=== FormData a enviar desde CreatePost ===')
@@ -711,18 +819,18 @@ ion-header {
 }
 
 ion-toolbar {
-    --background: #ffffff;
+    --background: var(--ion-background-color);
     --border-width: 0;
 }
 
 ion-toolbar ion-title {
     font-weight: bold;
     font-size: 18px;
-    color: #1f2937;
+    color: var(--ion-text-color);
 }
 
 ion-toolbar ion-button {
-    --color: #6b7280;
+    --color: var(--ion-color-medium);
 }
 
 ion-toolbar ion-icon {
@@ -730,7 +838,7 @@ ion-toolbar ion-icon {
 }
 
 ion-content {
-    --background: #ffffff;
+    --background: var(--ion-background-color);
 }
 
 .segmento-personalizado {
@@ -786,6 +894,7 @@ ion-content {
     font-size: 1.5rem;
     font-weight: bold;
     margin: 0 0 0.5rem 0;
+    color: var(--ion-text-color);
 }
 
 .seccion-encabezado p {
@@ -795,23 +904,24 @@ ion-content {
 }
 
 .caja-subida {
-    border: 2px dashed #E5E7EB;
+    border: 2px dashed var(--ion-border-color);
     border-radius: 12px;
     padding: 2rem;
     text-align: center;
     cursor: pointer;
     transition: all 0.3s;
-    background: #ffffff;
+    background: var(--ion-card-background);
 }
 
 .caja-subida:hover {
     border-color: var(--ion-color-primary);
-    background: #F9FAFB;
+    background: var(--ion-color-light);
 }
 
 .caja-subida h3 {
     margin: 1rem 0 0.5rem 0;
     font-size: 1.125rem;
+    color: var(--ion-text-color);
 }
 
 .caja-subida .texto-pequeno {
@@ -869,6 +979,7 @@ ion-content {
     font-size: 1rem;
     font-weight: 600;
     word-break: break-word;
+    color: var(--ion-text-color);
 }
 
 .detalles-archivo p {
@@ -879,9 +990,13 @@ ion-content {
 
 .caja-busqueda {
     border-radius: 12px;
-    --background: #ffffff;
+    --background: var(--ion-card-background);
     margin-bottom: 1rem;
-    border: 1px solid #E5E7EB;
+    border: 1px solid var(--ion-border-color);
+}
+
+.selected-track {
+    margin-bottom: 1rem;
 }
 
 .seccion-formulario {
@@ -921,11 +1036,11 @@ ion-item p {
 
 /* Estilos para ion-item sin fondo */
 ion-item {
-    --background: #ffffff;
-    --border-color: #E5E7EB;
+    --background: var(--ion-card-background);
+    --border-color: var(--ion-border-color);
 }
 
 .vista-previa-archivo {
-    background: #ffffff;
+    background: var(--ion-card-background);
 }
 </style>
