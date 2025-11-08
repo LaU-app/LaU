@@ -96,10 +96,19 @@ export default {
         // Actualizar estado de autenticación cada vez que se entra a la vista
         this.isAuthenticated = AuthService.isAuthenticated()
 
+        // Verificar si se viene de crear un post (state en router)
+        const postCreated = window.history.state?.postCreated
+
         // Si el usuario acaba de iniciar sesión, recargar datos
         if (this.isAuthenticated && this.user.username === 'invitado') {
             this.loadCurrentUser()
             this.fetchPosts()
+        } else if (this.isAuthenticated && postCreated) {
+            // Si viene de crear un post, refrescar el feed
+            console.log('📝 Post creado - Actualizando feed...')
+            this.fetchPosts(1)
+            // Limpiar el state para evitar recargas múltiples
+            window.history.replaceState({ ...window.history.state, postCreated: false }, '')
         }
 
         // Programar el alert solo si NO está autenticado y no hay timer activo

@@ -747,9 +747,13 @@ const publicar = async () => {
             imagenPreview.value = null
             busqueda.value = ''
             visibilidad.value = 'publico'
+            selectedTrack.value = null
 
-            // Navegar al feed
-            router.push('/tabs/tab1')
+            // Navegar al feed con un state para indicar que se creó un post
+            router.push({
+                path: '/tabs/tab1',
+                state: { postCreated: true }
+            })
         } else {
             throw new Error(response.data.message || 'Error al crear publicación')
         }
