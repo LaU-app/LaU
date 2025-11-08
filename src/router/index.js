@@ -20,6 +20,12 @@ const routes = [
     meta: { requiresGuest: true },
   },
   {
+    path: "/university-select",
+    name: "UniversitySelect",
+    component: () => import("@/views/UniversitySelectView.vue"),
+    meta: { requiresGuest: true },
+  },
+  {
     path: "/register",
     name: "Register",
     component: () => import("@/views/RegisterView.vue"),

@@ -19,11 +19,9 @@
                     <!-- Logo y título -->
                     <div class="title-section">
                         <img src="/LaU1.png" alt="LaÚ" class="app-logo" />
-                        <h2 class="subtitle">CONECTA EN TU CAMPUS</h2>
+                        <h2 class="subtitle">{{ pageTitle }}</h2>
                         <p class="description">
-                            Encuentra a tus compañeros de carrera, comparte apuntes y playlists, y descubre qué pasa en
-                            tu
-                            universidad.
+                            {{ pageDescription }}
                         </p>
                     </div>
 
@@ -48,10 +46,9 @@
 
                         <!-- Correo institucional -->
                         <div class="input-wrapper" :class="{ 'focused': emailFocused, 'invalid': errors.email }">
-                            <ion-input v-model="formData.email" type="email"
-                                placeholder="Correo institucional (@itca.edu.sv)" class="register-input"
-                                :class="{ 'ion-invalid': errors.email }" @ionFocus="emailFocused = true"
-                                @ionBlur="emailFocused = false"></ion-input>
+                            <ion-input v-model="formData.email" type="email" :placeholder="emailPlaceholder"
+                                class="register-input" :class="{ 'ion-invalid': errors.email }"
+                                @ionFocus="emailFocused = true" @ionBlur="emailFocused = false"></ion-input>
                             <div class="input-line"></div>
                         </div>
 
@@ -142,7 +139,9 @@ export default {
                 username: '',
                 email: '',
                 password: '',
-                password_confirmation: ''
+                password_confirmation: '',
+                universidad_id: null,
+                carrera_id: null
             },
             errors: {
                 name: false,
@@ -159,13 +158,70 @@ export default {
             usernameFocused: false,
             emailFocused: false,
             passwordFocused: false,
-            passwordConfirmFocused: false
+            passwordConfirmFocused: false,
+            // Datos de universidad seleccionada
+            universidadData: {
+                id: null,
+                nombre: null,
+                dominio: null
+            },
+            carreraData: {
+                id: null,
+                nombre: null
+            }
+        }
+    },
+    mounted() {
+        // Leer parámetros de la URL
+        const { universidadId, universidadNombre, universidadDominio, carreraId, carreraNombre } = this.$route.query
+
+        if (universidadId && universidadNombre && universidadDominio) {
+            this.universidadData.id = parseInt(universidadId)
+            this.universidadData.nombre = universidadNombre
+            this.universidadData.dominio = universidadDominio
+            this.formData.universidad_id = parseInt(universidadId)
+        }
+
+        if (carreraId && carreraNombre) {
+            this.carreraData.id = parseInt(carreraId)
+            this.carreraData.nombre = carreraNombre
+            this.formData.carrera_id = parseInt(carreraId)
+        }
+    },
+    computed: {
+        emailPlaceholder() {
+            if (this.universidadData.dominio) {
+                return `Correo institucional (${this.universidadData.dominio})`
+            }
+            return 'Correo institucional'
+        },
+        pageTitle() {
+            if (this.universidadData.nombre) {
+                return 'COMPLETA TU REGISTRO'
+            }
+            return 'CONECTA EN TU CAMPUS'
+        },
+        pageDescription() {
+            if (this.universidadData.nombre) {
+                return 'Completa tus datos para unirte a la comunidad universitaria.'
+            }
+            return 'Encuentra a tus compañeros de carrera, comparte apuntes y playlists, y descubre qué pasa en tu universidad.'
         }
     },
     methods: {
         validateForm() {
             // Validación según el controlador de la API
-            const emailRegex = /^[^\s@]+@itca\.edu\.sv$/  // Solo acepta correos @itca.edu.sv
+            // Si hay universidad seleccionada, validar con su dominio
+            let emailRegex
+            if (this.universidadData.dominio) {
+                // Escapar el dominio para regex (convertir puntos en \.)
+                const escapedDomain = this.universidadData.dominio.replace(/\./g, '\\.')
+                emailRegex = new RegExp(`^[^\\s@]+${escapedDomain}$`)
+            } else {
+                // Por defecto, validar correo genérico
+                emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+            }
+
             const isNameValid = this.formData.name && this.formData.name.trim().length > 0 && this.formData.name.length <= 255
             const isUsernameValid = this.formData.username && this.formData.username.trim().length > 0 && this.formData.username.length <= 15
             const isEmailValid = this.formData.email && emailRegex.test(this.formData.email)
@@ -237,17 +293,35 @@ export default {
                 return
             }
 
-            if (!this.formData.email.endsWith('@itca.edu.sv')) {
-                this.errorMessage = 'Solo se aceptan correos institucionales @itca.edu.sv'
-                this.errors.email = true
-                const toast = await toastController.create({
-                    message: this.errorMessage,
-                    duration: 3000,
-                    position: 'top',
-                    cssClass: 'danger-toast'
-                })
-                await toast.present()
-                return
+            // Validar dominio específico si hay universidad seleccionada
+            if (this.universidadData.dominio) {
+                if (!this.formData.email.endsWith(this.universidadData.dominio)) {
+                    this.errorMessage = `Solo se aceptan correos institucionales ${this.universidadData.dominio}`
+                    this.errors.email = true
+                    const toast = await toastController.create({
+                        message: this.errorMessage,
+                        duration: 3000,
+                        position: 'top',
+                        cssClass: 'danger-toast'
+                    })
+                    await toast.present()
+                    return
+                }
+            } else {
+                // Validar que sea un correo válido genérico
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                if (!emailRegex.test(this.formData.email)) {
+                    this.errorMessage = 'Por favor, ingresa un correo válido'
+                    this.errors.email = true
+                    const toast = await toastController.create({
+                        message: this.errorMessage,
+                        duration: 3000,
+                        position: 'top',
+                        cssClass: 'danger-toast'
+                    })
+                    await toast.present()
+                    return
+                }
             }
 
             if (!this.formData.password || this.formData.password.length < 8) {
@@ -344,7 +418,12 @@ export default {
         },
 
         goToWelcome() {
-            this.$router.push('/welcome')
+            // Si vino de university-select, volver ahí
+            if (this.universidadData.id) {
+                this.$router.push('/university-select')
+            } else {
+                this.$router.push('/welcome')
+            }
         },
 
         goToLogin() {
