@@ -36,17 +36,24 @@ import "./theme/variables.css";
 
 /* Push Notifications Service */
 import { pushNotificationsService } from "./services/pushNotificationsService";
+import { Capacitor } from "@capacitor/core";
 
 const app = createApp(App).use(IonicVue).use(router);
 
 router.isReady().then(() => {
   app.mount("#app");
 
-  // Inicializar notificaciones push si el usuario está autenticado
-  const token = localStorage.getItem("token");
-  if (token) {
-    pushNotificationsService.initialize().catch((err) => {
-      console.error("Failed to initialize push notifications:", err);
-    });
+  // Inicializar notificaciones push solo en plataformas nativas
+  if (Capacitor.isNativePlatform()) {
+    // Verificar si el usuario está autenticado
+    const token =
+      localStorage.getItem("auth_token") ||
+      sessionStorage.getItem("auth_token");
+
+    if (token) {
+      pushNotificationsService.initialize().catch((err) => {
+        console.error("Failed to initialize push notifications:", err);
+      });
+    }
   }
 });
