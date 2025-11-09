@@ -191,12 +191,18 @@ export default {
                 this.totalPosts = result.pagination.total || 0
                 this.feedType = result.feedType || 'public'
 
-                // Log para debugging
-                console.log(`Feed cargado: ${this.feedType}`, {
+                // Log detallado para debugging de likes
+                console.log(`[HomeView] Feed cargado: ${this.feedType}`, {
                     posts: result.data.length,
                     total: this.totalPosts,
                     page: this.currentPage,
-                    isAuthenticated: AuthService.isAuthenticated()
+                    isAuthenticated: AuthService.isAuthenticated(),
+                    // Mostrar estado de likes de los primeros 3 posts
+                    likesStatus: result.data.slice(0, 3).map(p => ({
+                        id: p.id,
+                        user_has_liked: p.user_has_liked,
+                        likes_count: p.likes_count
+                    }))
                 })
             } else {
                 this.error = result.error
@@ -213,13 +219,54 @@ export default {
             this.loading = false
         },
         async handleLike(postId) {
+            // Encontrar el post antes de hacer la petición
+            const postIndex = this.posts.findIndex(p => p.id === postId)
+            if (postIndex === -1) return
+
+            // Guardar el estado anterior por si hay que revertir
+            const previousLikedState = this.posts[postIndex].user_has_liked
+            const previousLikesCount = this.posts[postIndex].likes_count || 0
+
+            console.log('[HomeView] Like click - Estado antes:', {
+                postId,
+                user_has_liked: previousLikedState,
+                likes_count: previousLikesCount
+            })
+
+            // Actualizar UI optimistamente
+            this.posts[postIndex].user_has_liked = !previousLikedState
+            this.posts[postIndex].likes_count = this.posts[postIndex].user_has_liked
+                ? previousLikesCount + 1
+                : Math.max(0, previousLikesCount - 1)
+
+            console.log('[HomeView] Like click - Estado optimista:', {
+                postId,
+                user_has_liked: this.posts[postIndex].user_has_liked,
+                likes_count: this.posts[postIndex].likes_count
+            })
+
+            // Hacer la petición al backend
             const result = await postsService.likePost(postId)
-            if (result.success) {
-                const postIndex = this.posts.findIndex(p => p.id === postId)
-                if (postIndex !== -1) {
-                    this.posts[postIndex].user_has_liked = !this.posts[postIndex].user_has_liked
-                    this.posts[postIndex].likes_count = this.posts[postIndex].user_has_liked ? (this.posts[postIndex].likes_count || 0) + 1 : Math.max(0, (this.posts[postIndex].likes_count || 0) - 1)
-                }
+
+            if (result.success && result.data) {
+                // Actualizar con los datos reales del backend
+                this.posts[postIndex].user_has_liked = result.data.user_has_liked !== undefined
+                    ? result.data.user_has_liked
+                    : !previousLikedState
+                this.posts[postIndex].likes_count = result.data.likes_count !== undefined
+                    ? result.data.likes_count
+                    : this.posts[postIndex].likes_count
+
+                console.log('[HomeView] Like click - Estado final del backend:', {
+                    postId,
+                    user_has_liked: this.posts[postIndex].user_has_liked,
+                    likes_count: this.posts[postIndex].likes_count
+                })
+            } else {
+                console.error('[HomeView] Like falló, revirtiendo:', result.error)
+                // Si falla, revertir al estado anterior
+                this.posts[postIndex].user_has_liked = previousLikedState
+                this.posts[postIndex].likes_count = previousLikesCount
             }
         },
         async handleComment(postId) {

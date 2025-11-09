@@ -60,8 +60,34 @@ export const notificationsService = {
      */
     async markAsRead(notificationId) {
         try {
-            const response = await api.put(`/notifications/${notificationId}/read`);
-            return response.data;
+            // Intentar múltiples endpoints posibles
+            const endpoints = [
+                `/notifications/${notificationId}/read`,
+                `/notifications/${notificationId}/mark-read`,
+                `/notifications/read/${notificationId}`,
+                `/notificaciones/${notificationId}/leer`
+            ];
+
+            let lastError = null;
+
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await api.put(endpoint);
+                    console.log(`✅ Notificación marcada como leída usando: ${endpoint}`);
+                    return response.data;
+                } catch (error) {
+                    if (error.response?.status === 404) {
+                        console.log(`❌ Endpoint no encontrado: ${endpoint}`);
+                        lastError = error;
+                        continue;
+                    }
+                    // Si es otro error, lanzarlo inmediatamente
+                    throw error;
+                }
+            }
+
+            // Si ningún endpoint funcionó
+            throw lastError || new Error('No se encontró un endpoint válido');
         } catch (error) {
             console.error('[NotificationsService] Error al marcar como leída:', error);
             throw error;
@@ -74,8 +100,37 @@ export const notificationsService = {
      */
     async markAllAsRead() {
         try {
-            const response = await api.put('/notifications/read-all');
-            return response.data;
+            // Intentar múltiples endpoints posibles
+            const endpoints = [
+                { method: 'put', url: '/notifications/read-all' },
+                { method: 'put', url: '/notifications/mark-all-read' },
+                { method: 'post', url: '/notifications/read-all' },
+                { method: 'post', url: '/notifications/mark-all-read' },
+                { method: 'put', url: '/notificaciones/leer-todas' }
+            ];
+
+            let lastError = null;
+
+            for (const endpoint of endpoints) {
+                try {
+                    const response = endpoint.method === 'post'
+                        ? await api.post(endpoint.url)
+                        : await api.put(endpoint.url);
+                    console.log(`✅ Todas las notificaciones marcadas como leídas usando: ${endpoint.method.toUpperCase()} ${endpoint.url}`);
+                    return response.data;
+                } catch (error) {
+                    if (error.response?.status === 404 || error.response?.status === 405) {
+                        console.log(`❌ Endpoint no válido: ${endpoint.method.toUpperCase()} ${endpoint.url}`);
+                        lastError = error;
+                        continue;
+                    }
+                    // Si es otro error, lanzarlo inmediatamente
+                    throw error;
+                }
+            }
+
+            // Si ningún endpoint funcionó
+            throw lastError || new Error('No se encontró un endpoint válido para marcar todas como leídas');
         } catch (error) {
             console.error('[NotificationsService] Error al marcar todas como leídas:', error);
             throw error;

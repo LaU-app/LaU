@@ -31,16 +31,48 @@ class PostsService {
       if (response.data.success && response.data.data) {
         const posts = response.data.data.data || [];
 
+        // Obtener el ID del usuario actual para verificar likes
+        const currentUser = AuthService.getUser();
+        const currentUserId = currentUser?.id;
+
+        // Log para debugging - ver qué está enviando el backend
+        if (posts.length > 0) {
+          console.log('[PostsService] Ejemplo de post del backend:', {
+            id: posts[0].id,
+            user_has_liked: posts[0].user_has_liked,
+            likes_count: posts[0].likes_count,
+            likes: posts[0].likes,
+            currentUserId: currentUserId
+          });
+        }
+
         // Enriquecer posts con información de autenticación
-        const enrichedPosts = posts.map((post) => ({
-          ...post,
-          // Verificar si el usuario actual dio like (viene del backend)
-          user_has_liked: post.user_has_liked || false,
-          // Contar likes (puede venir como count o array)
-          likes_count: post.likes_count || post.likes?.length || 0,
-          // Contar comentarios
-          comments_count: post.comentarios?.length || 0,
-        }));
+        const enrichedPosts = posts.map((post) => {
+          // Calcular user_has_liked desde el array de likes si no viene del backend
+          let hasLiked = false;
+
+          if (post.user_has_liked !== undefined) {
+            // Si el backend envía user_has_liked, usarlo
+            hasLiked = post.user_has_liked;
+          } else if (post.likes && Array.isArray(post.likes) && currentUserId) {
+            // Si no viene user_has_liked pero sí el array de likes, calcularlo
+            hasLiked = post.likes.some(like =>
+              like.user_id === currentUserId ||
+              like.usuario_id === currentUserId ||
+              like.id === currentUserId
+            );
+          }
+
+          return {
+            ...post,
+            // IMPORTANTE: Preservar el valor calculado o del backend
+            user_has_liked: hasLiked,
+            // Contar likes (puede venir como count o array)
+            likes_count: post.likes_count !== undefined ? post.likes_count : (post.likes?.length || 0),
+            // Contar comentarios
+            comments_count: post.comentarios?.length || 0,
+          };
+        });
 
         return {
           success: true,
@@ -116,9 +148,42 @@ class PostsService {
   async getPost(postId) {
     try {
       const response = await api.get(`/posts/${postId}`);
+      const post = response.data?.data || response.data;
+
+      // Obtener el ID del usuario actual
+      const currentUser = AuthService.getUser();
+      const currentUserId = currentUser?.id;
+
+      // Calcular user_has_liked desde el array de likes si no viene del backend
+      let hasLiked = false;
+
+      if (post.user_has_liked !== undefined) {
+        hasLiked = post.user_has_liked;
+      } else if (post.likes && Array.isArray(post.likes) && currentUserId) {
+        hasLiked = post.likes.some(like =>
+          like.user_id === currentUserId ||
+          like.usuario_id === currentUserId ||
+          like.id === currentUserId
+        );
+      }
+
+      // Log para debugging
+      console.log('[PostsService] Post individual del backend:', {
+        id: post.id,
+        user_has_liked_backend: post.user_has_liked,
+        user_has_liked_calculado: hasLiked,
+        likes_count: post.likes_count,
+        currentUserId: currentUserId
+      });
+
       return {
         success: true,
-        data: response.data?.data || response.data,
+        data: {
+          ...post,
+          // Preservar el valor calculado
+          user_has_liked: hasLiked,
+          likes_count: post.likes_count !== undefined ? post.likes_count : (post.likes?.length || 0),
+        },
       };
     } catch (err) {
       return {
@@ -131,14 +196,39 @@ class PostsService {
   /**
    * Da like a un post
    * @param {number} postId - ID del post
-   * @returns {Promise<Object>} Respuesta de la API
+   * @returns {Promise<Object>} Respuesta de la API con el estado actualizado
    */
   async likePost(postId) {
     try {
       const response = await api.post(`/posts/${postId}/like`, {});
-      return { success: true, data: response.data };
+
+      // El backend puede devolver diferentes estructuras
+      const data = response.data?.data || response.data;
+
+      // Log detallado para debugging
+      console.log('[PostsService] Respuesta de like del backend:', {
+        postId,
+        rawResponse: response.data,
+        user_has_liked: data.user_has_liked,
+        liked: data.liked,
+        likes_count: data.likes_count,
+        total_likes: data.total_likes
+      });
+
+      return {
+        success: true,
+        data: {
+          user_has_liked: data.user_has_liked !== undefined ? data.user_has_liked : data.liked,
+          likes_count: data.likes_count !== undefined ? data.likes_count : data.total_likes,
+          message: data.message
+        }
+      };
     } catch (err) {
-      return { success: false, error: err.message };
+      console.error('[PostsService] Error en likePost:', err);
+      return {
+        success: false,
+        error: err.response?.data?.message || err.message
+      };
     }
   }
 

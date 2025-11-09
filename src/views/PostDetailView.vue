@@ -95,7 +95,7 @@
                     <br>
                     <!-- Post Actions -->
                     <ion-card-content class="post-footer">
-                        <PostActions :post="post" />
+                        <PostActions :post="post" @like="handleLike" @comment="focusCommentInput" />
                     </ion-card-content>
                 </ion-card>
 
@@ -180,6 +180,7 @@ import PostActions from '@/components/PostActions.vue'
 import CommentItem from '@/components/CommentItem.vue'
 import { timeAgo } from '@/utils/timeUtils'
 import api from '@/services/api'
+import postsService from '@/services/postsService'
 import { AuthService } from '@/services/auth'
 
 const route = useRoute()
@@ -211,7 +212,41 @@ const loadPost = async () => {
         const response = await api.getPostById(postId)
 
         if (response.data.success) {
-            post.value = response.data.data
+            const postData = response.data.data
+
+            // Obtener ID del usuario actual para calcular user_has_liked
+            const currentUserId = AuthService.getUser()?.id
+
+            // Calcular user_has_liked igual que en el feed
+            let hasLiked = false;
+
+            if (postData.user_has_liked !== undefined) {
+                // Si el backend envía user_has_liked, usarlo
+                hasLiked = postData.user_has_liked;
+            } else if (postData.likes && Array.isArray(postData.likes) && currentUserId) {
+                // Si no viene user_has_liked pero sí el array de likes, calcularlo
+                hasLiked = postData.likes.some(like =>
+                    like.user_id === currentUserId ||
+                    like.usuario_id === currentUserId ||
+                    like.id === currentUserId
+                );
+            }
+
+            // Asignar el post con user_has_liked calculado
+            post.value = {
+                ...postData,
+                user_has_liked: hasLiked,
+                likes_count: postData.likes_count !== undefined ? postData.likes_count : (postData.likes?.length || 0)
+            }
+
+            // Log para debugging
+            console.log('[PostDetailView] Post cargado:', {
+                id: post.value.id,
+                user_has_liked_backend: postData.user_has_liked,
+                user_has_liked_calculado: hasLiked,
+                likes_count: post.value.likes_count,
+                currentUserId: currentUserId
+            })
         } else {
             throw new Error(response.data.message || 'Error al cargar la publicación')
         }
@@ -269,17 +304,76 @@ const getFileIcon = (filePath) => {
 
 const handleLike = async () => {
     try {
-        // TODO: Implementar lógica de like con la API
-        console.log('Like en post:', post.value.id)
-        const toast = await toastController.create({
-            message: 'Like agregado',
-            duration: 1500,
-            position: 'bottom',
-            color: 'success'
+        if (!post.value) return
+
+        // Guardar estado anterior por si hay que revertir
+        const previousLikedState = post.value.user_has_liked
+        const previousLikesCount = post.value.likes_count || 0
+
+        console.log('[PostDetailView] Like click - Estado antes:', {
+            postId: post.value.id,
+            user_has_liked: previousLikedState,
+            likes_count: previousLikesCount
         })
-        await toast.present()
+
+        // Actualizar UI optimistamente
+        post.value.user_has_liked = !previousLikedState
+        post.value.likes_count = post.value.user_has_liked
+            ? previousLikesCount + 1
+            : Math.max(0, previousLikesCount - 1)
+
+        console.log('[PostDetailView] Like click - Estado optimista:', {
+            postId: post.value.id,
+            user_has_liked: post.value.user_has_liked,
+            likes_count: post.value.likes_count
+        })
+
+        // Hacer petición al backend
+        const result = await postsService.likePost(post.value.id)
+
+        if (result.success && result.data) {
+            // Actualizar con datos reales del backend
+            post.value.user_has_liked = result.data.user_has_liked !== undefined
+                ? result.data.user_has_liked
+                : !previousLikedState
+            post.value.likes_count = result.data.likes_count !== undefined
+                ? result.data.likes_count
+                : post.value.likes_count
+
+            console.log('[PostDetailView] Like click - Estado final del backend:', {
+                postId: post.value.id,
+                user_has_liked: post.value.user_has_liked,
+                likes_count: post.value.likes_count
+            })
+
+            // Solo mostrar mensaje cuando se agrega like
+            if (post.value.user_has_liked) {
+                const toast = await toastController.create({
+                    message: '❤️ Like agregado',
+                    duration: 1500,
+                    position: 'bottom',
+                    color: 'danger'
+                })
+                await toast.present()
+            }
+        } else {
+            console.error('[PostDetailView] Like falló, revirtiendo:', result.error)
+            // Si falla, revertir al estado anterior
+            post.value.user_has_liked = previousLikedState
+            post.value.likes_count = previousLikesCount
+
+            const toast = await toastController.create({
+                message: 'Error al dar like',
+                duration: 2000,
+                position: 'bottom',
+                color: 'danger'
+            })
+            await toast.present()
+        }
     } catch (err) {
         console.error('Error al dar like:', err)
+        // Recargar el post para obtener el estado correcto
+        await loadPost()
     }
 }
 

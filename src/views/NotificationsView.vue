@@ -191,8 +191,11 @@ const handleMarkAsRead = async (notificationId) => {
       notification.read_at = new Date().toISOString();
       unreadCount.value = Math.max(0, unreadCount.value - 1);
     }
+
+    showToast('Notificación marcada como leída', 'success');
   } catch (error) {
     console.error('Error al marcar como leída:', error);
+    showToast('Error al marcar como leída', 'danger');
   }
 };
 
@@ -201,7 +204,7 @@ const markAllAsRead = async () => {
   try {
     const response = await notificationsService.markAllAsRead();
 
-    if (response.success) {
+    if (response.success || response.message) {
       // Actualizar todas en el array local
       notifications.value.forEach(notification => {
         notification.read_at = new Date().toISOString();
@@ -209,10 +212,24 @@ const markAllAsRead = async () => {
 
       unreadCount.value = 0;
       showToast('Todas las notificaciones marcadas como leídas', 'success');
+    } else {
+      throw new Error('Respuesta inesperada del servidor');
     }
   } catch (error) {
     console.error('Error al marcar todas como leídas:', error);
-    showToast('Error al marcar notificaciones', 'danger');
+
+    // Mostrar mensaje de error más específico
+    let errorMessage = 'Error al marcar notificaciones';
+
+    if (error.response?.status === 404) {
+      errorMessage = 'Funcionalidad no disponible en el servidor';
+    } else if (error.response?.status === 401) {
+      errorMessage = 'Sesión expirada. Inicia sesión nuevamente';
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    }
+
+    showToast(errorMessage, 'danger');
   }
 };
 
