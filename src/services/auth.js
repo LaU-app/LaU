@@ -9,8 +9,12 @@ const TOKEN_EXPIRY_KEY = "token_expiry";
 export const AuthService = {
   async login(credentials, rememberMe = false) {
     try {
+      console.log('[AUTH] Intentando login...', { email: credentials.email });
+      
       // POST /auth/login con email y password
       const res = await api.post("/auth/login", credentials);
+
+      console.log('[AUTH] Login exitoso:', res.data);
 
       // Adaptarse a la estructura de respuesta de tu API
       const data = res.data?.data || res.data;
@@ -18,10 +22,12 @@ export const AuthService = {
       if (data?.token) {
         // Guardar token según la opción "Recuérdame"
         this.setToken(data.token, rememberMe);
+        console.log('[AUTH] Token guardado');
       }
 
       if (data?.user) {
         this.setUser(data.user, rememberMe);
+        console.log('[AUTH] Usuario guardado:', data.user.email);
       }
 
       // Inicializar notificaciones push después del login exitoso
@@ -36,7 +42,11 @@ export const AuthService = {
 
       return data;
     } catch (error) {
-      console.error("Error en login:", error);
+      console.error("[AUTH] Error en login:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       throw error;
     }
   },

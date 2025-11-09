@@ -91,26 +91,22 @@ const router = createRouter({
   routes,
 });
 
-// Manejar navegación desde notificaciones push
+// Listener para manejar navegación desde notificaciones push
 window.addEventListener("pushNotificationAction", (event) => {
   const { type, postId, userId, notificationId } = event.detail;
 
+  // Navegar según el tipo
   if (type === "like" || type === "comment") {
-    // Navegar al detalle del post
     if (postId) {
       router.push(`/tabs/post/${postId}`);
+    } else {
+      router.push("/tabs/notifications");
     }
   } else if (type === "follow") {
-    // Navegar al perfil del usuario que siguió
-    if (userId) {
-      // Aquí puedes navegar al perfil del usuario si tienes esa ruta
-      // router.push(`/profile/${userId}`);
-      // Por ahora, navegar a notificaciones
-      router.push("/notifications");
-    }
+    router.push("/tabs/notifications");
   } else {
-    // Por defecto, navegar a la página de notificaciones
-    router.push("/notifications");
+    // Por defecto, ir a notificaciones
+    router.push("/tabs/notifications");
   }
 });
 

@@ -145,8 +145,12 @@ export default {
             this.loading = true
 
             try {
+                console.log('[LOGIN] Iniciando login...', { email: this.formData.email });
+                
                 // Pasar rememberMe al servicio de autenticación
                 await AuthService.login(this.formData, this.rememberMe)
+
+                console.log('[LOGIN] Login completado exitosamente');
 
                 // Mostrar mensaje de éxito
                 const toast = await toastController.create({
@@ -160,20 +164,27 @@ export default {
                 // Redirigir al home o dashboard
                 this.$router.replace('/tabs/tab1')
             } catch (error) {
-                console.error('Error en login:', error)
+                console.error('[LOGIN] Error en login:', error)
 
                 // Marcar campos con error
                 this.errors.email = true
                 this.errors.password = true
 
-                // Mostrar mensaje de error específico de la API (Las credenciales son incorrectas)
-                if (error.response?.data?.message) {
-                    this.errorMessage = error.response.data.message
+                // Mostrar mensaje de error específico
+                let errorMsg = 'Error al iniciar sesión. Por favor, intenta de nuevo.';
+                
+                if (!error.response) {
+                    // Error de red
+                    errorMsg = 'No se pudo conectar al servidor. Verifica tu conexión a internet.';
+                } else if (error.response?.data?.message) {
+                    errorMsg = error.response.data.message;
                 } else if (error.response?.status === 401) {
-                    this.errorMessage = 'Las credenciales son incorrectas.'
-                } else {
-                    this.errorMessage = 'Error al iniciar sesión. Por favor, intenta de nuevo.'
+                    errorMsg = 'Las credenciales son incorrectas.';
+                } else if (error.response?.status === 500) {
+                    errorMsg = 'Error en el servidor. Intenta más tarde.';
                 }
+
+                this.errorMessage = errorMsg;
 
                 const toast = await toastController.create({
                     message: this.errorMessage,
