@@ -29,50 +29,37 @@
                 <ion-row>
                     <ion-col>
                         <ion-select :toggle-icon="chevronDownOutline" aria-label="ASC/DESC" placeholder="Ordenar Por"
-                            v-model="filters.order">
+                            v-model="filters.order" @ionChange="applyFilters">
                             <ion-select-option value="ASC">Ascendiente</ion-select-option>
                             <ion-select-option value="DESC">Descendiente</ion-select-option>
                             <ion-select-option value="ABC">Alfabético</ion-select-option>
                             <ion-select-option value="CBA">Alfabético Inverso</ion-select-option>
                         </ion-select>
                     </ion-col>
-                    <ion-col><ion-select :toggle-icon="chevronDownOutline" aria-label="Universidad"
-                            v-model="filters.universidad" placeholder="Universidad">
-                            <ion-select-option value="itca-fepade">ITCA-Fepade</ion-select-option>
-                            <ion-select-option value="ues">Universidad de El Salvador (UES)</ion-select-option>
-                            <ion-select-option value="upes">Universidad Pedagógica de El Salvador
-                                (UPES)</ion-select-option>
-                            <ion-select-option value="uca">Universidad Centroamericana José Simeón Cañas
-                                (UCA)</ion-select-option>
-                            <ion-select-option value="ucd">Universidad Cristiana de El Salvador
-                                (UCES)</ion-select-option>
-                            <ion-select-option value="unab">Universidad Nacional Alberto Masferrer
-                                (UNAB)</ion-select-option>
-                            <ion-select-option value="ufg">Universidad Francisco Gavidia (UFG)</ion-select-option>
-                            <ion-select-option value="umg">Universidad Modular Abierta (UMA)</ion-select-option>
-                            <ion-select-option value="upes">Universidad Politécnica de El Salvador
-                                (UPES)</ion-select-option>
-                        </ion-select></ion-col>
-                    <ion-col><ion-select :toggle-icon="chevronDownOutline" aria-label="Carrera" placeholder="Carrera"
-                            v-model="filters.carrera">
-                            >
-                            <ion-select-option value="ingenieria_sistemas">Ingeniería en Sistemas</ion-select-option>
-                            <ion-select-option value="administracion_empresas">Administración de
-                                Empresas</ion-select-option>
-                            <ion-select-option value="medicina">Medicina</ion-select-option>
-                            <ion-select-option value="derecho">Derecho</ion-select-option>
-                            <ion-select-option value="arquitectura">Arquitectura</ion-select-option>
-                            <ion-select-option value="contabilidad">Contabilidad</ion-select-option>
-                            <ion-select-option value="ingenieria_civil">Ingeniería Civil</ion-select-option>
-                            <ion-select-option value="ingenieria_electronica">Ingeniería Electrónica</ion-select-option>
-                            <ion-select-option value="psicologia">Psicología</ion-select-option>
-                            <ion-select-option value="enfermeria">Enfermería</ion-select-option>
-                            <ion-select-option value="comunicacion">Comunicación</ion-select-option>
-                            <ion-select-option value="mercadeo">Mercadeo</ion-select-option>
-                            <ion-select-option value="ingenieria_industrial">Ingeniería Industrial</ion-select-option>
-                            <ion-select-option value="sociologia">Sociología</ion-select-option>
-                            <ion-select-option value="educacion">Educación</ion-select-option>
-                        </ion-select></ion-col>
+                    <ion-col>
+                        <ion-select :toggle-icon="chevronDownOutline" aria-label="Universidad"
+                            v-model="filters.universidad_id" placeholder="Universidad" @ionChange="onUniversidadChange">
+                            <ion-select-option v-for="uni in universidades" :key="uni.id" :value="uni.id">
+                                {{ uni.nombre }}
+                            </ion-select-option>
+                        </ion-select>
+                    </ion-col>
+                    <ion-col>
+                        <ion-select :toggle-icon="chevronDownOutline" aria-label="Carrera" placeholder="Carrera"
+                            v-model="filters.carrera_id" @ionChange="applyFilters" :disabled="!filters.universidad_id">
+                            <ion-select-option v-for="carrera in carreras" :key="carrera.id" :value="carrera.id">
+                                {{ carrera.nombre }}
+                            </ion-select-option>
+                        </ion-select>
+                    </ion-col>
+                </ion-row>
+                <ion-row v-if="hasActiveFilters" class="clear-filters-row">
+                    <ion-col>
+                        <ion-button fill="clear" size="small" @click="clearFilters" class="clear-filters-btn">
+                            <ion-icon slot="start" :icon="closeCircleOutline"></ion-icon>
+                            Limpiar Filtros
+                        </ion-button>
+                    </ion-col>
                 </ion-row>
             </ion-grid>
             <ion-list v-if="!loading && filteredUsers.length > 0">
@@ -87,12 +74,47 @@
                                 {{ u.name }}
                             </strong>
                         </h3>
-                        <h3>{{ u.universidad || "Itca-Fepade" }}</h3>
-                        <h3>{{ u.profession || "Estudiante" }}</h3>
+                        <!-- Mostrar universidad solo si existe -->
+                        <p v-if="u.universidad" class="user-university">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="info-svg-icon">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path d="M22 9l-10 -4l-10 4l10 4l10 -4v6" />
+                                <path d="M6 10.6v5.4a6 3 0 0 0 12 0v-5.4" />
+                            </svg>
+                            <span>{{ u.universidad.nombre }}</span>
+                        </p>
+                        <!-- Mostrar carrera solo si existe -->
+                        <p v-if="u.carrera" class="user-career">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="info-svg-icon">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path d="M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0" />
+                                <path d="M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0" />
+                                <path d="M3 6l0 13" />
+                                <path d="M12 6l0 13" />
+                                <path d="M21 6l0 13" />
+                            </svg>
+                            <span>{{ u.carrera.nombre }}</span>
+                        </p>
+                        <!-- Mensaje si no tiene universidad ni carrera -->
+                        <p v-if="!u.universidad && !u.carrera" class="no-university-message">
+                            Sin información universitaria
+                        </p>
                     </ion-label>
                     <ion-button id="btnAction" slot="end">Seguir</ion-button>
                 </ion-item>
             </ion-list>
+
+            <div v-if="!loading && filteredUsers.length === 0" class="no-results">
+                <ion-icon :icon="searchOutline" class="no-results-icon"></ion-icon>
+                <p>No se encontraron usuarios</p>
+                <ion-button size="small" fill="clear" @click="clearFilters">
+                    Limpiar filtros
+                </ion-button>
+            </div>
 
             <ion-infinite-scroll @ionInfinite="onIonInfinite">
                 <ion-infinite-scroll-content />
@@ -127,7 +149,8 @@ import {
     IonSelectOption,
 } from "@ionic/vue";
 import api from "@/services/api";
-import { closeOutline, chevronDownOutline, personCircle, searchOutline } from "ionicons/icons";
+import { UniversidadService } from "@/services/universidad";
+import { closeOutline, chevronDownOutline, personCircle, searchOutline, schoolOutline, bookOutline, alertCircleOutline, closeCircleOutline } from "ionicons/icons";
 import { AuthService } from "@/services/auth";
 import { useDarkMode } from '@/utils/useDarkMode';
 
@@ -166,18 +189,35 @@ export default {
             filteredUsers: [],
             filters: {
                 order: null,
-                universidad: null,
-                carrera: null,
+                universidad_id: null,
+                carrera_id: null,
             },
             users: [],
+            universidades: [],
+            carreras: [],
             user: { imagen_url: null, name: "Usuario", username: "usuario" },
             closeOutline,
             chevronDownOutline,
             personCircle,
             searchOutline,
+            schoolOutline,
+            bookOutline,
+            alertCircleOutline,
+            closeCircleOutline,
             isAuthenticated: false,
             loading: false,
+            searchText: '',
         };
+    },
+    computed: {
+        hasActiveFilters() {
+            return (
+                this.filters.order !== null ||
+                this.filters.universidad_id !== null ||
+                this.filters.carrera_id !== null ||
+                (this.searchText && this.searchText.trim() !== '')
+            );
+        }
     },
     async created() {
         // Verificar autenticación
@@ -192,7 +232,10 @@ export default {
         // Cargar usuario autenticado
         await this.loadCurrentUser();
 
-        // Obtener usuarios
+        // Cargar universidades PRIMERO (importante para normalizar datos)
+        await this.loadUniversidades();
+
+        // Obtener usuarios DESPUÉS de cargar universidades
         await this.getUsers();
     },
 
@@ -207,6 +250,82 @@ export default {
             } catch (error) {
                 console.error("Error cargando usuario:", error);
             }
+        },
+
+        async loadUniversidades() {
+            try {
+                const response = await UniversidadService.getUniversidades();
+                this.universidades = response.data || response;
+            } catch (error) {
+                console.error("Error al cargar universidades:", error);
+                // No mostrar error al usuario, simplemente no tendrá filtros
+            }
+        },
+
+        async onUniversidadChange() {
+            if (this.filters.universidad_id) {
+                try {
+                    const response = await UniversidadService.getCarreras(this.filters.universidad_id);
+                    this.carreras = response.data || response;
+                } catch (error) {
+                    console.error("Error al cargar carreras:", error);
+                    this.carreras = [];
+                }
+            } else {
+                this.carreras = [];
+                this.filters.carrera_id = null;
+            }
+            this.applyFilters();
+        },
+
+        applyFilters() {
+            let filtered = [...this.users];
+
+            // Filtrar por búsqueda de texto
+            if (this.searchText && this.searchText.trim()) {
+                const searchTerm = this.searchText.toLowerCase();
+                filtered = filtered.filter((user) => {
+                    return (
+                        (user.name && user.name.toLowerCase().includes(searchTerm)) ||
+                        (user.universidad?.nombre && user.universidad.nombre.toLowerCase().includes(searchTerm)) ||
+                        (user.carrera?.nombre && user.carrera.nombre.toLowerCase().includes(searchTerm))
+                    );
+                });
+            }
+
+            // Filtrar por universidad
+            if (this.filters.universidad_id) {
+                filtered = filtered.filter(user => user.universidad?.id === this.filters.universidad_id);
+            }
+
+            // Filtrar por carrera
+            if (this.filters.carrera_id) {
+                filtered = filtered.filter(user => user.carrera?.id === this.filters.carrera_id);
+            }
+
+            // Ordenar
+            if (this.filters.order === 'ABC') {
+                filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            } else if (this.filters.order === 'CBA') {
+                filtered.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+            } else if (this.filters.order === 'ASC') {
+                filtered.sort((a, b) => a.id - b.id);
+            } else if (this.filters.order === 'DESC') {
+                filtered.sort((a, b) => b.id - a.id);
+            }
+
+            this.filteredUsers = filtered;
+        },
+
+        clearFilters() {
+            this.filters = {
+                order: null,
+                universidad_id: null,
+                carrera_id: null,
+            };
+            this.searchText = '';
+            this.carreras = [];
+            this.filteredUsers = this.users;
         },
         async getUsers() {
             try {
@@ -226,8 +345,14 @@ export default {
                     usersData = [];
                 }
 
+                // Asignar usuarios directamente
                 this.users = usersData;
                 this.filteredUsers = this.users;
+
+                console.log('Usuarios cargados:', this.users.length);
+                if (this.users.length > 0) {
+                    console.log('Primer usuario:', this.users[0]);
+                }
             } catch (error) {
                 console.error("Error obteniendo usuarios:", error);
 
@@ -250,42 +375,17 @@ export default {
             this.$router.back();
         },
         filterUsers(ev) {
-            const searchTerm = ev.detail.value.toLowerCase();
-            if (!searchTerm) {
-                this.filteredUsers = this.users;
-                return;
-            }
-            this.filteredUsers = this.users.filter((user) => {
-                return (
-                    (user.name && user.name.toLowerCase().includes(searchTerm)) ||
-                    (user.profession &&
-                        user.profession.toLowerCase().includes(searchTerm)) ||
-                    (user.universidad &&
-                        user.universidad.toLowerCase().includes(searchTerm))
-                );
-            });
+            this.searchText = ev.detail.value || '';
+            this.applyFilters();
         },
         handleImageError(ev) {
             // evita errores en consola si la imagen falla
             ev.target.src = "https://www.gravatar.com/avatar/?d=mp&f=y";
         },
         onIonInfinite(ev) {
-            setTimeout(() => {
-                const start = this.users.length + 1;
-                const more = Array.from({ length: 10 }, (_, i) => ({
-                    id: start + i,
-                    name: `User ${start + i}`,
-                    username: `user${start + i}`,
-                    imagen_url: "https://www.gravatar.com/avatar/?d=mp&f=y",
-                    universidad: null,
-                }));
-                this.users = [...this.users, ...more];
-
-                if (this.users.length >= 200) {
-                    ev.target.disabled = true;
-                }
-                ev.target.complete();
-            }, 800);
+            // Deshabilitado: no cargar usuarios falsos
+            ev.target.disabled = true;
+            ev.target.complete();
         },
     },
 };
@@ -364,6 +464,24 @@ ion-list ion-item {
     min-height: 20px;
 }
 
+.clear-filters-row {
+    padding-top: 0 !important;
+    padding-bottom: 8px !important;
+}
+
+.clear-filters-btn {
+    --color: #8A2BE2;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: none;
+    margin: 0;
+    height: 32px;
+}
+
+.clear-filters-btn ion-icon {
+    font-size: 18px;
+}
+
 #btnAction {
     --padding-top: 10px;
     --padding-bottom: 10px;
@@ -429,5 +547,64 @@ ion-searchbar {
 
 ion-content {
     --background: var(--ion-background-color);
+}
+
+/* Info de universidad y carrera */
+.user-university,
+.user-career {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--ion-text-color-secondary);
+    margin: 4px 0;
+}
+
+.user-university span,
+.user-career span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.info-svg-icon {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    stroke: #8A2BE2;
+}
+
+.no-university-message {
+    font-size: 0.75rem;
+    color: #f59e0b;
+    font-style: italic;
+    margin: 4px 0;
+}
+
+/* No results */
+.no-results {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.no-results-icon {
+    font-size: 64px;
+    color: var(--ion-text-color-secondary);
+    opacity: 0.5;
+    margin-bottom: 16px;
+}
+
+.no-results p {
+    color: var(--ion-text-color-secondary);
+    font-size: 16px;
+    margin: 0 0 16px 0;
+}
+
+.no-results ion-button {
+    --color: #8A2BE2;
 }
 </style>
