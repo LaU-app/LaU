@@ -50,12 +50,6 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/create-post/:tipo?",
-    name: "CreatePost",
-    component: () => import("@/views/CreatePost.vue"),
-    meta: { requiresAuth: true },
-  },
-  {
     path: "/tabs/",
     component: TabsPage,
     children: [
@@ -76,6 +70,12 @@ const routes = [
         // Sin meta: permite ver posts públicos sin login
       },
       {
+        path: "create-post/:tipo?",
+        name: "CreatePostTab",
+        component: () => import("@/views/CreatePost.vue"),
+        meta: { requiresAuth: true },
+      },
+      {
         path: "tab3",
         name: "Perfil",
         path: "perfil",
@@ -83,6 +83,12 @@ const routes = [
         meta: { requiresAuth: true },
       },
     ],
+  },
+  {
+    path: "/create-post/:tipo?",
+    name: "CreatePost",
+    component: () => import("@/views/CreatePost.vue"),
+    meta: { requiresAuth: true },
   },
 ];
 

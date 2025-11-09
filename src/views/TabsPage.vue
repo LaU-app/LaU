@@ -17,7 +17,7 @@
           <ion-icon aria-hidden="true" :icon="peopleSharp" />
         </ion-tab-button>
 
-        <ion-tab-button @click="openCreatePost">
+        <ion-tab-button tab="create-post" href="/tabs/create-post/foto">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"
             class="custom-icon create-icon">
             <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -123,11 +123,6 @@ router.afterEach(() => {
 // Función para abrir la vista de usuarios como modal
 const openUsers = () => {
   router.push('/users');
-};
-
-// Función para abrir la vista de crear post como modal
-const openCreatePost = () => {
-  router.push('/create-post/foto');
 };
 
 // Función para abrir la vista de notificaciones como modal

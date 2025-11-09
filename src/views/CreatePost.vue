@@ -1,6 +1,10 @@
 <template>
     <ion-page>
-        <ion-header>
+        <!-- Header dinámico: AppHeader cuando está en tabs, header simple cuando no -->
+        <AppHeader v-if="isInTabs" :isDarkMode="isDarkMode" :user="user" :isAuthenticated="isAuthenticated"
+            @toggleDarkMode="toggleDarkMode" />
+
+        <ion-header v-else>
             <ion-toolbar>
                 <ion-buttons slot="start">
                     <ion-button @click="goBack">
@@ -54,7 +58,7 @@
             <!-- Contenedor con animación fluida entre secciones -->
             <div class="contenedor-contenido" ref="contenedorContenidoRef">
                 <!-- Sección de Foto -->
-                <div v-show="tipo === 'foto'" class="seccion-contenido seccion-foto" data-seccion="foto">
+                <div v-if="tipo === 'foto'" class="seccion-contenido seccion-foto" data-seccion="foto">
                     <div class="contenido-interno">
                         <div class="seccion-encabezado">
                             <h2>Subir foto</h2>
@@ -94,7 +98,7 @@
                 </div>
 
                 <!-- Sección de Música -->
-                <div v-show="tipo === 'musica'" class="seccion-contenido seccion-musica" data-seccion="musica">
+                <div v-if="tipo === 'musica'" class="seccion-contenido seccion-musica" data-seccion="musica">
                     <div class="contenido-interno">
                         <div class="seccion-encabezado">
                             <h2>Buscar música</h2>
@@ -124,7 +128,7 @@
                 </div>
 
                 <!-- Sección de Archivo -->
-                <div v-show="tipo === 'archivo'" class="seccion-contenido seccion-archivo" data-seccion="archivo">
+                <div v-if="tipo === 'archivo'" class="seccion-contenido seccion-archivo" data-seccion="archivo">
                     <div class="contenido-interno">
                         <div class="seccion-encabezado">
                             <h2>Subir archivo</h2>
@@ -258,14 +262,26 @@ import {
     imagesOutline
 } from 'ionicons/icons'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
+import AppHeader from '@/components/AppHeader.vue'
 import MusicSearchModal from '@/components/MusicSearchModal.vue'
 import MusicTrackPreview from '@/components/MusicTrackPreview.vue'
 import musicService from '@/services/musicService'
 import api from '../services/api'
 import { AuthService } from '../services/auth'
+import { useDarkMode } from '@/utils/useDarkMode'
 
 const router = useRouter()
 const route = useRoute()
+
+// Dark mode
+const { isDarkMode, toggleDarkMode } = useDarkMode()
+
+// Usuario y autenticación
+const user = ref({ imagen_url: null, name: 'Usuario', username: 'usuario' })
+const isAuthenticated = ref(AuthService.isAuthenticated())
+
+// Detectar si está en tabs
+const isInTabs = computed(() => route.path.startsWith('/tabs/'))
 
 // Estado principal del formulario
 const tipo = ref('foto')
@@ -284,29 +300,72 @@ const showMusicSearch = ref(false)
 const selectedTrack = ref(null)
 const trackPreviewRef = ref(null)
 
+// Bandera para controlar si ya se inicializó (evitar watch en el montaje inicial)
+const isInitialized = ref(false)
+
+// Cargar usuario al montar
+const loadCurrentUser = async () => {
+    try {
+        const localUser = AuthService.getUser()
+        if (localUser) {
+            user.value = localUser
+        }
+
+        try {
+            const apiUser = await AuthService.fetchProfile()
+            if (apiUser) {
+                user.value = apiUser
+            }
+        } catch (apiError) {
+            console.warn('No se pudo validar el token con la API:', apiError)
+            if (apiError.response?.status === 401) {
+                AuthService.logout()
+                router.replace('/login')
+            }
+        }
+    } catch (error) {
+        console.error('Error cargando usuario:', error)
+        if (!AuthService.isAuthenticated()) {
+            router.replace('/login')
+        }
+    }
+}
+
 // Inicializar el tipo desde la ruta
-onMounted(() => {
+onMounted(async () => {
+    // Cargar usuario si está autenticado
+    if (isAuthenticated.value) {
+        await loadCurrentUser()
+    }
+
     const tipoParam = route.params.tipo
     if (tipoParam && ['foto', 'musica', 'archivo'].includes(tipoParam)) {
         tipo.value = tipoParam
     } else {
         tipo.value = 'foto'
-        // Actualizar la URL para que coincida con la ruta independiente
-        router.replace(`/create-post/foto`)
+        // Detectar si estamos en tabs o no para la ruta correcta
+        const basePath = isInTabs.value ? '/tabs/create-post' : '/create-post'
+        router.replace(`${basePath}/foto`)
     }
+    
+    // Marcar como inicializado después de establecer el tipo inicial
+    isInitialized.value = true
 })
 
 // Actualizar la ruta cuando cambia el tipo (sin agregar al historial y SIN animación de página)
 watch(tipo, (nuevoTipo, tipoAnterior) => {
+    // Solo ejecutar el watch después de la inicialización
+    if (!isInitialized.value) return
+    
     if (tipoAnterior && route.params.tipo !== nuevoTipo) {
         // Detener audio si está reproduciéndose al cambiar de tipo
         if (trackPreviewRef.value) {
             trackPreviewRef.value.stopAudio()
         }
 
-        // Actualizar la URL sin disparar animaciones de Ionic
-        // Usamos history.replaceState directamente para evitar animaciones
-        const newPath = `/create-post/${nuevoTipo}`
+        // Detectar si estamos en tabs o no
+        const basePath = isInTabs.value ? '/tabs/create-post' : '/create-post'
+        const newPath = `${basePath}/${nuevoTipo}`
         const currentState = window.history.state
 
         // Mantener el estado del historial
@@ -867,21 +926,19 @@ ion-content {
     position: relative;
     min-height: 300px;
     overflow: hidden;
-    transition: opacity 0.3s ease-in-out;
     padding: 0 16px;
 }
 
 /* Animación del contenedor durante el cambio */
 .contenedor-contenido.cambiando {
     opacity: 0.4;
+    transition: opacity 0.15s ease-in-out;
 }
 
 /* Estilos base para cada sección con animación */
 .seccion-contenido {
     position: relative;
     width: 100%;
-    opacity: 1;
-    transform: translateY(0);
 }
 
 .contenido-interno {
