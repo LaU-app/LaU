@@ -104,7 +104,9 @@
                             Sin información universitaria
                         </p>
                     </ion-label>
-                    <ion-button id="btnAction" slot="end">Seguir</ion-button>
+                    <FollowButton v-if="u.id !== currentUserId" slot="end" :userId="u.id"
+                        :initialFollowStatus="u.is_following || false" :followersCount="u.followers_count || 0"
+                        @update="handleFollowUpdate(u, $event)" />
                 </ion-item>
             </ion-list>
 
@@ -153,6 +155,8 @@ import { UniversidadService } from "@/services/universidad";
 import { closeOutline, chevronDownOutline, personCircle, searchOutline, schoolOutline, bookOutline, alertCircleOutline, closeCircleOutline } from "ionicons/icons";
 import { AuthService } from "@/services/auth";
 import { useDarkMode } from '@/utils/useDarkMode';
+import FollowButton from '@/components/FollowButton.vue';
+import { followersService } from '@/services/followersService';
 
 export default {
     name: "UsersView",
@@ -179,6 +183,7 @@ export default {
         IonCol,
         IonSelect,
         IonSelectOption,
+        FollowButton,
     },
     setup() {
         const { isDarkMode } = useDarkMode();
@@ -207,6 +212,8 @@ export default {
             isAuthenticated: false,
             loading: false,
             searchText: '',
+            currentUserId: null,
+            followingIds: [], // Array de IDs de usuarios que sigo
         };
     },
     computed: {
@@ -232,6 +239,9 @@ export default {
         // Cargar usuario autenticado
         await this.loadCurrentUser();
 
+        // Cargar la lista de usuarios que sigo (para sincronizar estado)
+        await this.loadFollowingIds();
+
         // Cargar universidades PRIMERO (importante para normalizar datos)
         await this.loadUniversidades();
 
@@ -246,9 +256,21 @@ export default {
                 const localUser = AuthService.getUser();
                 if (localUser) {
                     this.user = localUser;
+                    this.currentUserId = localUser.id;
                 }
             } catch (error) {
                 console.error("Error cargando usuario:", error);
+            }
+        },
+
+        async loadFollowingIds() {
+            try {
+                console.log('[UsersView] Cargando lista de usuarios que sigo...');
+                this.followingIds = await followersService.getFollowingIds();
+                console.log('[UsersView] ✅ Usuarios que sigo (IDs):', this.followingIds);
+            } catch (error) {
+                console.error('[UsersView] Error cargando following IDs:', error);
+                this.followingIds = [];
             }
         },
 
@@ -345,13 +367,72 @@ export default {
                     usersData = [];
                 }
 
-                // Asignar usuarios directamente
-                this.users = usersData;
+                // Obtener el ID del usuario actual
+                const currentUserId = this.currentUserId;
+
+                console.log('[UsersView] Procesando usuarios - currentUserId:', currentUserId);
+
+                if (usersData.length > 0) {
+                    console.log('[UsersView] ===== DIAGNÓSTICO DEL BACKEND =====');
+                    console.log('[UsersView] Ejemplo de usuario raw del backend:', JSON.stringify(usersData[0], null, 2));
+                    console.log('[UsersView] ¿Tiene is_following?', usersData[0].is_following);
+                    console.log('[UsersView] ¿Tiene followers?', usersData[0].followers);
+                    console.log('[UsersView] ¿Tiene following?', usersData[0].following);
+                    console.log('[UsersView] ========================================');
+                }
+
+                // Enriquecer usuarios con información de seguimiento (igual que user_has_liked en posts)
+                const enrichedUsers = usersData.map((user) => {
+                    let isFollowing = false;
+
+                    // PRIORIDAD 1: Verificar si el ID está en la lista de followingIds cargada previamente
+                    if (this.followingIds.includes(user.id)) {
+                        isFollowing = true;
+                        console.log(`[UsersView] ✅ Usuario ${user.id} (${user.name}) - ESTÁ en followingIds`);
+                    }
+                    // PRIORIDAD 2: Verificar si el backend envía is_following directamente
+                    else if (user.is_following !== undefined && user.is_following !== null) {
+                        isFollowing = Boolean(user.is_following);
+                        console.log(`[UsersView] Usuario ${user.id} (${user.name}) - is_following del backend:`, isFollowing);
+                    }
+                    // PRIORIDAD 3: Si no viene is_following pero sí el array de followers, calcularlo
+                    else if (user.followers && Array.isArray(user.followers) && currentUserId) {
+                        isFollowing = user.followers.some(follower => {
+                            const followerId = follower.follower_id || follower.user_id || follower.id;
+                            const isMatch = followerId === currentUserId;
+                            if (isMatch) {
+                                console.log(`[UsersView] ✅ Usuario ${user.id} - YO lo sigo (encontrado en followers)`, follower);
+                            }
+                            return isMatch;
+                        });
+                        console.log(`[UsersView] Usuario ${user.id} (${user.name}) - calculado desde followers[]:`, isFollowing, '| Total followers:', user.followers.length);
+                    }
+                    else {
+                        console.log(`[UsersView] Usuario ${user.id} (${user.name}) - No sigo a este usuario`);
+                    }
+
+                    return {
+                        ...user,
+                        is_following: isFollowing,
+                        followers_count: user.followers_count !== undefined
+                            ? user.followers_count
+                            : (user.followers?.length || 0),
+                    };
+                });
+
+                // Asignar usuarios enriquecidos
+                this.users = enrichedUsers;
                 this.filteredUsers = this.users;
 
                 console.log('Usuarios cargados:', this.users.length);
                 if (this.users.length > 0) {
-                    console.log('Primer usuario:', this.users[0]);
+                    console.log('Primer usuario:', {
+                        id: this.users[0].id,
+                        name: this.users[0].name,
+                        is_following: this.users[0].is_following,
+                        followers_count: this.users[0].followers_count,
+                        followers: this.users[0].followers
+                    });
                 }
             } catch (error) {
                 console.error("Error obteniendo usuarios:", error);
@@ -381,6 +462,35 @@ export default {
         handleImageError(ev) {
             // evita errores en consola si la imagen falla
             ev.target.src = "https://www.gravatar.com/avatar/?d=mp&f=y";
+        },
+        handleFollowUpdate(user, event) {
+            // Actualizar el estado del usuario en la lista
+            user.is_following = event.isFollowing;
+            user.followers_count = event.followersCount;
+
+            // IMPORTANTE: Actualizar también el array followingIds para persistencia
+            if (event.isFollowing) {
+                // Si ahora lo sigo, agregar al array si no está
+                if (!this.followingIds.includes(user.id)) {
+                    this.followingIds.push(user.id);
+                    console.log('[UsersView] ✅ Usuario agregado a followingIds:', user.id);
+                }
+            } else {
+                // Si dejé de seguirlo, remover del array
+                const index = this.followingIds.indexOf(user.id);
+                if (index > -1) {
+                    this.followingIds.splice(index, 1);
+                    console.log('[UsersView] ❌ Usuario removido de followingIds:', user.id);
+                }
+            }
+
+            console.log('[UsersView] Follow actualizado:', {
+                userId: user.id,
+                userName: user.name,
+                isFollowing: user.is_following,
+                followersCount: user.followers_count,
+                followingIds: this.followingIds
+            });
         },
         onIonInfinite(ev) {
             // Deshabilitado: no cargar usuarios falsos
