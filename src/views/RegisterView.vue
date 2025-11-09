@@ -536,6 +536,18 @@ export default {
 /* Wrapper para input con línea */
 .input-wrapper {
     position: relative;
+    overflow: hidden;
+}
+
+.input-wrapper::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: rgba(55, 65, 81, 0.5);
+    z-index: 5;
 }
 
 .register-input {
@@ -545,25 +557,57 @@ export default {
     --padding-start: 1rem;
     --padding-end: 1rem;
     --border-radius: 0.5rem 0.5rem 0 0;
-    --border-color: transparent;
+    --border-color: transparent !important;
+    --highlight-color: transparent !important;
+    --highlight-color-focused: transparent !important;
+    --highlight-color-valid: transparent !important;
+    --highlight-color-invalid: transparent !important;
+    --highlight-height: 0 !important;
     height: 3.5rem;
     font-size: 1rem;
     caret-color: #8A2BE2;
+    border: none !important;
+    position: relative;
+    z-index: 1;
 }
 
 .register-input.ion-focused {
     --background: rgba(55, 65, 81, 0.5);
     --color: #FFFFFF;
+    --highlight-color: transparent !important;
+    --highlight-color-focused: transparent !important;
+    --highlight-color-valid: transparent !important;
+    --highlight-color-invalid: transparent !important;
+    --border-color: transparent !important;
+    border: none !important;
 }
 
 .register-input:hover {
     --background: rgba(55, 65, 81, 0.5);
+    --border-color: transparent !important;
+    border: none !important;
 }
 
 .register-input::part(native) {
     border-radius: 0.5rem 0.5rem 0 0 !important;
     background: rgba(55, 65, 81, 0.5) !important;
     caret-color: #8A2BE2 !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-bottom: none !important;
+}
+
+.register-input::part(native):focus {
+    box-shadow: none !important;
+    border: none !important;
+    border-bottom: none !important;
+    outline: none !important;
+}
+
+/* Eliminar cualquier elemento de highlight interno de Ionic */
+.register-input .input-highlight,
+.register-input .input-bottom {
+    display: none !important;
 }
 
 /* Línea animada inferior */
@@ -575,7 +619,7 @@ export default {
     height: 2px;
     background: #8A2BE2;
     transition: width 0.3s ease;
-    z-index: 10;
+    z-index: 20;
 }
 
 .input-wrapper.focused .input-line {
@@ -585,6 +629,14 @@ export default {
 .input-wrapper.invalid .input-line {
     background: #ef4444;
     width: 100%;
+}
+
+.input-wrapper.focused::after {
+    display: none;
+}
+
+.input-wrapper.invalid::after {
+    display: none;
 }
 
 .register-input.ion-invalid {
@@ -656,6 +708,55 @@ export default {
     cursor: pointer;
 }
 
+/* Eliminar línea azul de Ionic completamente */
+.register-input.sc-ion-input-md-h,
+.register-input.sc-ion-input-ios-h {
+    --highlight-color-focused: transparent !important;
+    --highlight-color-valid: transparent !important;
+    --highlight-color-invalid: transparent !important;
+    --border-color: transparent !important;
+}
+
+.register-input .input-bottom .counter,
+.register-input .input-bottom .helper-text,
+.register-input .input-bottom .error-text {
+    display: none !important;
+}
+
+/* Sobrescribir estilos de Ionic profundamente */
+.register-input::part(native)::before,
+.register-input::part(native)::after {
+    display: none !important;
+}
+
+ion-input.register-input {
+    --border-style: none !important;
+    --border-width: 0 !important;
+}
+
+ion-input.register-input::part(native) {
+    border-style: none !important;
+    border-width: 0 !important;
+}
+
+/* Ocultar elementos internos de Ionic que crean la línea azul */
+.register-input .input-highlight,
+.register-input .input-bottom,
+ion-input.register-input .input-highlight,
+ion-input.register-input .input-bottom {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    height: 0 !important;
+}
+
+/* Forzar ocultar con selectores muy específicos */
+.input-wrapper ion-input::part(native)::after,
+.input-wrapper ion-input::part(native)::before {
+    content: none !important;
+    display: none !important;
+}
+
 /* Responsive */
 @media (min-width: 768px) {
     .register-container {
@@ -670,5 +771,41 @@ export default {
     .subtitle {
         font-size: 2.25rem;
     }
+}
+</style>
+
+<style>
+/* Estilos globales sin scoped para penetrar en componentes de Ionic */
+.register-page .input-wrapper ion-input {
+    --highlight-color-focused: transparent !important;
+    --highlight-color-valid: transparent !important;
+    --highlight-color-invalid: transparent !important;
+    --highlight-height: 0 !important;
+}
+
+.register-page .input-wrapper ion-input .input-highlight {
+    display: none !important;
+}
+
+.register-page .input-wrapper ion-input .input-bottom {
+    display: none !important;
+}
+
+/* Cubrir absolutamente cualquier línea que aparezca */
+.register-page .input-wrapper::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(55, 65, 81, 0.5);
+    z-index: 15;
+    pointer-events: none;
+}
+
+.register-page .input-wrapper.focused::before,
+.register-page .input-wrapper.invalid::before {
+    display: none;
 }
 </style>

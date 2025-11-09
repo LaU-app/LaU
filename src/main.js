@@ -34,6 +34,9 @@ import "@ionic/vue/css/palettes/dark.class.css";
 /* Theme variables */
 import "./theme/variables.css";
 
+/* Override de estilos de input de Ionic - DEBE IR DESPUÉS DE variables.css */
+import "./theme/input-override.css";
+
 /* Push Notifications Service */
 import { pushNotificationsService } from "./services/pushNotificationsService";
 import { Capacitor } from "@capacitor/core";

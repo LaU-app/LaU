@@ -146,7 +146,7 @@ export default {
 
             try {
                 console.log('[LOGIN] Iniciando login...', { email: this.formData.email });
-                
+
                 // Pasar rememberMe al servicio de autenticación
                 await AuthService.login(this.formData, this.rememberMe)
 
@@ -172,7 +172,7 @@ export default {
 
                 // Mostrar mensaje de error específico
                 let errorMsg = 'Error al iniciar sesión. Por favor, intenta de nuevo.';
-                
+
                 if (!error.response) {
                     // Error de red
                     errorMsg = 'No se pudo conectar al servidor. Verifica tu conexión a internet.';
@@ -316,6 +316,18 @@ export default {
 /* Wrapper para input con línea */
 .input-wrapper {
     position: relative;
+    overflow: hidden;
+}
+
+.input-wrapper::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: rgba(55, 65, 81, 0.5);
+    z-index: 5;
 }
 
 .login-input {
@@ -325,15 +337,25 @@ export default {
     --padding-start: 1rem;
     --padding-end: 1rem;
     --border-radius: 0.5rem 0.5rem 0 0;
-    --border-color: transparent;
+    --border-color: transparent !important;
+    --highlight-color: transparent !important;
+    --highlight-color-focused: transparent !important;
+    --highlight-color-valid: transparent !important;
+    --highlight-color-invalid: transparent !important;
+    --highlight-height: 0 !important;
     height: 3.5rem;
     font-size: 1rem;
     caret-color: #8A2BE2;
+    border: none !important;
+    position: relative;
+    z-index: 1;
 }
 
 .login-input.ion-focused {
     --background: rgba(55, 65, 81, 0.5);
     --color: #FFFFFF;
+    --highlight-color: transparent;
+    --highlight-color-focused: transparent;
 }
 
 .login-input:hover {
@@ -355,7 +377,7 @@ export default {
     height: 2px;
     background: #8A2BE2;
     transition: width 0.3s ease;
-    z-index: 10;
+    z-index: 20;
 }
 
 .input-wrapper.focused .input-line {
@@ -365,6 +387,14 @@ export default {
 .input-wrapper.invalid .input-line {
     background: #ef4444;
     width: 100%;
+}
+
+.input-wrapper.focused::after {
+    display: none;
+}
+
+.input-wrapper.invalid::after {
+    display: none;
 }
 
 .login-input.ion-invalid {
@@ -465,5 +495,41 @@ export default {
     .subtitle {
         font-size: 2.25rem;
     }
+}
+</style>
+
+<style>
+/* Estilos globales sin scoped para penetrar en componentes de Ionic */
+.login-page .input-wrapper ion-input {
+    --highlight-color-focused: transparent !important;
+    --highlight-color-valid: transparent !important;
+    --highlight-color-invalid: transparent !important;
+    --highlight-height: 0 !important;
+}
+
+.login-page .input-wrapper ion-input .input-highlight {
+    display: none !important;
+}
+
+.login-page .input-wrapper ion-input .input-bottom {
+    display: none !important;
+}
+
+/* Cubrir absolutamente cualquier línea que aparezca */
+.login-page .input-wrapper::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(55, 65, 81, 0.5);
+    z-index: 15;
+    pointer-events: none;
+}
+
+.login-page .input-wrapper.focused::before,
+.login-page .input-wrapper.invalid::before {
+    display: none;
 }
 </style>

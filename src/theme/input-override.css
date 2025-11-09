@@ -1,0 +1,50 @@
+/* Sobrescribir completamente los estilos de ion-input de Ionic */
+/* Este archivo elimina la línea azul de highlight en todos los ion-input */
+
+ion-input {
+    --highlight-color-focused: transparent !important;
+    --highlight-color-valid: transparent !important;
+    --highlight-color-invalid: transparent !important;
+    --highlight-height: 0 !important;
+    --border-width: 0 !important;
+}
+
+/* Ocultar elementos internos que generan líneas */
+ion-input .input-highlight,
+ion-input .input-bottom {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    height: 0 !important;
+}
+
+/* Sobrescribir estilos específicos de Material Design */
+ion-input.sc-ion-input-md-h,
+ion-input.sc-ion-input-md-s,
+ion-input.md {
+    --highlight-color-focused: transparent !important;
+    --highlight-color-valid: transparent !important;
+    --highlight-color-invalid: transparent !important;
+}
+
+/* Sobrescribir estilos específicos de iOS */
+ion-input.sc-ion-input-ios-h,
+ion-input.sc-ion-input-ios-s,
+ion-input.ios {
+    --highlight-color-focused: transparent !important;
+    --highlight-color-valid: transparent !important;
+    --highlight-color-invalid: transparent !important;
+}
+
+/* Forzar sin bordes */
+ion-input::part(native) {
+    border: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+
+ion-input::part(native):focus {
+    border: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
