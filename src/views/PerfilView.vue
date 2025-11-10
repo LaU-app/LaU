@@ -356,6 +356,11 @@ export default {
 
         await this.loadCurrentUser();
         this.loadDarkModePreference();
+
+        // Cargar datos del perfil después de obtener el usuario
+        if (this.user && this.user.id) {
+            await this.getProfileData();
+        }
     },
     ionViewWillEnter() {
         // Actualizar estado de autenticación cada vez que se entra a la vista
@@ -440,51 +445,116 @@ export default {
             }
         },
         async fetchPosts(page = 1) {
-            this.loading = page === 1;
+            // No cambiar el estado de loading si es una página mayor a 1
+            if (page === 1) {
+                this.loading = true;
+            }
             this.error = null;
 
-            const userId =
-                this.user && (this.user.id || this.user.user_id || this.user._id);
-
-            let result;
             try {
-                if (userId && typeof postsService.fetchPostsByUser === "function") {
-                    // preferred: service provides a user-scoped fetch
-                    result = await postsService.fetchPostsByUser(userId, page);
-                } else if (userId) {
-                    // fallback: service accepts an options object { page, userId }
-                    result = await postsService.fetchPosts({ page, userId });
-                } else {
-                    // no user id -> fetch default (all) or return empty set
-                    result = await postsService.fetchPosts(page);
-                }
-            } catch (err) {
-                result = {
-                    success: false,
-                    error: err.message || "Error fetching posts",
-                };
-            }
+                console.log('[PERFIL] Obteniendo posts del usuario, página:', page);
 
-            if (result.success) {
-                if (page === 1) {
-                    this.posts = result.data;
-                } else {
-                    this.posts = [...this.posts, ...result.data];
+                // Obtener posts específicos del usuario desde el backend
+                const postsResponse = await AuthService.getPosts(this.user.id);
+
+                console.log('[PERFIL] Respuesta de posts:', postsResponse);
+
+                // Manejar diferentes estructuras de respuesta
+                let postsData = [];
+
+                if (postsResponse?.success && postsResponse?.data) {
+                    // Si viene con success: true y data
+                    if (Array.isArray(postsResponse.data)) {
+                        postsData = postsResponse.data;
+                    } else if (postsResponse.data.data) {
+                        postsData = postsResponse.data.data;
+                    }
+                } else if (postsResponse?.data) {
+                    // Si solo viene data
+                    if (Array.isArray(postsResponse.data)) {
+                        postsData = postsResponse.data;
+                    } else if (postsResponse.data.data) {
+                        postsData = postsResponse.data.data;
+                    }
                 }
-                this.currentPage = result.pagination.currentPage;
-                this.lastPage = result.pagination.lastPage;
-                this.hasMorePages = result.pagination.hasMorePages;
-            } else {
-                this.error = result.error;
-                if (page === 1) this.posts = [];
+
+                // Si la respuesta tiene paginación
+                if (postsResponse?.data?.current_page) {
+                    this.currentPage = postsResponse.data.current_page;
+                    this.lastPage = postsResponse.data.last_page || 1;
+                    this.hasMorePages = this.currentPage < this.lastPage;
+                } else {
+                    // Sin paginación, solo una página
+                    this.currentPage = 1;
+                    this.lastPage = 1;
+                    this.hasMorePages = false;
+                }
+
+                // Asignar posts
+                if (page === 1) {
+                    this.posts = postsData;
+                } else {
+                    this.posts = [...this.posts, ...postsData];
+                }
+
+                console.log('[PERFIL] Posts totales cargados:', this.posts.length);
+
+            } catch (err) {
+                console.error('[PERFIL] Error al obtener posts:', err);
+                this.error = err.message || "Error al cargar posts";
+                if (page === 1) {
+                    this.posts = [];
+                }
+            } finally {
+                if (page === 1) {
+                    this.loading = false;
+                }
             }
-            this.loading = false;
         },
         async loadMorePosts(event) {
             if (this.hasMorePages) {
                 await this.fetchPosts(this.currentPage + 1);
             }
             event.target.complete();
+        },
+        async getProfileData() {
+            try {
+                console.log('[PERFIL] Cargando datos del perfil para usuario:', this.user.id);
+
+                this.loading = true;
+
+                // Cargar seguidores y seguidos en paralelo
+                const [followersResponse, followingResponse] = await Promise.all([
+                    AuthService.getFollowers(this.user.id),
+                    AuthService.getFollowing(this.user.id)
+                ]);
+
+                console.log('[PERFIL] Respuestas recibidas:', {
+                    followers: followersResponse,
+                    following: followingResponse
+                });
+
+                // Asignar seguidores
+                this.seguidores = followersResponse?.followers || [];
+                console.log('[PERFIL] Seguidores cargados:', this.seguidores.length);
+
+                // Asignar seguidos
+                this.siguiendo = followingResponse?.following || [];
+                console.log('[PERFIL] Seguidos cargados:', this.siguiendo.length);
+
+                // Cargar posts usando el método fetchPosts que ya maneja paginación
+                await this.fetchPosts(1);
+
+            } catch (error) {
+                console.error('[PERFIL] Error al cargar datos del perfil:', error);
+                this.error = 'Error al cargar los datos del perfil';
+                // Inicializar arrays vacíos en caso de error
+                this.seguidores = [];
+                this.siguiendo = [];
+                this.posts = [];
+            } finally {
+                this.loading = false;
+            }
         },
         openFollowers() {
             console.log("Opening followers modal");
