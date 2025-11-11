@@ -76,9 +76,8 @@ const routes = [
         meta: { requiresAuth: true },
       },
       {
-        path: "tab3",
         name: "Perfil",
-        path: "perfil",
+        path: "perfil/:username?",
         component: () => import("@/views/PerfilView.vue"),
         meta: { requiresAuth: true },
       },

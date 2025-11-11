@@ -235,11 +235,24 @@ export const AuthService = {
       throw error;
     }
   },
+  async fetchForeignProfile(usuario_username) {
+    try {
+      // GET /auth/user para validar token y obtener user actualizado
+      // Este endpoint está dentro del grupo middleware auth:sanctum
+      const res = await api.get(`/user/${usuario_username}`);
+      return res.data;
+    } catch (error) {
+      console.error("Error al obtener perfil:", error);
+      // NO hacemos logout automáticamente aquí, dejamos que el componente decida
+      // Solo si es 401, el componente limpiará la sesión
+      throw error;
+    }
+  },
 
   async updateProfile(data) {
     try {
       // PUT /profile para actualizar datos del usuario
-      const res = await api.put("/profile", data);
+      const res = await api.put("/user/edit", data);
 
       if (res.data) {
         localStorage.setItem(USER_KEY, JSON.stringify(res.data));

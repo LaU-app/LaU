@@ -1,264 +1,443 @@
 <template>
-    <ion-page>
-        <!-- Header del perfil -->
+  <ion-page>
+    <!-- Header del perfil -->
+    <ion-header>
+      <ion-toolbar color="light">
+        <ion-grid class="header-grid">
+          <ion-row class="ion-align-items-center ion-justify-content-between">
+            <ion-col size="auto">
+              <img src="/LaU.png" alt="LaÚ" class="header-logo" />
+            </ion-col>
+            <ion-col size="auto">
+              <ion-text class="username-purple">
+                <strong>@{{ user.username }}</strong>
+              </ion-text>
+            </ion-col>
+            <ion-col size="auto">
+              <ion-button fill="clear">
+                <ion-icon :icon="notifications" color="medium"></ion-icon>
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content class="ion-background-white">
+      <!-- Error message -->
+      <ion-card v-if="error && !loading" color="danger">
+        <ion-card-content>
+          <p>{{ error }}</p>
+        </ion-card-content>
+      </ion-card>
+
+      <!-- Loading -->
+      <div v-if="loading" class="loading-container">
+        <ion-spinner name="crescent"></ion-spinner>
+        <ion-text>
+          <p>Cargando perfil...</p>
+        </ion-text>
+      </div>
+
+      <!-- Perfil de usuario -->
+      <div v-if="!loading" class="profile-section ion-text-center ion-padding">
+        <!-- Avatar y botón de menú -->
+        <div class="profile-header-row">
+          <ion-avatar class="profile-avatar">
+            <img
+              v-if="user.imagen_url"
+              :src="user.imagen_url"
+              alt="Profile Picture"
+            />
+            <ion-icon
+              v-else
+              :icon="personCircle"
+              class="profile-avatar-icon"
+            ></ion-icon>
+          </ion-avatar>
+          <ion-button
+            fill="clear"
+            @click="openMenu"
+            id="open-menu-button"
+            class="menu-button-inline"
+          >
+            <ion-icon :icon="ellipsisVerticalOutline" color="medium"></ion-icon>
+          </ion-button>
+        </div>
+
+        <!-- Nombre y descripción -->
+        <h3 class="profile-name">{{ user.name }}</h3>
+        <p class="profile-description">
+          {{ universidad.nombre }} <br></br> {{ carrera.nombre  }}
+        </p>
+
+        <!-- Botón Seguir -->
+        <div class="action-buttons">
+       <ion-button v-if="!isMe" color="primary">Seguir</ion-button>
+        <ion-button v-else color="primary" @click="openSettings">Editar</ion-button>
+
+          <!-- Descomentar para agregar botón de mensaje -->
+          <!-- <ion-button color="light">Enviar Mensaje</ion-button> -->
+        </div>
+
+        <!-- Contadores -->
+        <ion-grid class="stats-grid">
+          <ion-row class="ion-text-center">
+            <ion-col size="4">
+              <div class="stat-number">{{ posts.length }}</div>
+              <div class="stat-label">Publicaciones</div>
+            </ion-col>
+            <ion-col size="4" class="clickable" @click="openFollowers">
+              <div class="stat-number">{{ seguidores.length }}</div>
+              <div class="stat-label">Seguidores</div>
+            </ion-col>
+            <ion-col size="4" class="clickable" @click="openFollowing">
+              <div class="stat-number">{{ siguiendo.length }}</div>
+              <div class="stat-label">Seguidos</div>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+
+        <!-- Divider -->
+        <div class="divider"></div>
+
+        <!-- Tabs -->
+        <ion-segment v-model="selectedTab" mode="md" color="primary">
+          <ion-segment-button value="1">
+            <ion-label class="tab-label">
+              <ion-icon :icon="grid"></ion-icon>
+              <span>Posts</span>
+            </ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="2">
+            <ion-label class="tab-label">
+              <ion-icon :icon="folderOutline"></ion-icon>
+              <span>Folders</span>
+            </ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="3">
+            <ion-label class="tab-label">
+              <ion-icon :icon="musicalNoteOutline"></ion-icon>
+              <span>Playlist</span>
+            </ion-label>
+          </ion-segment-button>
+        </ion-segment>
+
+        <!-- Contenido de los tabs -->
+        <div class="tabs-content">
+          <!-- Posts Tab -->
+          <div v-if="selectedTab === '1'">
+            <ion-grid>
+              <ion-row>
+                <ion-col v-for="(pub, index) in posts" :key="index" size="6">
+                  <div class="post-card">
+                    <ion-icon
+                      :icon="documentOutline"
+                      size="large"
+                      color="medium"
+                    ></ion-icon>
+                    <p class="post-title">{{ pub.titulo }}</p>
+                  </div>
+                </ion-col>
+              </ion-row>
+            </ion-grid>
+            <div v-if="posts.length === 0" class="empty-message">
+              Aún no hay publicaciones
+            </div>
+          </div>
+
+          <!-- Folders Tab -->
+          <div v-else-if="selectedTab === '2'">
+            <ion-grid>
+              <ion-row>
+                <ion-col
+                  v-for="(archivo, index) in archivos"
+                  :key="index"
+                  size="6"
+                >
+                  <div class="post-card">
+                    <ion-icon
+                      :icon="folderOutline"
+                      size="large"
+                      color="medium"
+                    ></ion-icon>
+                    <p class="post-title">{{ archivo.nombre }}</p>
+                  </div>
+                </ion-col>
+              </ion-row>
+            </ion-grid>
+            <div v-if="archivos.length === 0" class="empty-message">
+              Sin carpetas todavía
+            </div>
+          </div>
+
+          <!-- Playlist Tab -->
+          <div v-else>
+            <ion-grid>
+              <ion-row>
+                <ion-col
+                  v-for="(cancion, index) in canciones"
+                  :key="index"
+                  size="6"
+                >
+                  <div class="post-card">
+                    <ion-icon
+                      :icon="musicalNoteOutline"
+                      size="large"
+                      color="medium"
+                    ></ion-icon>
+                    <p class="post-title">{{ cancion.titulo }}</p>
+                  </div>
+                </ion-col>
+              </ion-row>
+            </ion-grid>
+            <div v-if="canciones.length === 0" class="empty-message">
+              No hay playlists creadas
+            </div>
+          </div>
+        </div>
+
+        <!-- Infinite Scroll -->
+        <ion-infinite-scroll
+          v-if="!loading && hasMorePages"
+          @ionInfinite="loadMorePosts"
+          threshold="100px"
+        >
+          <ion-infinite-scroll-content
+            loading-spinner="bubbles"
+            loading-text="Cargando más posts..."
+          >
+          </ion-infinite-scroll-content>
+        </ion-infinite-scroll>
+      </div>
+
+      <!-- Modal Settings -->
+     <ion-modal :is-open="showSettingsModal" @didDismiss="closeSettings">
+  <ion-content class="settings-modal-content">
+
+    <h2 class="modal-title">Editar Perfil</h2>
+
+    <form @submit.prevent="updateProfile" class="settings-form">
+
+      <!-- Nombre -->
+     <ion-input
+  label="Nombre completo"
+  label-placement="stacked"
+  v-model="formData.name"
+/>
+
+<ion-input
+  label="Username"
+  label-placement="stacked"
+  v-model="formData.username"
+/>
+
+<ion-input
+  type="email"
+  label="Correo"
+  label-placement="stacked"
+  v-model="formData.email"
+/>
+
+<ion-input
+  label="Profesión"
+  label-placement="stacked"
+  v-model="formData.profession"
+/>
+<ion-item>
+  <ion-label>Universidad</ion-label>
+  <ion-select v-model="formData.universidad_id" placeholder="Selecciona una Universidad">
+  <ion-select-option
+    v-for="uni in universidades"
+    :key="uni.id"
+    :value="Number(uni.id)"
+  >
+    {{ uni.nombre }}
+  </ion-select-option>
+</ion-select>
+
+</ion-item>
+<ion-item>
+  <ion-label>Carrera</ion-label>
+ <ion-select v-model="formData.carrera_id" placeholder="Selecciona una Carrera">
+  <ion-select-option
+    v-for="carr in carreras"
+    :key="carr.id"
+    :value="Number(carr.id)"
+  >
+    {{ carr.nombre }}
+  </ion-select-option>
+</ion-select>
+</ion-item>
+<ion-item>
+  <ion-label>Género</ion-label>
+  <ion-select v-model="formData.gender" placeholder="Selecciona un género">
+    <ion-select-option value="Male">Male</ion-select-option>
+    <ion-select-option value="Female">Female</ion-select-option>
+  </ion-select>
+</ion-item>
+
+      <!-- Botones -->
+      <ion-button expand="block" type="submit">Guardar Cambios</ion-button>
+      <ion-button expand="block" fill="clear" color="medium" @click="closeSettings">Cancelar</ion-button>
+    </form>
+
+  </ion-content>
+</ion-modal>
+
+      <!-- Modal Seguidores -->
+      <ion-modal :is-open="showFollowersModal" @didDismiss="closeFollowers">
         <ion-header>
-            <ion-toolbar color="light">
-                <ion-grid class="header-grid">
-                    <ion-row class="ion-align-items-center ion-justify-content-between">
-                        <ion-col size="auto">
-                            <img src="/LaU.png" alt="LaÚ" class="header-logo" />
-                        </ion-col>
-                        <ion-col size="auto">
-                            <ion-text class="username-purple">
-                                <strong>@{{ user.username }}</strong>
-                            </ion-text>
-                        </ion-col>
-                        <ion-col size="auto">
-                            <ion-button fill="clear">
-                                <ion-icon :icon="notifications" color="medium"></ion-icon>
-                            </ion-button>
-                        </ion-col>
-                    </ion-row>
-                </ion-grid>
-            </ion-toolbar>
+          <ion-toolbar>
+            <ion-title>Seguidores</ion-title>
+            <ion-buttons slot="end">
+              <ion-button @click="closeFollowers">Cerrar</ion-button>
+            </ion-buttons>
+          </ion-toolbar>
         </ion-header>
+        <ion-content>
+          <ion-list>
+            <ion-item v-if="seguidores.length === 0">
+              <ion-avatar slot="start">
+                <img src="https://www.gravatar.com/avatar/?d=mp&f=y" />
+              </ion-avatar>
+              <ion-label>No hay seguidores</ion-label>
+            </ion-item>
+                        <ion-item
+              v-for="(f, i) in seguidores"
+              :key="i"
+              @click="$router.push(`/tabs/perfil/${f.username}`); closeFollowers()"
+            >
+              <ion-avatar slot="start">
+                <img
+                  :src="f.imagen_url || 'https://www.gravatar.com/avatar/?d=mp&f=y'"
+                />
+              </ion-avatar>
 
-        <ion-content class="ion-background-white">
-            <!-- Error message -->
-            <ion-card v-if="error && !loading" color="danger">
-                <ion-card-content>
-                    <p>{{ error }}</p>
-                </ion-card-content>
-            </ion-card>
+              <ion-label>
+                <h3>{{ f.name || f.username || "Usuario" }}</h3>
+                <p class="ion-text-wrap">@{{ f.username }}</p>
+              </ion-label>
+            </ion-item>
 
-            <!-- Loading -->
-            <div v-if="loading" class="loading-container">
-                <ion-spinner name="crescent"></ion-spinner>
-                <ion-text>
-                    <p>Cargando perfil...</p>
-                </ion-text>
-            </div>
-
-            <!-- Perfil de usuario -->
-            <div v-if="!loading" class="profile-section ion-text-center ion-padding">
-                <!-- Avatar y botón de menú -->
-                <div class="profile-header-row">
-                    <ion-avatar class="profile-avatar">
-                        <img v-if="user.imagen_url" :src="user.imagen_url" alt="Profile Picture" />
-                        <ion-icon v-else :icon="personCircle" class="profile-avatar-icon"></ion-icon>
-                    </ion-avatar>
-                    <ion-button fill="clear" @click="openMenu" id="open-menu-button" class="menu-button-inline">
-                        <ion-icon :icon="ellipsisVerticalOutline" color="medium"></ion-icon>
-                    </ion-button>
-                </div>
-
-                <!-- Nombre y descripción -->
-                <h3 class="profile-name">{{ user.name }}</h3>
-                <p class="profile-description">
-                    ITCA FEPADE, Desarrollo de software
-                </p>
-
-                <!-- Botón Seguir -->
-                <div class="action-buttons">
-                    <ion-button color="primary">Seguir</ion-button>
-                    <!-- Descomentar para agregar botón de mensaje -->
-                    <!-- <ion-button color="light">Enviar Mensaje</ion-button> -->
-                </div>
-
-                <!-- Contadores -->
-                <ion-grid class="stats-grid">
-                    <ion-row class="ion-text-center">
-                        <ion-col size="4">
-                            <div class="stat-number">{{ posts.length }}</div>
-                            <div class="stat-label">Publicaciones</div>
-                        </ion-col>
-                        <ion-col size="4" class="clickable" @click="openFollowers">
-                            <div class="stat-number">{{ seguidores.length }}</div>
-                            <div class="stat-label">Seguidores</div>
-                        </ion-col>
-                        <ion-col size="4" class="clickable" @click="openFollowing">
-                            <div class="stat-number">{{ siguiendo.length }}</div>
-                            <div class="stat-label">Seguidos</div>
-                        </ion-col>
-                    </ion-row>
-                </ion-grid>
-
-                <!-- Divider -->
-                <div class="divider"></div>
-
-                <!-- Tabs -->
-                <ion-segment v-model="selectedTab" mode="md" color="primary">
-                    <ion-segment-button value="1">
-                        <ion-label class="tab-label">
-                            <ion-icon :icon="grid"></ion-icon>
-                            <span>Posts</span>
-                        </ion-label>
-                    </ion-segment-button>
-                    <ion-segment-button value="2">
-                        <ion-label class="tab-label">
-                            <ion-icon :icon="folderOutline"></ion-icon>
-                            <span>Folders</span>
-                        </ion-label>
-                    </ion-segment-button>
-                    <ion-segment-button value="3">
-                        <ion-label class="tab-label">
-                            <ion-icon :icon="musicalNoteOutline"></ion-icon>
-                            <span>Playlist</span>
-                        </ion-label>
-                    </ion-segment-button>
-                </ion-segment>
-
-                <!-- Contenido de los tabs -->
-                <div class="tabs-content">
-                    <!-- Posts Tab -->
-                    <div v-if="selectedTab === '1'">
-                        <ion-grid>
-                            <ion-row>
-                                <ion-col v-for="(pub, index) in posts" :key="index" size="6">
-                                    <div class="post-card">
-                                        <ion-icon :icon="documentOutline" size="large" color="medium"></ion-icon>
-                                        <p class="post-title">{{ pub.titulo }}</p>
-                                    </div>
-                                </ion-col>
-                            </ion-row>
-                        </ion-grid>
-                        <div v-if="posts.length === 0" class="empty-message">
-                            Aún no hay publicaciones
-                        </div>
-                    </div>
-
-                    <!-- Folders Tab -->
-                    <div v-else-if="selectedTab === '2'">
-                        <ion-grid>
-                            <ion-row>
-                                <ion-col v-for="(archivo, index) in archivos" :key="index" size="6">
-                                    <div class="post-card">
-                                        <ion-icon :icon="folderOutline" size="large" color="medium"></ion-icon>
-                                        <p class="post-title">{{ archivo.nombre }}</p>
-                                    </div>
-                                </ion-col>
-                            </ion-row>
-                        </ion-grid>
-                        <div v-if="archivos.length === 0" class="empty-message">
-                            Sin carpetas todavía
-                        </div>
-                    </div>
-
-                    <!-- Playlist Tab -->
-                    <div v-else>
-                        <ion-grid>
-                            <ion-row>
-                                <ion-col v-for="(cancion, index) in canciones" :key="index" size="6">
-                                    <div class="post-card">
-                                        <ion-icon :icon="musicalNoteOutline" size="large" color="medium"></ion-icon>
-                                        <p class="post-title">{{ cancion.titulo }}</p>
-                                    </div>
-                                </ion-col>
-                            </ion-row>
-                        </ion-grid>
-                        <div v-if="canciones.length === 0" class="empty-message">
-                            No hay playlists creadas
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Infinite Scroll -->
-                <ion-infinite-scroll v-if="!loading && hasMorePages" @ionInfinite="loadMorePosts" threshold="100px">
-                    <ion-infinite-scroll-content loading-spinner="bubbles" loading-text="Cargando más posts...">
-                    </ion-infinite-scroll-content>
-                </ion-infinite-scroll>
-            </div>
-
-            <!-- Modal Seguidores -->
-            <ion-modal :is-open="showFollowersModal" @didDismiss="closeFollowers">
-                <ion-header>
-                    <ion-toolbar>
-                        <ion-title>Seguidores</ion-title>
-                        <ion-buttons slot="end">
-                            <ion-button @click="closeFollowers">Cerrar</ion-button>
-                        </ion-buttons>
-                    </ion-toolbar>
-                </ion-header>
-                <ion-content>
-                    <ion-list>
-                        <ion-item v-if="seguidores.length === 0">
-                            <ion-avatar slot="start">
-                                <img src="https://www.gravatar.com/avatar/?d=mp&f=y" />
-                            </ion-avatar>
-                            <ion-label>No hay seguidores</ion-label>
-                        </ion-item>
-                        <ion-item v-for="(f, i) in seguidores" :key="i">
-                            <ion-avatar slot="start">
-                                <img :src="f.imagen_url || 'https://www.gravatar.com/avatar/?d=mp&f=y'
-                                    " />
-                            </ion-avatar>
-                            <ion-label>
-                                <h3>{{ f.name || f.username || "Usuario" }}</h3>
-                                <p class="ion-text-wrap">@{{ f.username || "" }}</p>
-                            </ion-label>
-                        </ion-item>
-                    </ion-list>
-                </ion-content>
-            </ion-modal>
-
-            <!-- Modal Seguidos -->
-            <ion-modal :is-open="showFollowingModal" @didDismiss="closeFollowing">
-                <ion-header>
-                    <ion-toolbar>
-                        <ion-title>Seguidos</ion-title>
-                        <ion-buttons slot="end">
-                            <ion-button @click="closeFollowing">Cerrar</ion-button>
-                        </ion-buttons>
-                    </ion-toolbar>
-                </ion-header>
-                <ion-content>
-                    <ion-list>
-                        <ion-item v-if="siguiendo.length === 0">
-                            <ion-avatar slot="start">
-                                <img src="https://www.gravatar.com/avatar/?d=mp&f=y" />
-                            </ion-avatar>
-                            <ion-label>No sigue a nadie</ion-label>
-                        </ion-item>
-                        <ion-item v-for="(f, i) in siguiendo" :key="i">
-                            <ion-avatar slot="start">
-                                <img :src="f.imagen_url || 'https://www.gravatar.com/avatar/?d=mp&f=y'
-                                    " />
-                            </ion-avatar>
-                            <ion-label>
-                                <h3>{{ f.name || f.username || "Usuario" }}</h3>
-                                <p class="ion-text-wrap">@{{ f.username || "" }}</p>
-                            </ion-label>
-                        </ion-item>
-                    </ion-list>
-                </ion-content>
-            </ion-modal>
-
-            <!-- Menu Popover -->
-            <ion-popover :is-open="isMenuOpen" @didDismiss="closeMenu" trigger="open-menu-button">
-                <ion-content>
-                    <ion-list>
-                        <ion-item button @click="handleLogout">
-                            <ion-icon slot="start" :icon="logOutOutline"></ion-icon>
-                            <ion-label>Cerrar sesión</ion-label>
-                        </ion-item>
-                    </ion-list>
-                </ion-content>
-            </ion-popover>
+          </ion-list>
         </ion-content>
-    </ion-page>
+      </ion-modal>
+
+      <!-- Modal Seguidos -->
+      <ion-modal :is-open="showFollowingModal" @didDismiss="closeFollowing">
+        <ion-header>
+          <ion-toolbar>
+            <ion-title>Seguidos</ion-title>
+            <ion-buttons slot="end">
+              <ion-button @click="closeFollowing">Cerrar</ion-button>
+            </ion-buttons>
+          </ion-toolbar>
+        </ion-header>
+        <ion-content>
+          <ion-list>
+            <ion-item v-if="siguiendo.length === 0">
+              <ion-avatar slot="start">
+                <img src="https://www.gravatar.com/avatar/?d=mp&f=y" />
+              </ion-avatar>
+              <ion-label>No sigue a nadie</ion-label>
+            </ion-item>
+            <ion-item
+            v-for="(f, i) in siguiendo"
+            :key="i"
+          @click="$router.push(`/tabs/perfil/${f.username}`); closeFollowing()"
+          >
+            <ion-avatar slot="start">
+              <img :src="f.imagen_url || 'https://www.gravatar.com/avatar/?d=mp&f=y'" />
+            </ion-avatar>
+
+            <ion-label>
+              <h3>{{ f.name || f.username || "Usuario" }}</h3>
+              <p class="ion-text-wrap">@{{ f.username || "" }}</p>
+            </ion-label>
+          </ion-item>
+
+          </ion-list>
+        </ion-content>
+      </ion-modal>
+
+      <!-- Menu Popover -->
+      <ion-popover
+        :is-open="isMenuOpen"
+        @didDismiss="closeMenu"
+        trigger="open-menu-button"
+      >
+        <ion-content>
+          <ion-list>
+            <ion-item button @click="handleLogout">
+              <ion-icon slot="start" :icon="logOutOutline"></ion-icon>
+              <ion-label>Cerrar sesión</ion-label>
+            </ion-item>
+          </ion-list>
+        </ion-content>
+      </ion-popover>
+    </ion-content>
+  </ion-page>
 </template>
 
 <script>
 import {
+  IonPage,
+  IonContent,
+  IonCard,
+  IonCardContent,
+  IonSpinner,
+  IonSegment,
+  IonSegmentButton,
+  IonLabel,
+  IonIcon,
+  IonText,
+  IonInfiniteScroll,
+  IonInfiniteScrollContent,
+  IonModal,
+  IonHeader,
+  IonToolbar,
+  IonButtons,
+  IonTitle,
+  IonList,
+  IonItem,
+  IonAvatar,
+  IonButton,
+  IonGrid,
+  IonRow,
+  IonCol,
+  IonPopover,
+  IonInput,
+  IonSelect,      
+  IonSelectOption 
+} from "@ionic/vue";
+import {
+  ellipsisVerticalOutline,
+  grid,
+  folderOutline,
+  musicalNoteOutline,
+  logOutOutline,
+  personCircle,
+  documentOutline,
+  notifications,
+} from "ionicons/icons";
+import { UniversidadService } from "@/services/universidad";
+import postsService from "@/services/postsService";
+import { AuthService } from "@/services/auth";
+import router from "../router";
+
+export default {
+  name: "PerfilView",
+  components: {
     IonPage,
     IonContent,
     IonCard,
     IonCardContent,
+    IonIcon,
     IonSpinner,
     IonSegment,
     IonSegmentButton,
     IonLabel,
-    IonIcon,
     IonText,
     IonInfiniteScroll,
     IonInfiniteScrollContent,
@@ -275,558 +454,614 @@ import {
     IonRow,
     IonCol,
     IonPopover,
-} from "@ionic/vue";
-import {
-    ellipsisVerticalOutline,
-    grid,
-    folderOutline,
-    musicalNoteOutline,
-    logOutOutline,
-    personCircle,
-    documentOutline,
-    notifications,
-} from "ionicons/icons";
+    IonInput,
+    IonSelect,      
+  IonSelectOption 
+  },
+  data() {
+    return {
+      posts: [],
+      seguidores: [],
+      siguiendo: [],
+      canciones: [],
+      universidad: "",
+      carrera: "",
+      universidades: [],
+      carreras: [],
+      archivos: [],
+      loading: false,
+      isMe: true, //ver si el que esta viendo el perfil soy yo
+      error: null,
+      selectedTab: "1",
+      currentPage: 1,
+      lastPage: 1,
+      hasMorePages: false,
+      isDarkMode: false,
+      user: { imagen_url: null, name: "Usuario", username: "usuario" },
+      user_viewer: {imagen_url: null,name: "Usuario", username: "usuario"},
+      formData: {
+        id: null,
+        name: '',
+        username: '',
+        email: '',
+        profession: '',
+        gender: '',
+        universidad_id: null,
+        carrera_id: null,
+        gender: '',
+      },
+      isAuthenticated: false,
+      ellipsisVerticalOutline,
+      grid,
+      folderOutline,
+      musicalNoteOutline,
+      logOutOutline,
+      personCircle,
+      documentOutline,
+      notifications,
+      // modals
+      showFollowersModal: false,
+      showFollowingModal: false,
+      showSettingsModal:false,
+      // menu
+      isMenuOpen: false,
+    };
+  },
+  async created() {
+    // Verificar autenticación
+    this.isAuthenticated = AuthService.isAuthenticated();
 
-import postsService from "@/services/postsService";
-import { AuthService } from "@/services/auth";
-
-export default {
-    name: "PerfilView",
-    components: {
-        IonPage,
-        IonContent,
-        IonCard,
-        IonCardContent,
-        IonIcon,
-        IonSpinner,
-        IonSegment,
-        IonSegmentButton,
-        IonLabel,
-        IonText,
-        IonInfiniteScroll,
-        IonInfiniteScrollContent,
-        IonModal,
-        IonHeader,
-        IonToolbar,
-        IonButtons,
-        IonTitle,
-        IonList,
-        IonItem,
-        IonAvatar,
-        IonButton,
-        IonGrid,
-        IonRow,
-        IonCol,
-        IonPopover,
-    },
-    data() {
-        return {
-            posts: [],
-            seguidores: [],
-            siguiendo: [],
-            canciones: [],
-            archivos: [],
-            loading: false,
-            error: null,
-            selectedTab: "1",
-            currentPage: 1,
-            lastPage: 1,
-            hasMorePages: false,
-            isDarkMode: false,
-            user: { imagen_url: null, name: "Usuario", username: "usuario" },
-            isAuthenticated: false,
-            ellipsisVerticalOutline,
-            grid,
-            folderOutline,
-            musicalNoteOutline,
-            logOutOutline,
-            personCircle,
-            documentOutline,
-            notifications,
-            // modals
-            showFollowersModal: false,
-            showFollowingModal: false,
-            // menu
-            isMenuOpen: false,
-        };
-    },
-    async created() {
-        // Verificar autenticación
-        this.isAuthenticated = AuthService.isAuthenticated();
-
-        await this.loadCurrentUser();
-        this.loadDarkModePreference();
-
-        // Cargar datos del perfil después de obtener el usuario
-        if (this.user && this.user.id) {
-            await this.getProfileData();
+    await this.loadCurrentUser();
+    this.loadDarkModePreference();
+    // Cargar datos del perfil después de obtener el usuario
+    if (this.user && this.user.id) {
+      await this.getProfileData();
+    }
+  },
+  ionViewWillEnter() {
+    // Actualizar estado de autenticación cada vez que se entra a la vista
+    this.isAuthenticated = AuthService.isAuthenticated();
+  },
+  methods: {
+    async loadCurrentUser() {
+      try {
+        // Primero intenta obtener el usuario del localStorage
+        const localUser = AuthService.getUser();
+        if (localUser) {
+          this.user = localUser;
+          this.user_viewer = localUser;
         }
+        // Luego valida el token con la API y actualiza los datos (en background, sin bloquear)
+        try {
+          const apiUser = await AuthService.fetchProfile();
+          if (apiUser) {
+            this.user_viewer = apiUser;
+            this.isMeUser();
+            if(this.isMe){
+              this.user = apiUser;
+              this.loadUniversidades();
+              this.getCarrera();
+            }
+            else{
+              const usuario_username = this.$route.params.username ? this.$route.params.username : 'me';
+              const apiUser = await AuthService.fetchForeignProfile(usuario_username);
+               this.user = apiUser.data;
+            }
+          }
+
+        } catch (apiError) {
+          // Si falla la validación con la API
+          console.warn("No se pudo validar el token con la API:", apiError);
+
+          // Solo redirigimos al login si es un error 401 (token inválido)
+          if (apiError.response?.status === 401) {
+            AuthService.logout();
+            this.$router.replace("/login");
+          }
+          // Si es otro tipo de error (red, servidor caído, etc.) y tenemos usuario local, continuamos
+          else if (!localUser) {
+            // Solo redirigimos si no hay usuario local tampoco
+            this.$router.replace("/login");
+          }
+        }
+      } catch (error) {
+        console.error("Error cargando usuario:", error);
+        // Solo redirige si es un error crítico
+        if (!AuthService.isAuthenticated()) {
+          this.$router.replace("/login");
+        }
+      }
     },
-    ionViewWillEnter() {
-        // Actualizar estado de autenticación cada vez que se entra a la vista
-        this.isAuthenticated = AuthService.isAuthenticated();
+    async loadUniversidades() {
+      try {
+        const response = await UniversidadService.getUniversidades();
+        this.universidad =
+          response.data.find((u) => u.id === this.user.universidad_id) || null;
+       } catch (error) {
+        console.error("Error al cargar universidades:", error);
+        // No mostrar error al usuario, simplemente no tendrá filtros
+      }
     },
-    methods: {
-        async loadCurrentUser() {
-            try {
-                // Primero intenta obtener el usuario del localStorage
-                const localUser = AuthService.getUser();
-                if (localUser) {
-                    this.user = localUser;
-                }
 
-                // Luego valida el token con la API y actualiza los datos (en background, sin bloquear)
-                try {
-                    const apiUser = await AuthService.fetchProfile();
-                    if (apiUser) {
-                        this.user = apiUser;
-                    }
-                } catch (apiError) {
-                    // Si falla la validación con la API
-                    console.warn("No se pudo validar el token con la API:", apiError);
+    //funcion para actualizar perfil y recargar pagina
+      async updateProfile() {
+      try {
+        await AuthService.updateProfile(this.formData)
+        router.go(0); // Recargar la página
+         this.closeSettings()
 
-                    // Solo redirigimos al login si es un error 401 (token inválido)
-                    if (apiError.response?.status === 401) {
-                        AuthService.logout();
-                        this.$router.replace("/login");
-                    }
-                    // Si es otro tipo de error (red, servidor caído, etc.) y tenemos usuario local, continuamos
-                    else if (!localUser) {
-                        // Solo redirigimos si no hay usuario local tampoco
-                        this.$router.replace("/login");
-                    }
-                }
-            } catch (error) {
-                console.error("Error cargando usuario:", error);
-                // Solo redirige si es un error crítico
-                if (!AuthService.isAuthenticated()) {
-                    this.$router.replace("/login");
-                }
-            }
-        },
-        loadDarkModePreference() {
-            const savedMode = localStorage.getItem("darkMode");
-            if (savedMode !== null) {
-                this.isDarkMode = savedMode === "true";
-            } else {
-                const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
-                this.isDarkMode = prefersDark.matches;
-            }
-            this.applyDarkMode();
-        },
-        toggleDarkMode() {
-            this.isDarkMode = !this.isDarkMode;
-            localStorage.setItem("darkMode", this.isDarkMode.toString());
-            this.applyDarkMode();
-        },
-        applyDarkMode() {
-            document.documentElement.classList.toggle(
-                "ion-palette-dark",
-                this.isDarkMode
-            );
-            if (this.isDarkMode) {
-                document.documentElement.style.setProperty(
-                    "--ion-background-color",
-                    "#121212"
-                );
-                document.documentElement.style.setProperty(
-                    "--ion-card-background",
-                    "#1E1E1E"
-                );
-            } else {
-                document.documentElement.style.setProperty(
-                    "--ion-background-color",
-                    "#F3F4F6"
-                );
-                document.documentElement.style.setProperty(
-                    "--ion-card-background",
-                    "#FFFFFF"
-                );
-            }
-        },
-        async fetchPosts(page = 1) {
-            // No cambiar el estado de loading si es una página mayor a 1
-            if (page === 1) {
-                this.loading = true;
-            }
-            this.error = null;
-
-            try {
-                console.log('[PERFIL] Obteniendo posts del usuario, página:', page);
-
-                // Obtener posts específicos del usuario desde el backend
-                const postsResponse = await AuthService.getPosts(this.user.id);
-
-                console.log('[PERFIL] Respuesta de posts:', postsResponse);
-
-                // Manejar diferentes estructuras de respuesta
-                let postsData = [];
-
-                if (postsResponse?.success && postsResponse?.data) {
-                    // Si viene con success: true y data
-                    if (Array.isArray(postsResponse.data)) {
-                        postsData = postsResponse.data;
-                    } else if (postsResponse.data.data) {
-                        postsData = postsResponse.data.data;
-                    }
-                } else if (postsResponse?.data) {
-                    // Si solo viene data
-                    if (Array.isArray(postsResponse.data)) {
-                        postsData = postsResponse.data;
-                    } else if (postsResponse.data.data) {
-                        postsData = postsResponse.data.data;
-                    }
-                }
-
-                // Si la respuesta tiene paginación
-                if (postsResponse?.data?.current_page) {
-                    this.currentPage = postsResponse.data.current_page;
-                    this.lastPage = postsResponse.data.last_page || 1;
-                    this.hasMorePages = this.currentPage < this.lastPage;
-                } else {
-                    // Sin paginación, solo una página
-                    this.currentPage = 1;
-                    this.lastPage = 1;
-                    this.hasMorePages = false;
-                }
-
-                // Asignar posts
-                if (page === 1) {
-                    this.posts = postsData;
-                } else {
-                    this.posts = [...this.posts, ...postsData];
-                }
-
-                console.log('[PERFIL] Posts totales cargados:', this.posts.length);
-
-            } catch (err) {
-                console.error('[PERFIL] Error al obtener posts:', err);
-                this.error = err.message || "Error al cargar posts";
-                if (page === 1) {
-                    this.posts = [];
-                }
-            } finally {
-                if (page === 1) {
-                    this.loading = false;
-                }
-            }
-        },
-        async loadMorePosts(event) {
-            if (this.hasMorePages) {
-                await this.fetchPosts(this.currentPage + 1);
-            }
-            event.target.complete();
-        },
-        async getProfileData() {
-            try {
-                console.log('[PERFIL] Cargando datos del perfil para usuario:', this.user.id);
-
-                this.loading = true;
-
-                // Cargar seguidores y seguidos en paralelo
-                const [followersResponse, followingResponse] = await Promise.all([
-                    AuthService.getFollowers(this.user.id),
-                    AuthService.getFollowing(this.user.id)
-                ]);
-
-                console.log('[PERFIL] Respuestas recibidas:', {
-                    followers: followersResponse,
-                    following: followingResponse
-                });
-
-                // Asignar seguidores
-                this.seguidores = followersResponse?.followers || [];
-                console.log('[PERFIL] Seguidores cargados:', this.seguidores.length);
-
-                // Asignar seguidos
-                this.siguiendo = followingResponse?.following || [];
-                console.log('[PERFIL] Seguidos cargados:', this.siguiendo.length);
-
-                // Cargar posts usando el método fetchPosts que ya maneja paginación
-                await this.fetchPosts(1);
-
-            } catch (error) {
-                console.error('[PERFIL] Error al cargar datos del perfil:', error);
-                this.error = 'Error al cargar los datos del perfil';
-                // Inicializar arrays vacíos en caso de error
-                this.seguidores = [];
-                this.siguiendo = [];
-                this.posts = [];
-            } finally {
-                this.loading = false;
-            }
-        },
-        openFollowers() {
-            console.log("Opening followers modal");
-            this.showFollowersModal = true;
-        },
-        closeFollowers() {
-            this.showFollowersModal = false;
-        },
-        openFollowing() {
-            this.showFollowingModal = true;
-        },
-        closeFollowing() {
-            this.showFollowingModal = false;
-        },
-        openMenu() {
-            this.isMenuOpen = true;
-        },
-        closeMenu() {
-            this.isMenuOpen = false;
-        },
-        async handleLogout() {
-            try {
-                // Cerrar el menú primero
-                this.closeMenu();
-
-                // Cerrar sesión usando AuthService (esto limpia localStorage)
-                // Esperamos a que termine completamente
-                await AuthService.logout();
-
-                // Pequeña pausa para asegurar que el localStorage se limpió
-                await new Promise(resolve => setTimeout(resolve, 100));
-
-                // Usar window.location para forzar una navegación completa
-                // Esto asegura que todo el estado se limpie correctamente
-                window.location.href = '/welcome';
-            } catch (error) {
-                console.error('Error al cerrar sesión:', error);
-                // En caso de error, igualmente limpiar y redirigir
-                localStorage.removeItem('auth_token');
-                localStorage.removeItem('user');
-                window.location.href = '/welcome';
-            }
-        },
+      } catch (error) {
+       console.log(error);
+      }},
+   async getCarrera(){
+    try {
+        const response = await UniversidadService.getAllCarreras();
+        this.carrera =
+          response.data.find((u) => u.id === this.user.carrera_id) || null;
+       } catch (error) {
+        console.error("Error al cargar universidades:", error);
+        // No mostrar error al usuario, simplemente no tendrá filtros
+      }
     },
+    async isMeUser(){
+       const parametro = this.$route.params.username.toLowerCase();
+       this.isMe = parametro.trim() == 'me' || parametro.trim() == this.user_viewer.username.trim() ? true : false;
+    },
+    loadDarkModePreference() {
+      const savedMode = localStorage.getItem("darkMode");
+      if (savedMode !== null) {
+        this.isDarkMode = savedMode === "true";
+      } else {
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
+        this.isDarkMode = prefersDark.matches;
+      }
+      this.applyDarkMode();
+    },
+    toggleDarkMode() {
+      this.isDarkMode = !this.isDarkMode;
+      localStorage.setItem("darkMode", this.isDarkMode.toString());
+      this.applyDarkMode();
+    },
+    applyDarkMode() {
+      document.documentElement.classList.toggle(
+        "ion-palette-dark",
+        this.isDarkMode
+      );
+      if (this.isDarkMode) {
+        document.documentElement.style.setProperty(
+          "--ion-background-color",
+          "#121212"
+        );
+        document.documentElement.style.setProperty(
+          "--ion-card-background",
+          "#1E1E1E"
+        );
+      } else {
+        document.documentElement.style.setProperty(
+          "--ion-background-color",
+          "#F3F4F6"
+        );
+        document.documentElement.style.setProperty(
+          "--ion-card-background",
+          "#FFFFFF"
+        );
+      }
+    },
+    async fetchPosts(page = 1) {
+      // No cambiar el estado de loading si es una página mayor a 1
+      if (page === 1) {
+        this.loading = true;
+      }
+      this.error = null;
+
+      try {
+        console.log("[PERFIL] Obteniendo posts del usuario, página:", page);
+
+        // Obtener posts específicos del usuario desde el backend
+        const postsResponse = await AuthService.getPosts(this.user.id);
+
+        console.log("[PERFIL] Respuesta de posts:", postsResponse);
+
+        // Manejar diferentes estructuras de respuesta
+        let postsData = [];
+
+        if (postsResponse?.success && postsResponse?.data) {
+          // Si viene con success: true y data
+          if (Array.isArray(postsResponse.data)) {
+            postsData = postsResponse.data;
+          } else if (postsResponse.data.data) {
+            postsData = postsResponse.data.data;
+          }
+        } else if (postsResponse?.data) {
+          // Si solo viene data
+          if (Array.isArray(postsResponse.data)) {
+            postsData = postsResponse.data;
+          } else if (postsResponse.data.data) {
+            postsData = postsResponse.data.data;
+          }
+        }
+
+        // Si la respuesta tiene paginación
+        if (postsResponse?.data?.current_page) {
+          this.currentPage = postsResponse.data.current_page;
+          this.lastPage = postsResponse.data.last_page || 1;
+          this.hasMorePages = this.currentPage < this.lastPage;
+        } else {
+          // Sin paginación, solo una página
+          this.currentPage = 1;
+          this.lastPage = 1;
+          this.hasMorePages = false;
+        }
+
+        // Asignar posts
+        if (page === 1) {
+          this.posts = postsData;
+        } else {
+          this.posts = [...this.posts, ...postsData];
+        }
+
+        console.log("[PERFIL] Posts totales cargados:", this.posts.length);
+      } catch (err) {
+        console.error("[PERFIL] Error al obtener posts:", err);
+        this.error = err.message || "Error al cargar posts";
+        if (page === 1) {
+          this.posts = [];
+        }
+      } finally {
+        if (page === 1) {
+          this.loading = false;
+        }
+      }
+    },
+    async loadMorePosts(event) {
+      if (this.hasMorePages) {
+        await this.fetchPosts(this.currentPage + 1);
+      }
+      event.target.complete();
+    },
+    async getProfileData() {
+      try {
+        console.log(
+          "[PERFIL] Cargando datos del perfil para usuario:",
+          this.user.id
+        );
+
+        this.loading = true;
+
+        // Cargar seguidores y seguidos en paralelo
+        const [followersResponse, followingResponse] = await Promise.all([
+          AuthService.getFollowers(this.user.id),
+          AuthService.getFollowing(this.user.id),
+        ]);
+
+        console.log("[PERFIL] Respuestas recibidas:", {
+          followers: followersResponse,
+          following: followingResponse,
+        });
+
+        // Asignar seguidores
+        this.seguidores = followersResponse?.followers || [];
+        console.log("[PERFIL] Seguidores cargados:", this.seguidores.length);
+
+        // Asignar seguidos
+        this.siguiendo = followingResponse?.following || [];
+        console.log("[PERFIL] Seguidos cargados:", this.siguiendo.length);
+
+        // Cargar posts usando el método fetchPosts que ya maneja paginación
+        await this.fetchPosts(1);
+      } catch (error) {
+        console.error("[PERFIL] Error al cargar datos del perfil:", error);
+        this.error = "Error al cargar los datos del perfil";
+        // Inicializar arrays vacíos en caso de error
+        this.seguidores = [];
+        this.siguiendo = [];
+        this.posts = [];
+      } finally {
+        this.loading = false;
+      }
+    },
+    openFollowers() {
+      console.log("Opening followers modal");
+       this.showFollowersModal = true;
+    },
+    closeFollowers() {
+      this.showFollowersModal = false;
+    },
+    openFollowing() {
+      this.showFollowingModal = true;
+    },
+    closeFollowing() {
+      this.showFollowingModal = false;
+    },
+   async openSettings(){
+     try {
+    const [unisResp, carrResp] = await Promise.all([
+      UniversidadService.getUniversidades(),
+      UniversidadService.getAllCarreras()
+    ]);
+
+    this.universidades = unisResp.data;
+    this.carreras = carrResp.data;
+
+    this.formData = {
+      ...this.user,
+      universidad_id: this.user.universidad_id ? Number(this.user.universidad_id) : null,
+      carrera_id: this.user.carrera_id ? Number(this.user.carrera_id) : null
+    };
+
+    this.showSettingsModal = true;
+  } catch (error) {
+    console.error("Error al cargar universidades o carreras:", error);
+  }
+      },
+    closeSettings(){
+      this.showSettingsModal =false
+    },
+    openMenu() {
+      this.isMenuOpen = true;
+    },
+    closeMenu() {
+      this.isMenuOpen = false;
+    },
+    async handleLogout() {
+      try {
+        // Cerrar el menú primero
+        this.closeMenu();
+
+        // Cerrar sesión usando AuthService (esto limpia localStorage)
+        // Esperamos a que termine completamente
+        await AuthService.logout();
+
+        // Pequeña pausa para asegurar que el localStorage se limpió
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Usar window.location para forzar una navegación completa
+        // Esto asegura que todo el estado se limpie correctamente
+        window.location.href = "/welcome";
+      } catch (error) {
+        console.error("Error al cerrar sesión:", error);
+        // En caso de error, igualmente limpiar y redirigir
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("user");
+        window.location.href = "/welcome";
+      }
+    },
+  },
 };
 </script>
 
 <style scoped>
 /* Header */
 ion-header ion-toolbar {
-    --background: white;
-    --border-width: 0;
+  --background: white;
+  --border-width: 0;
 }
 
 .header-grid {
-    padding: 0;
-    margin: 0;
+  padding: 0;
+  margin: 0;
 }
 
 .header-grid ion-row {
-    padding: 8px 16px;
+  padding: 8px 16px;
 }
 
 .header-logo {
-    width: 40px;
-    height: 40px;
-    object-fit: contain;
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
 }
 
 .username-purple {
-    color: #7b2ff7;
-    font-size: 14px;
-    font-weight: 600;
+  color: #7b2ff7;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 /* Content background */
 ion-content {
-    --background: var(--ion-background-color);
+  --background: var(--ion-background-color);
 }
 
 /* Profile Section */
 .profile-section {
-    background: var(--ion-card-background);
-    padding: 24px 16px 16px 16px;
+  background: var(--ion-card-background);
+  padding: 24px 16px 16px 16px;
 }
 
 .profile-header-row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    position: relative;
-    margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 12px;
 }
 
 .profile-avatar {
-    width: 80px;
-    height: 80px;
+  width: 80px;
+  height: 80px;
 }
 
 .profile-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .profile-avatar-icon {
-    width: 80px !important;
-    height: 80px !important;
-    font-size: 80px !important;
-    color: #9CA3AF;
+  width: 80px !important;
+  height: 80px !important;
+  font-size: 80px !important;
+  color: #9ca3af;
 }
 
 .menu-button-inline {
-    position: absolute;
-    right: 16px;
-    top: 0;
+  position: absolute;
+  right: 16px;
+  top: 0;
 }
 
 #open-menu-button {
-    --padding-start: 8px;
-    --padding-end: 8px;
-    margin: 0;
+  --padding-start: 8px;
+  --padding-end: 8px;
+  margin: 0;
 }
 
 .profile-name {
-    margin-top: 0;
-    margin-bottom: 4px;
-    font-size: 20px;
-    font-weight: 600;
-    color: #000000;
+  margin-top: 0;
+  margin-bottom: 4px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #000000;
 }
 
 .profile-description {
-    font-size: 12px;
-    color: #6B7280;
-    margin: 0;
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
 }
-
+.settings-form{
+  padding: 25px 25px;
+}
+.settings-modal-content .modal-title{
+position: relative;
+top: 16px;
+left: 30px;
+}
 /* Action Buttons */
 .action-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    margin-top: 16px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
 }
 
 .action-buttons ion-button {
-    text-transform: none;
-    font-weight: 600;
+  text-transform: none;
+  font-weight: 600;
 }
 
 /* Stats */
 .stats-grid {
-    margin-top: 24px;
-    margin-bottom: 0;
-    padding: 0;
+  margin-top: 24px;
+  margin-bottom: 0;
+  padding: 0;
 }
 
 .stat-number {
-    font-size: 16px;
-    font-weight: 600;
-    color: #000000;
-    margin-bottom: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #000000;
+  margin-bottom: 4px;
 }
 
 .stat-label {
-    font-size: 12px;
-    color: #6B7280;
+  font-size: 12px;
+  color: #6b7280;
 }
 
 .clickable {
-    cursor: pointer;
+  cursor: pointer;
 }
 
 /* Divider */
 .divider {
-    height: 1px;
-    background-color: #E5E7EB;
-    margin: 16px 0;
+  height: 1px;
+  background-color: #e5e7eb;
+  margin: 16px 0;
 }
 
 /* Tabs */
 ion-segment {
-    --background: white;
-    margin-bottom: 8px;
+  --background: white;
+  margin-bottom: 8px;
 }
 
 ion-segment-button {
-    text-transform: none;
-    font-size: 14px;
-    font-weight: 500;
+  text-transform: none;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .tab-label {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 .tab-label ion-icon {
-    font-size: 20px;
+  font-size: 20px;
 }
 
 .tab-label span {
-    font-size: 12px;
+  font-size: 12px;
 }
 
 /* Tabs Content */
 .tabs-content {
-    padding: 8px 0;
+  padding: 8px 0;
 }
 
 .post-card {
-    background-color: #F3F4F6;
-    border-radius: 12px;
-    height: 120px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 12px;
-    transition: background-color 0.2s;
+  background-color: #f3f4f6;
+  border-radius: 12px;
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  transition: background-color 0.2s;
 }
 
 .post-card:active {
-    background-color: #E5E7EB;
+  background-color: #e5e7eb;
 }
 
 .post-card ion-icon {
-    font-size: 40px;
-    color: #6B7280;
-    margin-bottom: 8px;
+  font-size: 40px;
+  color: #6b7280;
+  margin-bottom: 8px;
 }
 
 .post-title {
-    margin: 0;
-    font-size: 11px;
-    text-align: center;
-    color: #374151;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 100%;
+  margin: 0;
+  font-size: 11px;
+  text-align: center;
+  color: #374151;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .empty-message {
-    text-align: center;
-    padding: 40px 20px;
-    color: #6B7280;
-    font-style: normal;
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+  font-style: normal;
 }
 
 /* Loading */
 .loading-container {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
 }
 
 /* Modal styles */
 ion-modal ion-avatar img {
-    object-fit: cover;
+  object-fit: cover;
 }
 
 /* Responsive */
 @media (min-width: 600px) {
-    .profile-section {
-        max-width: 600px;
-        margin: 0 auto;
-    }
+  .profile-section {
+    max-width: 600px;
+    margin: 0 auto;
+  }
 }
 </style>
