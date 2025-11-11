@@ -54,30 +54,28 @@
 
                 <!-- Nombre y descripción -->
                 <h3 class="profile-name">{{ user.name }}</h3>
-                <p class="profile-description">
-                    ITCA FEPADE, Desarrollo de software
+                <p class="profile-description" v-if="user.universidad || user.carrera">
+                    <span v-if="user.universidad">{{ user.universidad.nombre }}</span>
+                    <span v-if="user.universidad && user.carrera">, </span>
+                    <span v-if="user.carrera">{{ user.carrera.nombre }}</span>
                 </p>
-
-                <!-- Botón Seguir -->
-                <div class="action-buttons">
-                    <ion-button color="primary">Seguir</ion-button>
-                    <!-- Descomentar para agregar botón de mensaje -->
-                    <!-- <ion-button color="light">Enviar Mensaje</ion-button> -->
-                </div>
+                <p class="profile-description" v-else>
+                    Sin información académica
+                </p>
 
                 <!-- Contadores -->
                 <ion-grid class="stats-grid">
                     <ion-row class="ion-text-center">
                         <ion-col size="4">
-                            <div class="stat-number">{{ posts.length }}</div>
+                            <div class="stat-number">{{ userStats.posts_count || 0 }}</div>
                             <div class="stat-label">Publicaciones</div>
                         </ion-col>
                         <ion-col size="4" class="clickable" @click="openFollowers">
-                            <div class="stat-number">{{ seguidores.length }}</div>
+                            <div class="stat-number">{{ userStats.followers_count || 0 }}</div>
                             <div class="stat-label">Seguidores</div>
                         </ion-col>
                         <ion-col size="4" class="clickable" @click="openFollowing">
-                            <div class="stat-number">{{ siguiendo.length }}</div>
+                            <div class="stat-number">{{ userStats.following_count || 0 }}</div>
                             <div class="stat-label">Seguidos</div>
                         </ion-col>
                     </ion-row>
@@ -110,53 +108,67 @@
 
                 <!-- Contenido de los tabs -->
                 <div class="tabs-content">
-                    <!-- Posts Tab -->
+                    <!-- Posts Tab (Imagen/Texto) -->
                     <div v-if="selectedTab === '1'">
                         <ion-grid>
                             <ion-row>
-                                <ion-col v-for="(pub, index) in posts" :key="index" size="6">
-                                    <div class="post-card">
-                                        <ion-icon :icon="documentOutline" size="large" color="medium"></ion-icon>
-                                        <p class="post-title">{{ pub.titulo }}</p>
+                                <ion-col v-for="post in postsImagenTexto" :key="post.id" size="6">
+                                    <div class="post-card" @click="goToPostDetail(post.id)">
+                                        <!-- Mostrar imagen si existe -->
+                                        <img v-if="post.imagen_url" :src="post.imagen_url" class="post-thumbnail"
+                                            :alt="post.titulo" />
+                                        <!-- Icono de documento si no hay imagen -->
+                                        <ion-icon v-else :icon="documentOutline" size="large" color="medium"></ion-icon>
+                                        <p class="post-title">{{ post.titulo || 'Sin título' }}</p>
                                     </div>
                                 </ion-col>
                             </ion-row>
                         </ion-grid>
-                        <div v-if="posts.length === 0" class="empty-message">
+                        <div v-if="postsImagenTexto.length === 0" class="empty-message">
                             Aún no hay publicaciones
                         </div>
                     </div>
 
-                    <!-- Folders Tab -->
+                    <!-- Folders Tab (Archivos) -->
                     <div v-else-if="selectedTab === '2'">
                         <ion-grid>
                             <ion-row>
-                                <ion-col v-for="(archivo, index) in archivos" :key="index" size="6">
-                                    <div class="post-card">
+                                <ion-col v-for="post in postsFolders" :key="post.id" size="6">
+                                    <div class="post-card" @click="goToPostDetail(post.id)">
                                         <ion-icon :icon="folderOutline" size="large" color="medium"></ion-icon>
-                                        <p class="post-title">{{ archivo.nombre }}</p>
+                                        <p class="post-title">{{ post.titulo || 'Archivo' }}</p>
+                                        <p class="post-subtitle" v-if="post.archivo">
+                                            {{ getFileName(post.archivo) }}
+                                        </p>
                                     </div>
                                 </ion-col>
                             </ion-row>
                         </ion-grid>
-                        <div v-if="archivos.length === 0" class="empty-message">
-                            Sin carpetas todavía
+                        <div v-if="postsFolders.length === 0" class="empty-message">
+                            Sin archivos todavía
                         </div>
                     </div>
 
-                    <!-- Playlist Tab -->
+                    <!-- Playlist Tab (Música) -->
                     <div v-else>
                         <ion-grid>
                             <ion-row>
-                                <ion-col v-for="(cancion, index) in canciones" :key="index" size="6">
-                                    <div class="post-card">
-                                        <ion-icon :icon="musicalNoteOutline" size="large" color="medium"></ion-icon>
-                                        <p class="post-title">{{ cancion.titulo }}</p>
+                                <ion-col v-for="post in postsMusicaPlaylist" :key="post.id" size="6">
+                                    <div class="post-card" @click="goToPostDetail(post.id)">
+                                        <!-- Mostrar imagen del track si existe -->
+                                        <img v-if="post.track_image" :src="post.track_image" class="post-thumbnail"
+                                            :alt="post.track_name" />
+                                        <ion-icon v-else :icon="musicalNoteOutline" size="large"
+                                            color="medium"></ion-icon>
+                                        <p class="post-title">{{ post.track_name || post.titulo || 'Sin título' }}</p>
+                                        <p class="post-subtitle" v-if="post.artist_name">
+                                            {{ post.artist_name }}
+                                        </p>
                                     </div>
                                 </ion-col>
                             </ion-row>
                         </ion-grid>
-                        <div v-if="canciones.length === 0" class="empty-message">
+                        <div v-if="postsMusicaPlaylist.length === 0" class="empty-message">
                             No hay playlists creadas
                         </div>
                     </div>
@@ -187,10 +199,9 @@
                             </ion-avatar>
                             <ion-label>No hay seguidores</ion-label>
                         </ion-item>
-                        <ion-item v-for="(f, i) in seguidores" :key="i">
+                        <ion-item button v-for="(f, i) in seguidores" :key="i" @click="goToUserProfile(f)">
                             <ion-avatar slot="start">
-                                <img :src="f.imagen_url || 'https://www.gravatar.com/avatar/?d=mp&f=y'
-                                    " />
+                                <img :src="f.imagen_url || 'https://www.gravatar.com/avatar/?d=mp&f=y'" />
                             </ion-avatar>
                             <ion-label>
                                 <h3>{{ f.name || f.username || "Usuario" }}</h3>
@@ -219,10 +230,9 @@
                             </ion-avatar>
                             <ion-label>No sigue a nadie</ion-label>
                         </ion-item>
-                        <ion-item v-for="(f, i) in siguiendo" :key="i">
+                        <ion-item button v-for="(f, i) in siguiendo" :key="i" @click="goToUserProfile(f)">
                             <ion-avatar slot="start">
-                                <img :src="f.imagen_url || 'https://www.gravatar.com/avatar/?d=mp&f=y'
-                                    " />
+                                <img :src="f.imagen_url || 'https://www.gravatar.com/avatar/?d=mp&f=y'" />
                             </ion-avatar>
                             <ion-label>
                                 <h3>{{ f.name || f.username || "Usuario" }}</h3>
@@ -324,8 +334,6 @@ export default {
             posts: [],
             seguidores: [],
             siguiendo: [],
-            canciones: [],
-            archivos: [],
             loading: false,
             error: null,
             selectedTab: "1",
@@ -334,6 +342,13 @@ export default {
             hasMorePages: false,
             isDarkMode: false,
             user: { imagen_url: null, name: "Usuario", username: "usuario" },
+            userStats: {
+                posts_count: 0,
+                followers_count: 0,
+                following_count: 0,
+                total_likes_received: 0,
+                total_comments_received: 0
+            },
             isAuthenticated: false,
             ellipsisVerticalOutline,
             grid,
@@ -349,6 +364,24 @@ export default {
             // menu
             isMenuOpen: false,
         };
+    },
+    computed: {
+        // Posts de tipo imagen y texto (sin música ni archivos)
+        postsImagenTexto() {
+            return this.posts.filter(post => {
+                const tipo = post.tipo_contenido;
+                // Solo posts de texto/imagen, excluyendo música y archivos
+                return !tipo || tipo === 'texto' || tipo === 'imagen';
+            });
+        },
+        // Posts de tipo música (playlist)
+        postsMusicaPlaylist() {
+            return this.posts.filter(post => post.tipo_contenido === 'musica');
+        },
+        // Posts con archivos (folders)
+        postsFolders() {
+            return this.posts.filter(post => post.tipo_contenido === 'archivo' || (post.archivo && post.tipo_contenido !== 'musica'));
+        }
     },
     async created() {
         // Verificar autenticación
@@ -454,34 +487,42 @@ export default {
             try {
                 console.log('[PERFIL] Obteniendo posts del usuario, página:', page);
 
-                // Obtener posts específicos del usuario desde el backend
-                const postsResponse = await AuthService.getPosts(this.user.id);
+                // Usar el username o ID del usuario actual
+                const userIdentifier = this.user.username || this.user.id;
 
-                console.log('[PERFIL] Respuesta de posts:', postsResponse);
+                // Obtener posts específicos del usuario desde el nuevo endpoint
+                const response = await AuthService.getUserPosts(userIdentifier, page);
 
-                // Manejar diferentes estructuras de respuesta
+                console.log('[PERFIL] Respuesta de posts:', response);
+
+                // Manejar la estructura de respuesta del backend
                 let postsData = [];
+                let paginationData = null;
 
-                if (postsResponse?.success && postsResponse?.data) {
+                if (response?.success && response?.data) {
                     // Si viene con success: true y data
-                    if (Array.isArray(postsResponse.data)) {
-                        postsData = postsResponse.data;
-                    } else if (postsResponse.data.data) {
-                        postsData = postsResponse.data.data;
+                    if (response.data.data && Array.isArray(response.data.data)) {
+                        // Datos paginados
+                        postsData = response.data.data;
+                        paginationData = response.data;
+                    } else if (Array.isArray(response.data)) {
+                        // Array directo
+                        postsData = response.data;
                     }
-                } else if (postsResponse?.data) {
+                } else if (response?.data) {
                     // Si solo viene data
-                    if (Array.isArray(postsResponse.data)) {
-                        postsData = postsResponse.data;
-                    } else if (postsResponse.data.data) {
-                        postsData = postsResponse.data.data;
+                    if (response.data.data && Array.isArray(response.data.data)) {
+                        postsData = response.data.data;
+                        paginationData = response.data;
+                    } else if (Array.isArray(response.data)) {
+                        postsData = response.data;
                     }
                 }
 
-                // Si la respuesta tiene paginación
-                if (postsResponse?.data?.current_page) {
-                    this.currentPage = postsResponse.data.current_page;
-                    this.lastPage = postsResponse.data.last_page || 1;
+                // Configurar paginación
+                if (paginationData?.current_page) {
+                    this.currentPage = paginationData.current_page;
+                    this.lastPage = paginationData.last_page || 1;
                     this.hasMorePages = this.currentPage < this.lastPage;
                 } else {
                     // Sin paginación, solo una página
@@ -519,27 +560,73 @@ export default {
         },
         async getProfileData() {
             try {
-                console.log('[PERFIL] Cargando datos del perfil para usuario:', this.user.id);
+                console.log('[PERFIL] Cargando datos del perfil para usuario:', this.user);
 
                 this.loading = true;
 
-                // Cargar seguidores y seguidos en paralelo
-                const [followersResponse, followingResponse] = await Promise.all([
-                    AuthService.getFollowers(this.user.id),
-                    AuthService.getFollowing(this.user.id)
+                // Usar el username o ID del usuario actual
+                const userIdentifier = this.user.username || this.user.id;
+
+                // Cargar estadísticas, seguidores y seguidos en paralelo
+                const [statsResponse, followersResponse, followingResponse] = await Promise.all([
+                    AuthService.getUserStats(userIdentifier),
+                    AuthService.getFollowers(userIdentifier),
+                    AuthService.getFollowing(userIdentifier)
                 ]);
 
                 console.log('[PERFIL] Respuestas recibidas:', {
+                    stats: statsResponse,
                     followers: followersResponse,
                     following: followingResponse
                 });
 
+                // Asignar estadísticas del usuario
+                if (statsResponse?.success && statsResponse?.data) {
+                    this.userStats = statsResponse.data;
+
+                    // Actualizar también los datos del usuario con la información más reciente
+                    if (statsResponse.data.name) {
+                        this.user.name = statsResponse.data.name;
+                    }
+                    if (statsResponse.data.username) {
+                        this.user.username = statsResponse.data.username;
+                    }
+                    if (statsResponse.data.imagen_url) {
+                        this.user.imagen_url = statsResponse.data.imagen_url;
+                    }
+                    if (statsResponse.data.insignia) {
+                        this.user.insignia = statsResponse.data.insignia;
+                    }
+                    if (statsResponse.data.universidad) {
+                        this.user.universidad = statsResponse.data.universidad;
+                    }
+                    if (statsResponse.data.carrera) {
+                        this.user.carrera = statsResponse.data.carrera;
+                    }
+                }
+
                 // Asignar seguidores
-                this.seguidores = followersResponse?.followers || [];
+                if (followersResponse?.success && followersResponse?.data) {
+                    this.seguidores = followersResponse.data || [];
+                } else if (followersResponse?.followers) {
+                    this.seguidores = followersResponse.followers || [];
+                } else if (Array.isArray(followersResponse)) {
+                    this.seguidores = followersResponse;
+                } else {
+                    this.seguidores = [];
+                }
                 console.log('[PERFIL] Seguidores cargados:', this.seguidores.length);
 
                 // Asignar seguidos
-                this.siguiendo = followingResponse?.following || [];
+                if (followingResponse?.success && followingResponse?.data) {
+                    this.siguiendo = followingResponse.data || [];
+                } else if (followingResponse?.following) {
+                    this.siguiendo = followingResponse.following || [];
+                } else if (Array.isArray(followingResponse)) {
+                    this.siguiendo = followingResponse;
+                } else {
+                    this.siguiendo = [];
+                }
                 console.log('[PERFIL] Seguidos cargados:', this.siguiendo.length);
 
                 // Cargar posts usando el método fetchPosts que ya maneja paginación
@@ -552,6 +639,13 @@ export default {
                 this.seguidores = [];
                 this.siguiendo = [];
                 this.posts = [];
+                this.userStats = {
+                    posts_count: 0,
+                    followers_count: 0,
+                    following_count: 0,
+                    total_likes_received: 0,
+                    total_comments_received: 0
+                };
             } finally {
                 this.loading = false;
             }
@@ -597,6 +691,42 @@ export default {
                 localStorage.removeItem('user');
                 window.location.href = '/welcome';
             }
+        },
+        /**
+         * Navega al detalle de un post
+         */
+        goToPostDetail(postId) {
+            console.log('[PERFIL] Navegando al detalle del post:', postId);
+            this.$router.push(`/post/${postId}`);
+        },
+        /**
+         * Navega al perfil de un usuario
+         * Si es el mismo usuario actual, no hace nada
+         */
+        goToUserProfile(user) {
+            console.log('[PERFIL] Navegando al perfil del usuario:', user);
+
+            // Cerrar modales
+            this.closeFollowers();
+            this.closeFollowing();
+
+            // Si es el mismo usuario, no navegar (ya estamos en su perfil)
+            if (user.id === this.user.id || user.username === this.user.username) {
+                console.log('[PERFIL] Es el mismo usuario, no navegando');
+                return;
+            }
+
+            // Navegar al perfil del usuario (usando username o id)
+            const userIdentifier = user.username || user.id;
+            this.$router.push(`/user/${userIdentifier}`);
+        },
+        /**
+         * Extrae el nombre del archivo de una ruta
+         */
+        getFileName(filePath) {
+            if (!filePath) return '';
+            const parts = filePath.split('/');
+            return parts[parts.length - 1];
         },
     },
 };
@@ -778,6 +908,9 @@ ion-segment-button {
     justify-content: center;
     padding: 12px;
     transition: background-color 0.2s;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
 }
 
 .post-card:active {
@@ -790,11 +923,30 @@ ion-segment-button {
     margin-bottom: 8px;
 }
 
+.post-thumbnail {
+    width: 100%;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 4px;
+}
+
 .post-title {
     margin: 0;
     font-size: 11px;
     text-align: center;
     color: #374151;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+.post-subtitle {
+    margin: 2px 0 0 0;
+    font-size: 9px;
+    text-align: center;
+    color: #6B7280;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

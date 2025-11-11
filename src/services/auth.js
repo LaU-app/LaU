@@ -161,10 +161,33 @@ export const AuthService = {
     return null;
   },
 
-  async getFollowers(id) {
+  /**
+   * Obtiene las estadísticas completas de un usuario
+   * Incluye: posts, seguidores, siguiendo, likes, comentarios, is_following
+   */
+  async getUserStats(userIdentifier) {
     try {
-      console.log("[AUTH] Obteniendo seguidores para usuario:", id);
-      const res = await api.get(`/auth/followers/${id}`);
+      console.log("[AUTH] Obteniendo estadísticas para usuario:", userIdentifier);
+      const res = await api.get(`/users/${userIdentifier}/stats`);
+      console.log("[AUTH] Respuesta de estadísticas:", res.data);
+      return res.data;
+    } catch (error) {
+      console.error("[AUTH] Error al obtener estadísticas:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      throw error;
+    }
+  },
+
+  /**
+   * Obtiene los seguidores de un usuario
+   */
+  async getFollowers(userIdentifier) {
+    try {
+      console.log("[AUTH] Obteniendo seguidores para usuario:", userIdentifier);
+      const res = await api.get(`/users/${userIdentifier}/followers`);
       console.log("[AUTH] Respuesta de seguidores:", res.data);
       return res.data;
     } catch (error) {
@@ -177,10 +200,13 @@ export const AuthService = {
     }
   },
 
-  async getFollowing(id) {
+  /**
+   * Obtiene los usuarios que sigue un usuario
+   */
+  async getFollowing(userIdentifier) {
     try {
-      console.log("[AUTH] Obteniendo seguidos para usuario:", id);
-      const res = await api.get(`/auth/following/${id}`);
+      console.log("[AUTH] Obteniendo seguidos para usuario:", userIdentifier);
+      const res = await api.get(`/users/${userIdentifier}/following`);
       console.log("[AUTH] Respuesta de seguidos:", res.data);
       return res.data;
     } catch (error) {
@@ -193,10 +219,15 @@ export const AuthService = {
     }
   },
 
-  async getPosts(id) {
+  /**
+   * Obtiene los posts de un usuario específico (paginados)
+   */
+  async getUserPosts(userIdentifier, page = 1) {
     try {
-      console.log("[AUTH] Obteniendo posts para usuario:", id);
-      const res = await api.get(`/posts/user/${id}`);
+      console.log("[AUTH] Obteniendo posts para usuario:", userIdentifier, "página:", page);
+      const res = await api.get(`/users/${userIdentifier}/posts`, {
+        params: { page }
+      });
       console.log("[AUTH] Respuesta de posts:", res.data);
       return res.data;
     } catch (error) {
