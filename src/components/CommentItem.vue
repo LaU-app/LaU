@@ -71,7 +71,7 @@ const handleImageError = (event) => {
     margin: 0;
     font-size: 0.95rem;
     line-height: 1.4;
-    color: var(--ion-color-step-700);
+    color: rgba(31, 41, 55, 0.95);
     word-wrap: break-word;
 }
 
@@ -80,5 +80,10 @@ const handleImageError = (event) => {
     color: var(--ion-color-medium);
     margin: 0;
     padding-left: 0.5rem;
+}
+
+/* Modo oscuro */
+.ion-palette-dark .comment-text {
+    color: rgba(255, 255, 255, 0.95);
 }
 </style>
