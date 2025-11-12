@@ -982,7 +982,7 @@ export default {
 
     goToPostDetail(postId) {
       if (!postId) return;
-      this.$router.push(`/post/${postId}`);
+      this.$router.push(`/tabs/post/${postId}`);
     },
 
     goToUserProfile(user) {
