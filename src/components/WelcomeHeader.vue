@@ -16,6 +16,7 @@
 <script>
 import { IonHeader, IonToolbar, IonButton, IonIcon } from '@ionic/vue'
 import { moon, sunny, logIn } from 'ionicons/icons'
+import { useDarkMode } from '@/utils/useDarkMode'
 
 export default {
     name: 'WelcomeHeader',
@@ -31,26 +32,17 @@ export default {
             default: false
         }
     },
-    data() {
+    setup() {
+        const { isDarkMode, toggleDarkMode } = useDarkMode()
         return {
+            isDarkMode,
+            toggleDarkMode,
             moon,
             sunny,
-            logIn,
-            isDarkMode: false
+            logIn
         }
     },
-    mounted() {
-        // Detectar el modo oscuro actual
-        this.isDarkMode = document.documentElement.classList.contains('ion-palette-dark')
-    },
     methods: {
-        toggleDarkMode() {
-            this.isDarkMode = !this.isDarkMode
-            document.documentElement.classList.toggle('ion-palette-dark', this.isDarkMode)
-
-            // Guardar preferencia en localStorage
-            localStorage.setItem('darkMode', this.isDarkMode ? 'true' : 'false')
-        },
         goToLogin() {
             this.$router.push('/login')
         }
