@@ -9,12 +9,8 @@ const TOKEN_EXPIRY_KEY = "token_expiry";
 export const AuthService = {
   async login(credentials, rememberMe = false) {
     try {
-      console.log("[AUTH] Intentando login...", { email: credentials.email });
-
       // POST /auth/login con email y password
       const res = await api.post("/auth/login", credentials);
-
-      console.log("[AUTH] Login exitoso:", res.data);
 
       // Adaptarse a la estructura de respuesta de tu API
       const data = res.data?.data || res.data;
@@ -22,12 +18,10 @@ export const AuthService = {
       if (data?.token) {
         // Guardar token según la opción "Recuérdame"
         this.setToken(data.token, rememberMe);
-        console.log("[AUTH] Token guardado");
       }
 
       if (data?.user) {
         this.setUser(data.user, rememberMe);
-        console.log("[AUTH] Usuario guardado:", data.user.email);
       }
 
       // Inicializar notificaciones push después del login exitoso
@@ -167,54 +161,59 @@ export const AuthService = {
    */
   async getUserStats(userIdentifier) {
     try {
-      console.log("[AUTH] Obteniendo estadísticas para usuario:", userIdentifier);
       const res = await api.get(`/users/${userIdentifier}/stats`);
-      console.log("[AUTH] Respuesta de estadísticas:", res.data);
       return res.data;
     } catch (error) {
-      console.error("[AUTH] Error al obtener estadísticas:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
+      console.error("[AUTH] Error al obtener estadísticas:", error.message);
       throw error;
     }
   },
 
   /**
    * Obtiene los seguidores de un usuario
+   * Usa el endpoint /auth/followers/{id} del backend
    */
   async getFollowers(userIdentifier) {
     try {
-      console.log("[AUTH] Obteniendo seguidores para usuario:", userIdentifier);
-      const res = await api.get(`/users/${userIdentifier}/followers`);
-      console.log("[AUTH] Respuesta de seguidores:", res.data);
+      const res = await api.get(`/auth/followers/${userIdentifier}`);
       return res.data;
     } catch (error) {
-      console.error("[AUTH] Error al obtener seguidores:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
-      throw error;
+      console.error("[AUTH] Error al obtener seguidores:", error.message);
+      // Retornar estructura vacía en lugar de lanzar error
+      return { followers: [] };
     }
   },
 
   /**
    * Obtiene los usuarios que sigue un usuario
+   * Usa el endpoint /auth/following/{id} del backend
    */
   async getFollowing(userIdentifier) {
     try {
-      console.log("[AUTH] Obteniendo seguidos para usuario:", userIdentifier);
-      const res = await api.get(`/users/${userIdentifier}/following`);
-      console.log("[AUTH] Respuesta de seguidos:", res.data);
+      const res = await api.get(`/auth/following/${userIdentifier}`);
       return res.data;
     } catch (error) {
-      console.error("[AUTH] Error al obtener seguidos:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
+      console.error("[AUTH] Error al obtener seguidos:", error.message);
+      // Retornar estructura vacía en lugar de lanzar error
+      return { following: [] };
+    }
+  },
+
+  /**
+   * Obtiene los posts de un usuario específico (paginados)
+   * Usa el endpoint /posts/user/{id} del backend
+   */
+  async getUserPosts(userIdentifier, page = 1) {
+    try {
+      const res = await api.get(`/posts/user/${userIdentifier}`, {
+        params: { page },
       });
+      return res.data;
+    } catch (error) {
+      console.error(
+        "[AUTH] Error al obtener posts del usuario:",
+        error.message
+      );
       throw error;
     }
   },
@@ -224,9 +223,14 @@ export const AuthService = {
    */
   async getUserPosts(userIdentifier, page = 1) {
     try {
-      console.log("[AUTH] Obteniendo posts para usuario:", userIdentifier, "página:", page);
+      console.log(
+        "[AUTH] Obteniendo posts para usuario:",
+        userIdentifier,
+        "página:",
+        page
+      );
       const res = await api.get(`/users/${userIdentifier}/posts`, {
-        params: { page }
+        params: { page },
       });
       console.log("[AUTH] Respuesta de posts:", res.data);
       return res.data;

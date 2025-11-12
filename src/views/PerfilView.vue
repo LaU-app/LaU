@@ -149,7 +149,8 @@
               <ion-row>
                 <ion-col v-for="post in postsMusicaPlaylist" :key="post.id || post._id || post.track_name" size="6">
                   <div class="post-card" @click="goToPostDetail(post.id || post._id)">
-                    <img v-if="post.track_image" :src="post.track_image" class="post-thumbnail" :alt="post.track_name" />
+                    <img v-if="post.track_image" :src="post.track_image" class="post-thumbnail"
+                      :alt="post.track_name" />
                     <ion-icon v-else :icon="musicalNoteOutline" size="large" color="medium"></ion-icon>
                     <p class="post-title">{{ post.track_name || post.titulo || 'Sin título' }}</p>
                     <p class="post-subtitle" v-if="post.artist_name">{{ post.artist_name }}</p>
@@ -163,7 +164,8 @@
 
         <!-- Infinite Scroll -->
         <ion-infinite-scroll v-if="!loading && hasMorePages" @ionInfinite="loadMorePosts" threshold="100px">
-          <ion-infinite-scroll-content loading-spinner="bubbles" loading-text="Cargando más posts..."></ion-infinite-scroll-content>
+          <ion-infinite-scroll-content loading-spinner="bubbles"
+            loading-text="Cargando más posts..."></ion-infinite-scroll-content>
         </ion-infinite-scroll>
       </div>
 
@@ -179,13 +181,15 @@
             <ion-item>
               <ion-label>Universidad</ion-label>
               <ion-select v-model="formData.universidad_id" placeholder="Selecciona una Universidad">
-                <ion-select-option v-for="uni in universidades" :key="uni.id" :value="Number(uni.id)">{{ uni.nombre }}</ion-select-option>
+                <ion-select-option v-for="uni in universidades" :key="uni.id" :value="Number(uni.id)">{{ uni.nombre
+                }}</ion-select-option>
               </ion-select>
             </ion-item>
             <ion-item>
               <ion-label>Carrera</ion-label>
               <ion-select v-model="formData.carrera_id" placeholder="Selecciona una Carrera">
-                <ion-select-option v-for="carr in carreras" :key="carr.id" :value="Number(carr.id)">{{ carr.nombre }}</ion-select-option>
+                <ion-select-option v-for="carr in carreras" :key="carr.id" :value="Number(carr.id)">{{ carr.nombre
+                }}</ion-select-option>
               </ion-select>
             </ion-item>
             <ion-item>
@@ -219,7 +223,8 @@
               <ion-label>No hay seguidores</ion-label>
             </ion-item>
             <ion-item button v-for="(f, i) in seguidores" :key="i" @click="goToUserProfile(f)">
-              <ion-avatar slot="start"><img :src="f.imagen_url || 'https://www.gravatar.com/avatar/?d=mp&f=y'" /></ion-avatar>
+              <ion-avatar slot="start"><img
+                  :src="f.imagen_url || 'https://www.gravatar.com/avatar/?d=mp&f=y'" /></ion-avatar>
               <ion-label>
                 <h3>{{ f.name || f.username || 'Usuario' }}</h3>
                 <p class="ion-text-wrap">@{{ f.username || '' }}</p>
@@ -246,7 +251,8 @@
               <ion-label>No sigue a nadie</ion-label>
             </ion-item>
             <ion-item button v-for="(f, i) in siguiendo" :key="i" @click="goToUserProfile(f)">
-              <ion-avatar slot="start"><img :src="f.imagen_url || 'https://www.gravatar.com/avatar/?d=mp&f=y'" /></ion-avatar>
+              <ion-avatar slot="start"><img
+                  :src="f.imagen_url || 'https://www.gravatar.com/avatar/?d=mp&f=y'" /></ion-avatar>
               <ion-label>
                 <h3>{{ f.name || f.username || 'Usuario' }}</h3>
                 <p class="ion-text-wrap">@{{ f.username || '' }}</p>
@@ -410,6 +416,26 @@ export default {
     }
   },
 
+  watch: {
+    // Observar cambios en el parámetro de ruta para recargar el perfil
+    '$route.params.username': {
+      async handler(newUsername, oldUsername) {
+        if (newUsername !== oldUsername) {
+          // Resetear estado
+          this.posts = [];
+          this.seguidores = [];
+          this.siguiendo = [];
+          this.error = null;
+          // Recargar usuario y datos
+          await this.loadCurrentUser();
+          if (this.user && (this.user.id || this.user.username)) {
+            await this.getProfileData();
+          }
+        }
+      }
+    }
+  },
+
   methods: {
     // carga el usuario actual y decide si mostrar perfil propio o ajeno según ruta
     async loadCurrentUser() {
@@ -451,11 +477,16 @@ export default {
           // perfil ajeno: fetch by username
           this.isMe = false;
           try {
-            const usuario = await AuthService.fetchForeignProfile(routeParam);
-            // fetchForeignProfile devuelve el objeto usuario (res.data)
-            this.user = usuario;
+            const response = await AuthService.fetchForeignProfile(routeParam);
+            // fetchForeignProfile devuelve res.data que puede tener estructura variable
+            // Normalizar la estructura: puede venir como { data: {...} } o directamente el objeto
+            this.user = response.data || response;
+
+            // Cargar universidad y carrera también para perfiles ajenos
+            await this.loadUniversidades();
+            await this.getCarrera();
           } catch (err) {
-            console.error("Error al obtener perfil foráneo:", err);
+            console.error("[PERFIL] Error al obtener perfil foráneo:", err);
             if (err.response?.status === 401) {
               await AuthService.logout();
               this.$router.replace("/login");
@@ -465,7 +496,7 @@ export default {
           }
         }
       } catch (error) {
-        console.error("Error cargando usuario:", error);
+        console.error("[PERFIL] Error cargando usuario:", error);
         if (!AuthService.isAuthenticated()) {
           this.$router.replace("/login");
         }
@@ -476,7 +507,12 @@ export default {
       try {
         const response = await UniversidadService.getUniversidades();
         this.universidades = response.data || [];
-        this.universidad = this.universidades.find((u) => u.id === this.user.universidad_id) || null;
+        // Buscar la universidad del usuario actual
+        if (this.user.universidad_id) {
+          this.universidad = this.universidades.find((u) => u.id === this.user.universidad_id) || null;
+        } else if (this.user.universidad?.id) {
+          this.universidad = this.universidades.find((u) => u.id === this.user.universidad.id) || null;
+        }
       } catch (error) {
         console.error("Error al cargar universidades:", error);
       }
@@ -486,7 +522,12 @@ export default {
       try {
         const response = await UniversidadService.getAllCarreras();
         this.carreras = response.data || [];
-        this.carrera = this.carreras.find((c) => c.id === this.user.carrera_id) || null;
+        // Buscar la carrera del usuario actual
+        if (this.user.carrera_id) {
+          this.carrera = this.carreras.find((c) => c.id === this.user.carrera_id) || null;
+        } else if (this.user.carrera?.id) {
+          this.carrera = this.carreras.find((c) => c.id === this.user.carrera.id) || null;
+        }
       } catch (error) {
         console.error("Error al cargar carreras:", error);
       }
@@ -517,7 +558,7 @@ export default {
       try {
         // usar ID o username según lo que tenga user
         const userId = this.user.id || this.user.username;
-        const postsResponse = await AuthService.getPosts(userId, page);
+        const postsResponse = await AuthService.getUserPosts(userId, page);
 
         // normalizar estructura
         let postsData = [];
@@ -567,9 +608,60 @@ export default {
           AuthService.getFollowing(userId),
         ]);
 
-        // normalizar arrays
-        this.seguidores = followersResponse?.followers || followersResponse?.data || followersResponse || [];
-        this.siguiendo = followingResponse?.following || followingResponse?.data || followingResponse || [];
+        // Normalizar arrays de seguidores
+        // Laravel devuelve paginación: { success: true, data: { data: [...], current_page: 1, ... } }
+        if (followersResponse?.success && followersResponse?.data) {
+          // Si tiene success y data (respuesta paginada de Laravel)
+          if (Array.isArray(followersResponse.data.data)) {
+            this.seguidores = followersResponse.data.data;
+          } else if (Array.isArray(followersResponse.data)) {
+            this.seguidores = followersResponse.data;
+          } else {
+            this.seguidores = [];
+          }
+        } else if (followersResponse?.data) {
+          // Si solo tiene data
+          if (Array.isArray(followersResponse.data.data)) {
+            this.seguidores = followersResponse.data.data;
+          } else if (Array.isArray(followersResponse.data)) {
+            this.seguidores = followersResponse.data;
+          } else {
+            this.seguidores = [];
+          }
+        } else if (followersResponse?.followers) {
+          this.seguidores = followersResponse.followers;
+        } else if (Array.isArray(followersResponse)) {
+          this.seguidores = followersResponse;
+        } else {
+          this.seguidores = [];
+        }
+
+        // Normalizar arrays de seguidos (misma lógica)
+        if (followingResponse?.success && followingResponse?.data) {
+          // Si tiene success y data (respuesta paginada de Laravel)
+          if (Array.isArray(followingResponse.data.data)) {
+            this.siguiendo = followingResponse.data.data;
+          } else if (Array.isArray(followingResponse.data)) {
+            this.siguiendo = followingResponse.data;
+          } else {
+            this.siguiendo = [];
+          }
+        } else if (followingResponse?.data) {
+          // Si solo tiene data
+          if (Array.isArray(followingResponse.data.data)) {
+            this.siguiendo = followingResponse.data.data;
+          } else if (Array.isArray(followingResponse.data)) {
+            this.siguiendo = followingResponse.data;
+          } else {
+            this.siguiendo = [];
+          }
+        } else if (followingResponse?.following) {
+          this.siguiendo = followingResponse.following;
+        } else if (Array.isArray(followingResponse)) {
+          this.siguiendo = followingResponse;
+        } else {
+          this.siguiendo = [];
+        }
 
         // cargar posts
         await this.fetchPosts(1);
@@ -621,13 +713,27 @@ export default {
 
     async updateProfile() {
       try {
-        await AuthService.updateProfile(this.formData);
-        // refrescar datos del perfil y del usuario local
+        const updatedUser = await AuthService.updateProfile(this.formData);
+
+        // Actualizar el usuario local
+        if (updatedUser) {
+          const rememberMe = localStorage.getItem('remember_me') === 'true';
+          AuthService.setUser(updatedUser.data || updatedUser, rememberMe);
+        }
+
+        // Recargar datos del perfil
         await this.loadCurrentUser();
-        await this.getProfileData();
+
+        // Recargar universidad y carrera con los nuevos datos
+        if (this.isMe) {
+          await this.loadUniversidades();
+          await this.getCarrera();
+        }
+
         this.closeSettings();
       } catch (error) {
         console.error("Error al actualizar perfil:", error);
+        this.error = "Error al actualizar el perfil. Por favor intenta de nuevo.";
       }
     },
 
@@ -660,13 +766,30 @@ export default {
     goToUserProfile(user) {
       this.closeFollowers();
       this.closeFollowing();
+
       const identifier = user.username || user.id;
       if (!identifier) return;
-      // si es el mismo usuario que vemos, no navegamos
-      if ((this.user_viewer.username && identifier === this.user_viewer.username) || (this.user.id && identifier === this.user.id)) {
-        return;
+
+      // Obtener el username actual de la ruta
+      const currentRouteUsername = this.$route.params.username || 'me';
+
+      // Comparar con el usuario actual
+      const isSameAsViewer = this.user_viewer.username &&
+        (identifier === this.user_viewer.username || identifier === this.user_viewer.id);
+      const isSameAsCurrentProfile = identifier === currentRouteUsername ||
+        (this.user.username && identifier === this.user.username) ||
+        (this.user.id && identifier === this.user.id);
+
+      // Si es el mismo perfil que estamos viendo, no navegar
+      if (isSameAsCurrentProfile) return;
+
+      // Si es el perfil del viewer, ir a 'me'
+      if (isSameAsViewer) {
+        this.$router.push(`/tabs/perfil/me`);
+      } else {
+        // Navegar al perfil del otro usuario
+        this.$router.push(`/tabs/perfil/${identifier}`);
       }
-      this.$router.push(`/tabs/perfil/${identifier}`);
     },
 
     getFileName(filePath) {
@@ -786,14 +909,17 @@ ion-content {
   color: #6b7280;
   margin: 0;
 }
-.settings-form{
+
+.settings-form {
   padding: 25px 25px;
 }
-.settings-modal-content .modal-title{
-position: relative;
-top: 16px;
-left: 30px;
+
+.settings-modal-content .modal-title {
+  position: relative;
+  top: 16px;
+  left: 30px;
 }
+
 /* Action Buttons */
 .action-buttons {
   display: flex;
