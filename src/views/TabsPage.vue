@@ -70,8 +70,8 @@
           </div>
         </ion-tab-button>
 
-        <ion-tab-button tab="perfil" href="/tabs/perfil/me">
-          <ion-icon aria-hidden="true" :icon="person" />
+        <ion-tab-button tab="perfil" href="#">
+          <ion-icon aria-hidden="true" :icon="alarm" />
         </ion-tab-button>
       </ion-tab-bar>
     </ion-tabs>
@@ -89,7 +89,7 @@ import {
   IonRouterOutlet,
   IonBadge,
 } from "@ionic/vue";
-import { peopleSharp, person } from "ionicons/icons";
+import { peopleSharp, alarm } from "ionicons/icons";
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { AuthService } from "@/services/auth";

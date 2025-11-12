@@ -65,6 +65,7 @@ const routes = [
       },
       {
         path: "post/:id",
+        path: "/post/:id",
         name: "PostDetail",
         component: () => import("@/views/PostDetailView.vue"),
         // Sin meta: permite ver posts públicos sin login

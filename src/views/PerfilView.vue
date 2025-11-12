@@ -44,10 +44,24 @@
         <!-- Avatar y botón de menú -->
         <div class="profile-header-row">
           <ion-avatar class="profile-avatar">
-            <img v-if="user.imagen_url" :src="user.imagen_url" alt="Profile Picture" />
-            <ion-icon v-else :icon="personCircle" class="profile-avatar-icon"></ion-icon>
+            <img
+              v-if="user.imagen_url"
+              :src="user.imagen_url"
+              alt="Profile Picture"
+            />
+            <ion-icon
+              v-else
+              :icon="personCircle"
+              class="profile-avatar-icon"
+            ></ion-icon>
           </ion-avatar>
-          <ion-button fill="clear" @click="openMenu" id="open-menu-button" class="menu-button-inline">
+          <ion-button
+            v-if="isMe"
+            fill="clear"
+            @click="openMenu"
+            id="open-menu-button"
+            class="menu-button-inline"
+          >
             <ion-icon :icon="ellipsisVerticalOutline" color="medium"></ion-icon>
           </ion-button>
         </div>
@@ -55,15 +69,26 @@
         <!-- Nombre y descripción -->
         <h3 class="profile-name">{{ user.name }}</h3>
         <p class="profile-description">
-          {{ universidad?.nombre || user.universidad?.nombre || 'Sin información académica' }}
-          <br v-if="(universidad?.nombre || user.universidad?.nombre) && (carrera?.nombre || user.carrera?.nombre)" />
-          {{ carrera?.nombre || user.carrera?.nombre || '' }}
+          {{
+            universidad?.nombre ||
+            user.universidad?.nombre ||
+            "Sin información académica"
+          }}
+          <br
+            v-if="
+              (universidad?.nombre || user.universidad?.nombre) &&
+              (carrera?.nombre || user.carrera?.nombre)
+            "
+          />
+          {{ carrera?.nombre || user.carrera?.nombre || "" }}
         </p>
 
         <!-- Botón Seguir / Editar -->
         <div class="action-buttons">
           <ion-button v-if="!isMe" color="primary">Seguir</ion-button>
-          <ion-button v-else color="primary" @click="openSettings">Editar</ion-button>
+          <ion-button v-else color="primary" @click="openSettings"
+            >Editar</ion-button
+          >
         </div>
 
         <!-- Contadores -->
@@ -115,57 +140,118 @@
           <div v-if="selectedTab === '1'">
             <ion-grid>
               <ion-row>
-                <ion-col v-for="post in postsImagenTexto" :key="post.id || post._id || post.titulo" size="6">
-                  <div class="post-card" @click="goToPostDetail(post.id || post._id)">
-                    <img v-if="post.imagen_url" :src="post.imagen_url" class="post-thumbnail" :alt="post.titulo" />
-                    <ion-icon v-else :icon="documentOutline" size="large" color="medium"></ion-icon>
-                    <p class="post-title">{{ post.titulo || 'Sin título' }}</p>
+                <ion-col
+                  v-for="post in postsImagenTexto"
+                  :key="post.id || post._id || post.titulo"
+                  size="4"
+                >
+                  <div
+                    class="post-card"
+                    @click="goToPostDetail(post.id || post._id)"
+                  >
+                    <img
+                      v-if="post.imagen_url"
+                      :src="post.imagen_url"
+                      class="post-thumbnail"
+                      :alt="post.titulo"
+                    />
+                    <ion-icon
+                      v-else
+                      :icon="documentOutline"
+                      size="large"
+                      color="medium"
+                    ></ion-icon>
                   </div>
                 </ion-col>
               </ion-row>
             </ion-grid>
-            <div v-if="postsImagenTexto.length === 0" class="empty-message">Aún no hay publicaciones</div>
+            <div v-if="postsImagenTexto.length === 0" class="empty-message">
+              Aún no hay publicaciones
+            </div>
           </div>
 
           <!-- Folders Tab (Archivos) -->
           <div v-else-if="selectedTab === '2'">
             <ion-grid>
               <ion-row>
-                <ion-col v-for="post in postsFolders" :key="post.id || post._id || post.titulo" size="6">
-                  <div class="post-card" @click="goToPostDetail(post.id || post._id)">
-                    <ion-icon :icon="folderOutline" size="large" color="medium"></ion-icon>
-                    <p class="post-title">{{ post.titulo || 'Archivo' }}</p>
-                    <p class="post-subtitle" v-if="post.archivo">{{ getFileName(post.archivo) }}</p>
+                <ion-col
+                  v-for="post in postsFolders"
+                  :key="post.id || post._id || post.titulo"
+                  size="6"
+                >
+                  <div
+                    class="post-card"
+                    @click="goToPostDetail(post.id || post._id)"
+                  >
+                    <ion-icon
+                      :icon="folderOutline"
+                      size="large"
+                      color="medium"
+                    ></ion-icon>
+                    <p class="post-title">{{ post.titulo || "Archivo" }}</p>
+                    <p class="post-subtitle" v-if="post.archivo">
+                      {{ getFileName(post.archivo) }}
+                    </p>
                   </div>
                 </ion-col>
               </ion-row>
             </ion-grid>
-            <div v-if="postsFolders.length === 0" class="empty-message">Sin archivos todavía</div>
+            <div v-if="postsFolders.length === 0" class="empty-message">
+              Sin archivos todavía
+            </div>
           </div>
 
           <!-- Playlist Tab (Música) -->
           <div v-else>
             <ion-grid>
               <ion-row>
-                <ion-col v-for="post in postsMusicaPlaylist" :key="post.id || post._id || post.track_name" size="6">
-                  <div class="post-card" @click="goToPostDetail(post.id || post._id)">
-                    <img v-if="post.track_image" :src="post.track_image" class="post-thumbnail"
-                      :alt="post.track_name" />
-                    <ion-icon v-else :icon="musicalNoteOutline" size="large" color="medium"></ion-icon>
-                    <p class="post-title">{{ post.track_name || post.titulo || 'Sin título' }}</p>
-                    <p class="post-subtitle" v-if="post.artist_name">{{ post.artist_name }}</p>
+                <ion-col
+                  v-for="post in postsMusicaPlaylist"
+                  :key="post.id || post._id || post.track_name"
+                  size="6"
+                >
+                  <div
+                    class="post-card"
+                    @click="goToPostDetail(post.id || post._id)"
+                  >
+                    <img
+                      v-if="post.track_image"
+                      :src="post.track_image"
+                      class="post-thumbnail"
+                      :alt="post.track_name"
+                    />
+                    <ion-icon
+                      v-else
+                      :icon="musicalNoteOutline"
+                      size="large"
+                      color="medium"
+                    ></ion-icon>
+                    <p class="post-title">
+                      {{ post.track_name || post.titulo || "Sin título" }}
+                    </p>
+                    <p class="post-subtitle" v-if="post.artist_name">
+                      {{ post.artist_name }}
+                    </p>
                   </div>
                 </ion-col>
               </ion-row>
             </ion-grid>
-            <div v-if="postsMusicaPlaylist.length === 0" class="empty-message">No hay playlists creadas</div>
+            <div v-if="postsMusicaPlaylist.length === 0" class="empty-message">
+              No hay playlists creadas
+            </div>
           </div>
         </div>
 
         <!-- Infinite Scroll -->
-        <ion-infinite-scroll v-if="!loading && hasMorePages" @ionInfinite="loadMorePosts" threshold="100px">
-          <ion-infinite-scroll-content loading-spinner="bubbles"
-            loading-text="Cargando más posts..."></ion-infinite-scroll-content>
+        <ion-infinite-scroll
+          v-if="!loading && hasMorePages"
+          @ionInfinite="loadMorePosts"
+          threshold="100px"
+        >
+          <ion-infinite-scroll-content
+            loading-spinner="bubbles"
+            loading-text="Cargando más posts..."
+          ></ion-infinite-scroll-content>
         </ion-infinite-scroll>
       </div>
 
@@ -174,34 +260,88 @@
         <ion-content class="settings-modal-content">
           <h2 class="modal-title">Editar Perfil</h2>
           <form @submit.prevent="updateProfile" class="settings-form">
-            <ion-input label="Nombre completo" label-placement="stacked" v-model="formData.name" />
-            <ion-input label="Username" label-placement="stacked" v-model="formData.username" />
-            <ion-input type="email" label="Correo" label-placement="stacked" v-model="formData.email" />
-            <ion-input label="Profesión" label-placement="stacked" v-model="formData.profession" />
+            <ion-avatar class="profile-avatar edit-avatar">
+              <img
+                v-if="formData.imagen_url"
+                :src="formData.imagen_url"
+                alt="Profile Picture"
+              />
+              <ion-icon
+                v-else
+                :icon="personCircle"
+                class="profile-avatar-icon"
+              ></ion-icon>
+            </ion-avatar>
+            <ion-input
+              label="Nombre completo"
+              label-placement="stacked"
+              v-model="formData.name"
+            />
+            <ion-input
+              label="Username"
+              label-placement="stacked"
+              v-model="formData.username"
+            />
+            <ion-input
+              type="email"
+              label="Correo"
+              label-placement="stacked"
+              v-model="formData.email"
+            />
+            <ion-input
+              label="Profesión"
+              label-placement="stacked"
+              v-model="formData.profession"
+            />
             <ion-item>
               <ion-label>Universidad</ion-label>
-              <ion-select v-model="formData.universidad_id" placeholder="Selecciona una Universidad">
-                <ion-select-option v-for="uni in universidades" :key="uni.id" :value="Number(uni.id)">{{ uni.nombre
-                }}</ion-select-option>
+              <ion-select
+                v-model="formData.universidad_id"
+                placeholder="Selecciona una Universidad"
+              >
+                <ion-select-option
+                  v-for="uni in universidades"
+                  :key="uni.id"
+                  :value="Number(uni.id)"
+                  >{{ uni.nombre }}</ion-select-option
+                >
               </ion-select>
             </ion-item>
             <ion-item>
               <ion-label>Carrera</ion-label>
-              <ion-select v-model="formData.carrera_id" placeholder="Selecciona una Carrera">
-                <ion-select-option v-for="carr in carreras" :key="carr.id" :value="Number(carr.id)">{{ carr.nombre
-                }}</ion-select-option>
+              <ion-select
+                v-model="formData.carrera_id"
+                placeholder="Selecciona una Carrera"
+              >
+                <ion-select-option
+                  v-for="carr in carreras"
+                  :key="carr.id"
+                  :value="Number(carr.id)"
+                  >{{ carr.nombre }}</ion-select-option
+                >
               </ion-select>
             </ion-item>
             <ion-item>
               <ion-label>Género</ion-label>
-              <ion-select v-model="formData.gender" placeholder="Selecciona un género">
+              <ion-select
+                v-model="formData.gender"
+                placeholder="Selecciona un género"
+              >
                 <ion-select-option value="Male">Male</ion-select-option>
                 <ion-select-option value="Female">Female</ion-select-option>
               </ion-select>
             </ion-item>
 
-            <ion-button expand="block" type="submit">Guardar Cambios</ion-button>
-            <ion-button expand="block" fill="clear" color="medium" @click="closeSettings">Cancelar</ion-button>
+            <ion-button expand="block" type="submit"
+              >Guardar Cambios</ion-button
+            >
+            <ion-button
+              expand="block"
+              fill="clear"
+              color="medium"
+              @click="closeSettings"
+              >Cancelar</ion-button
+            >
           </form>
         </ion-content>
       </ion-modal>
@@ -219,15 +359,26 @@
         <ion-content>
           <ion-list>
             <ion-item v-if="seguidores.length === 0">
-              <ion-avatar slot="start"><img src="https://www.gravatar.com/avatar/?d=mp&f=y" /></ion-avatar>
+              <ion-avatar slot="start"
+                ><img src="https://www.gravatar.com/avatar/?d=mp&f=y"
+              /></ion-avatar>
               <ion-label>No hay seguidores</ion-label>
             </ion-item>
-            <ion-item button v-for="(f, i) in seguidores" :key="i" @click="goToUserProfile(f)">
-              <ion-avatar slot="start"><img
-                  :src="f.imagen_url || 'https://www.gravatar.com/avatar/?d=mp&f=y'" /></ion-avatar>
+            <ion-item
+              button
+              v-for="(f, i) in seguidores"
+              :key="i"
+              @click="goToUserProfile(f)"
+            >
+              <ion-avatar slot="start"
+                ><img
+                  :src="
+                    f.imagen_url || 'https://www.gravatar.com/avatar/?d=mp&f=y'
+                  "
+              /></ion-avatar>
               <ion-label>
-                <h3>{{ f.name || f.username || 'Usuario' }}</h3>
-                <p class="ion-text-wrap">@{{ f.username || '' }}</p>
+                <h3>{{ f.name || f.username || "Usuario" }}</h3>
+                <p class="ion-text-wrap">@{{ f.username || "" }}</p>
               </ion-label>
             </ion-item>
           </ion-list>
@@ -247,15 +398,26 @@
         <ion-content>
           <ion-list>
             <ion-item v-if="siguiendo.length === 0">
-              <ion-avatar slot="start"><img src="https://www.gravatar.com/avatar/?d=mp&f=y" /></ion-avatar>
+              <ion-avatar slot="start"
+                ><img src="https://www.gravatar.com/avatar/?d=mp&f=y"
+              /></ion-avatar>
               <ion-label>No sigue a nadie</ion-label>
             </ion-item>
-            <ion-item button v-for="(f, i) in siguiendo" :key="i" @click="goToUserProfile(f)">
-              <ion-avatar slot="start"><img
-                  :src="f.imagen_url || 'https://www.gravatar.com/avatar/?d=mp&f=y'" /></ion-avatar>
+            <ion-item
+              button
+              v-for="(f, i) in siguiendo"
+              :key="i"
+              @click="goToUserProfile(f)"
+            >
+              <ion-avatar slot="start"
+                ><img
+                  :src="
+                    f.imagen_url || 'https://www.gravatar.com/avatar/?d=mp&f=y'
+                  "
+              /></ion-avatar>
               <ion-label>
-                <h3>{{ f.name || f.username || 'Usuario' }}</h3>
-                <p class="ion-text-wrap">@{{ f.username || '' }}</p>
+                <h3>{{ f.name || f.username || "Usuario" }}</h3>
+                <p class="ion-text-wrap">@{{ f.username || "" }}</p>
               </ion-label>
             </ion-item>
           </ion-list>
@@ -263,7 +425,11 @@
       </ion-modal>
 
       <!-- Menu Popover -->
-      <ion-popover :is-open="isMenuOpen" @didDismiss="closeMenu" trigger="open-menu-button">
+      <ion-popover
+        :is-open="isMenuOpen"
+        @didDismiss="closeMenu"
+        trigger="open-menu-button"
+      >
         <ion-content>
           <ion-list>
             <ion-item button @click="handleLogout">
@@ -375,8 +541,18 @@ export default {
       lastPage: 1,
       hasMorePages: false,
       isDarkMode: false,
-      user: { imagen_url: null, name: "Usuario", username: "usuario", id: null },
-      user_viewer: { imagen_url: null, name: "Usuario", username: "usuario", id: null },
+      user: {
+        imagen_url: null,
+        name: "Usuario",
+        username: "usuario",
+        id: null,
+      },
+      user_viewer: {
+        imagen_url: null,
+        name: "Usuario",
+        username: "usuario",
+        id: null,
+      },
       formData: {
         id: null,
         name: "",
@@ -406,19 +582,23 @@ export default {
   },
 
   async created() {
+    this.loading = true; // <-- Mostrar loading PRIMERO
     this.isAuthenticated = AuthService.isAuthenticated();
-    await this.loadCurrentUser();
     this.loadDarkModePreference();
+
+    await this.loadCurrentUser();
 
     // Si user cargado con id, obtener datos del perfil
     if (this.user && (this.user.id || this.user.username)) {
       await this.getProfileData();
     }
+
+    this.loading = false; // <-- Ocultar loading AL FINAL
   },
 
   watch: {
     // Observar cambios en el parámetro de ruta para recargar el perfil
-    '$route.params.username': {
+    "$route.params.username": {
       async handler(newUsername, oldUsername) {
         if (newUsername !== oldUsername) {
           // Resetear estado
@@ -432,8 +612,8 @@ export default {
             await this.getProfileData();
           }
         }
-      }
-    }
+      },
+    },
   },
 
   methods: {
@@ -464,11 +644,17 @@ export default {
         }
 
         // determinar parámetro de ruta
-        const routeParam = (this.$route.params.username || "me").toString().trim();
+        const routeParam = (this.$route.params.username || "me")
+          .toString()
+          .trim();
         const paramLower = routeParam.toLowerCase();
 
         // si es 'me' o coincide con el viewer => perfil propio
-        if (paramLower === "me" || (this.user_viewer.username && paramLower === this.user_viewer.username.toLowerCase())) {
+        if (
+          paramLower === "me" ||
+          (this.user_viewer.username &&
+            paramLower === this.user_viewer.username.toLowerCase())
+        ) {
           this.isMe = true;
           this.user = this.user_viewer;
           await this.loadUniversidades();
@@ -509,9 +695,13 @@ export default {
         this.universidades = response.data || [];
         // Buscar la universidad del usuario actual
         if (this.user.universidad_id) {
-          this.universidad = this.universidades.find((u) => u.id === this.user.universidad_id) || null;
+          this.universidad =
+            this.universidades.find((u) => u.id === this.user.universidad_id) ||
+            null;
         } else if (this.user.universidad?.id) {
-          this.universidad = this.universidades.find((u) => u.id === this.user.universidad.id) || null;
+          this.universidad =
+            this.universidades.find((u) => u.id === this.user.universidad.id) ||
+            null;
         }
       } catch (error) {
         console.error("Error al cargar universidades:", error);
@@ -524,9 +714,11 @@ export default {
         this.carreras = response.data || [];
         // Buscar la carrera del usuario actual
         if (this.user.carrera_id) {
-          this.carrera = this.carreras.find((c) => c.id === this.user.carrera_id) || null;
+          this.carrera =
+            this.carreras.find((c) => c.id === this.user.carrera_id) || null;
         } else if (this.user.carrera?.id) {
-          this.carrera = this.carreras.find((c) => c.id === this.user.carrera.id) || null;
+          this.carrera =
+            this.carreras.find((c) => c.id === this.user.carrera.id) || null;
         }
       } catch (error) {
         console.error("Error al cargar carreras:", error);
@@ -536,18 +728,36 @@ export default {
     loadDarkModePreference() {
       const savedMode = localStorage.getItem("darkMode");
       if (savedMode !== null) this.isDarkMode = savedMode === "true";
-      else this.isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      else
+        this.isDarkMode = window.matchMedia(
+          "(prefers-color-scheme: dark)"
+        ).matches;
       this.applyDarkMode();
     },
 
     applyDarkMode() {
-      document.documentElement.classList.toggle("ion-palette-dark", this.isDarkMode);
+      document.documentElement.classList.toggle(
+        "ion-palette-dark",
+        this.isDarkMode
+      );
       if (this.isDarkMode) {
-        document.documentElement.style.setProperty("--ion-background-color", "#121212");
-        document.documentElement.style.setProperty("--ion-card-background", "#1E1E1E");
+        document.documentElement.style.setProperty(
+          "--ion-background-color",
+          "#121212"
+        );
+        document.documentElement.style.setProperty(
+          "--ion-card-background",
+          "#1E1E1E"
+        );
       } else {
-        document.documentElement.style.setProperty("--ion-background-color", "#F3F4F6");
-        document.documentElement.style.setProperty("--ion-card-background", "#FFFFFF");
+        document.documentElement.style.setProperty(
+          "--ion-background-color",
+          "#F3F4F6"
+        );
+        document.documentElement.style.setProperty(
+          "--ion-card-background",
+          "#FFFFFF"
+        );
       }
     },
 
@@ -564,8 +774,11 @@ export default {
         let postsData = [];
         if (Array.isArray(postsResponse)) postsData = postsResponse;
         else if (postsResponse?.data) {
-          postsData = Array.isArray(postsResponse.data) ? postsResponse.data : postsResponse.data.data || [];
-        } else if (postsResponse?.data?.data) postsData = postsResponse.data.data;
+          postsData = Array.isArray(postsResponse.data)
+            ? postsResponse.data
+            : postsResponse.data.data || [];
+        } else if (postsResponse?.data?.data)
+          postsData = postsResponse.data.data;
 
         // paginación posible
         if (postsResponse?.data?.current_page || postsResponse?.current_page) {
@@ -699,8 +912,16 @@ export default {
         this.carreras = carrResp.data || [];
         this.formData = {
           ...this.user,
-          universidad_id: this.user.universidad_id ? Number(this.user.universidad_id) : (this.user.universidad?.id ? Number(this.user.universidad.id) : null),
-          carrera_id: this.user.carrera_id ? Number(this.user.carrera_id) : (this.user.carrera?.id ? Number(this.user.carrera.id) : null),
+          universidad_id: this.user.universidad_id
+            ? Number(this.user.universidad_id)
+            : this.user.universidad?.id
+            ? Number(this.user.universidad.id)
+            : null,
+          carrera_id: this.user.carrera_id
+            ? Number(this.user.carrera_id)
+            : this.user.carrera?.id
+            ? Number(this.user.carrera.id)
+            : null,
         };
         this.showSettingsModal = true;
       } catch (error) {
@@ -717,7 +938,7 @@ export default {
 
         // Actualizar el usuario local
         if (updatedUser) {
-          const rememberMe = localStorage.getItem('remember_me') === 'true';
+          const rememberMe = localStorage.getItem("remember_me") === "true";
           AuthService.setUser(updatedUser.data || updatedUser, rememberMe);
         }
 
@@ -733,7 +954,8 @@ export default {
         this.closeSettings();
       } catch (error) {
         console.error("Error al actualizar perfil:", error);
-        this.error = "Error al actualizar el perfil. Por favor intenta de nuevo.";
+        this.error =
+          "Error al actualizar el perfil. Por favor intenta de nuevo.";
       }
     },
 
@@ -771,12 +993,15 @@ export default {
       if (!identifier) return;
 
       // Obtener el username actual de la ruta
-      const currentRouteUsername = this.$route.params.username || 'me';
+      const currentRouteUsername = this.$route.params.username || "me";
 
       // Comparar con el usuario actual
-      const isSameAsViewer = this.user_viewer.username &&
-        (identifier === this.user_viewer.username || identifier === this.user_viewer.id);
-      const isSameAsCurrentProfile = identifier === currentRouteUsername ||
+      const isSameAsViewer =
+        this.user_viewer.username &&
+        (identifier === this.user_viewer.username ||
+          identifier === this.user_viewer.id);
+      const isSameAsCurrentProfile =
+        identifier === currentRouteUsername ||
         (this.user.username && identifier === this.user.username) ||
         (this.user.id && identifier === this.user.id);
 
@@ -807,7 +1032,10 @@ export default {
       });
     },
     postsMusicaPlaylist() {
-      return this.posts.filter((post) => (post.tipo_contenido || "").toString().toLowerCase() === "musica");
+      return this.posts.filter(
+        (post) =>
+          (post.tipo_contenido || "").toString().toLowerCase() === "musica"
+      );
     },
     postsFolders() {
       return this.posts.filter((post) => {
@@ -996,14 +1224,13 @@ ion-segment-button {
 }
 
 .post-card {
-  background-color: #F3F4F6;
+  background-color: #f3f4f6;
   border-radius: 12px;
   height: 120px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 12px;
   transition: background-color 0.2s;
   cursor: pointer;
   position: relative;
@@ -1022,7 +1249,7 @@ ion-segment-button {
 
 .post-thumbnail {
   width: 100%;
-  height: 80px;
+  height: 100%;
   object-fit: cover;
   border-radius: 8px;
   margin-bottom: 4px;
@@ -1043,7 +1270,7 @@ ion-segment-button {
   margin: 2px 0 0 0;
   font-size: 9px;
   text-align: center;
-  color: #6B7280;
+  color: #6b7280;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
