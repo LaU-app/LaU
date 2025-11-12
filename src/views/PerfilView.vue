@@ -44,23 +44,10 @@
         <!-- Avatar y botón de menú -->
         <div class="profile-header-row">
           <ion-avatar class="profile-avatar">
-            <img
-              v-if="user.imagen_url"
-              :src="user.imagen_url"
-              alt="Profile Picture"
-            />
-            <ion-icon
-              v-else
-              :icon="personCircle"
-              class="profile-avatar-icon"
-            ></ion-icon>
+            <img v-if="user.imagen_url" :src="user.imagen_url" alt="Profile Picture" />
+            <ion-icon v-else :icon="personCircle" class="profile-avatar-icon"></ion-icon>
           </ion-avatar>
-          <ion-button
-            fill="clear"
-            @click="openMenu"
-            id="open-menu-button"
-            class="menu-button-inline"
-          >
+          <ion-button fill="clear" @click="openMenu" id="open-menu-button" class="menu-button-inline">
             <ion-icon :icon="ellipsisVerticalOutline" color="medium"></ion-icon>
           </ion-button>
         </div>
@@ -68,16 +55,15 @@
         <!-- Nombre y descripción -->
         <h3 class="profile-name">{{ user.name }}</h3>
         <p class="profile-description">
-          {{ universidad.nombre }} <br></br> {{ carrera.nombre  }}
+          {{ universidad?.nombre || user.universidad?.nombre || 'Sin información académica' }}
+          <br v-if="(universidad?.nombre || user.universidad?.nombre) && (carrera?.nombre || user.carrera?.nombre)" />
+          {{ carrera?.nombre || user.carrera?.nombre || '' }}
         </p>
 
-        <!-- Botón Seguir -->
+        <!-- Botón Seguir / Editar -->
         <div class="action-buttons">
-       <ion-button v-if="!isMe" color="primary">Seguir</ion-button>
-        <ion-button v-else color="primary" @click="openSettings">Editar</ion-button>
-
-          <!-- Descomentar para agregar botón de mensaje -->
-          <!-- <ion-button color="light">Enviar Mensaje</ion-button> -->
+          <ion-button v-if="!isMe" color="primary">Seguir</ion-button>
+          <ion-button v-else color="primary" @click="openSettings">Editar</ion-button>
         </div>
 
         <!-- Contadores -->
@@ -125,165 +111,96 @@
 
         <!-- Contenido de los tabs -->
         <div class="tabs-content">
-          <!-- Posts Tab -->
+          <!-- Posts Tab (Imagen/Texto) -->
           <div v-if="selectedTab === '1'">
             <ion-grid>
               <ion-row>
-                <ion-col v-for="(pub, index) in posts" :key="index" size="6">
-                  <div class="post-card">
-                    <ion-icon
-                      :icon="documentOutline"
-                      size="large"
-                      color="medium"
-                    ></ion-icon>
-                    <p class="post-title">{{ pub.titulo }}</p>
+                <ion-col v-for="post in postsImagenTexto" :key="post.id || post._id || post.titulo" size="6">
+                  <div class="post-card" @click="goToPostDetail(post.id || post._id)">
+                    <img v-if="post.imagen_url" :src="post.imagen_url" class="post-thumbnail" :alt="post.titulo" />
+                    <ion-icon v-else :icon="documentOutline" size="large" color="medium"></ion-icon>
+                    <p class="post-title">{{ post.titulo || 'Sin título' }}</p>
                   </div>
                 </ion-col>
               </ion-row>
             </ion-grid>
-            <div v-if="posts.length === 0" class="empty-message">
-              Aún no hay publicaciones
-            </div>
+            <div v-if="postsImagenTexto.length === 0" class="empty-message">Aún no hay publicaciones</div>
           </div>
 
-          <!-- Folders Tab -->
+          <!-- Folders Tab (Archivos) -->
           <div v-else-if="selectedTab === '2'">
             <ion-grid>
               <ion-row>
-                <ion-col
-                  v-for="(archivo, index) in archivos"
-                  :key="index"
-                  size="6"
-                >
-                  <div class="post-card">
-                    <ion-icon
-                      :icon="folderOutline"
-                      size="large"
-                      color="medium"
-                    ></ion-icon>
-                    <p class="post-title">{{ archivo.nombre }}</p>
+                <ion-col v-for="post in postsFolders" :key="post.id || post._id || post.titulo" size="6">
+                  <div class="post-card" @click="goToPostDetail(post.id || post._id)">
+                    <ion-icon :icon="folderOutline" size="large" color="medium"></ion-icon>
+                    <p class="post-title">{{ post.titulo || 'Archivo' }}</p>
+                    <p class="post-subtitle" v-if="post.archivo">{{ getFileName(post.archivo) }}</p>
                   </div>
                 </ion-col>
               </ion-row>
             </ion-grid>
-            <div v-if="archivos.length === 0" class="empty-message">
-              Sin carpetas todavía
-            </div>
+            <div v-if="postsFolders.length === 0" class="empty-message">Sin archivos todavía</div>
           </div>
 
-          <!-- Playlist Tab -->
+          <!-- Playlist Tab (Música) -->
           <div v-else>
             <ion-grid>
               <ion-row>
-                <ion-col
-                  v-for="(cancion, index) in canciones"
-                  :key="index"
-                  size="6"
-                >
-                  <div class="post-card">
-                    <ion-icon
-                      :icon="musicalNoteOutline"
-                      size="large"
-                      color="medium"
-                    ></ion-icon>
-                    <p class="post-title">{{ cancion.titulo }}</p>
+                <ion-col v-for="post in postsMusicaPlaylist" :key="post.id || post._id || post.track_name" size="6">
+                  <div class="post-card" @click="goToPostDetail(post.id || post._id)">
+                    <img v-if="post.track_image" :src="post.track_image" class="post-thumbnail" :alt="post.track_name" />
+                    <ion-icon v-else :icon="musicalNoteOutline" size="large" color="medium"></ion-icon>
+                    <p class="post-title">{{ post.track_name || post.titulo || 'Sin título' }}</p>
+                    <p class="post-subtitle" v-if="post.artist_name">{{ post.artist_name }}</p>
                   </div>
                 </ion-col>
               </ion-row>
             </ion-grid>
-            <div v-if="canciones.length === 0" class="empty-message">
-              No hay playlists creadas
-            </div>
+            <div v-if="postsMusicaPlaylist.length === 0" class="empty-message">No hay playlists creadas</div>
           </div>
         </div>
 
         <!-- Infinite Scroll -->
-        <ion-infinite-scroll
-          v-if="!loading && hasMorePages"
-          @ionInfinite="loadMorePosts"
-          threshold="100px"
-        >
-          <ion-infinite-scroll-content
-            loading-spinner="bubbles"
-            loading-text="Cargando más posts..."
-          >
-          </ion-infinite-scroll-content>
+        <ion-infinite-scroll v-if="!loading && hasMorePages" @ionInfinite="loadMorePosts" threshold="100px">
+          <ion-infinite-scroll-content loading-spinner="bubbles" loading-text="Cargando más posts..."></ion-infinite-scroll-content>
         </ion-infinite-scroll>
       </div>
 
       <!-- Modal Settings -->
-     <ion-modal :is-open="showSettingsModal" @didDismiss="closeSettings">
-  <ion-content class="settings-modal-content">
+      <ion-modal :is-open="showSettingsModal" @didDismiss="closeSettings">
+        <ion-content class="settings-modal-content">
+          <h2 class="modal-title">Editar Perfil</h2>
+          <form @submit.prevent="updateProfile" class="settings-form">
+            <ion-input label="Nombre completo" label-placement="stacked" v-model="formData.name" />
+            <ion-input label="Username" label-placement="stacked" v-model="formData.username" />
+            <ion-input type="email" label="Correo" label-placement="stacked" v-model="formData.email" />
+            <ion-input label="Profesión" label-placement="stacked" v-model="formData.profession" />
+            <ion-item>
+              <ion-label>Universidad</ion-label>
+              <ion-select v-model="formData.universidad_id" placeholder="Selecciona una Universidad">
+                <ion-select-option v-for="uni in universidades" :key="uni.id" :value="Number(uni.id)">{{ uni.nombre }}</ion-select-option>
+              </ion-select>
+            </ion-item>
+            <ion-item>
+              <ion-label>Carrera</ion-label>
+              <ion-select v-model="formData.carrera_id" placeholder="Selecciona una Carrera">
+                <ion-select-option v-for="carr in carreras" :key="carr.id" :value="Number(carr.id)">{{ carr.nombre }}</ion-select-option>
+              </ion-select>
+            </ion-item>
+            <ion-item>
+              <ion-label>Género</ion-label>
+              <ion-select v-model="formData.gender" placeholder="Selecciona un género">
+                <ion-select-option value="Male">Male</ion-select-option>
+                <ion-select-option value="Female">Female</ion-select-option>
+              </ion-select>
+            </ion-item>
 
-    <h2 class="modal-title">Editar Perfil</h2>
-
-    <form @submit.prevent="updateProfile" class="settings-form">
-
-      <!-- Nombre -->
-     <ion-input
-  label="Nombre completo"
-  label-placement="stacked"
-  v-model="formData.name"
-/>
-
-<ion-input
-  label="Username"
-  label-placement="stacked"
-  v-model="formData.username"
-/>
-
-<ion-input
-  type="email"
-  label="Correo"
-  label-placement="stacked"
-  v-model="formData.email"
-/>
-
-<ion-input
-  label="Profesión"
-  label-placement="stacked"
-  v-model="formData.profession"
-/>
-<ion-item>
-  <ion-label>Universidad</ion-label>
-  <ion-select v-model="formData.universidad_id" placeholder="Selecciona una Universidad">
-  <ion-select-option
-    v-for="uni in universidades"
-    :key="uni.id"
-    :value="Number(uni.id)"
-  >
-    {{ uni.nombre }}
-  </ion-select-option>
-</ion-select>
-
-</ion-item>
-<ion-item>
-  <ion-label>Carrera</ion-label>
- <ion-select v-model="formData.carrera_id" placeholder="Selecciona una Carrera">
-  <ion-select-option
-    v-for="carr in carreras"
-    :key="carr.id"
-    :value="Number(carr.id)"
-  >
-    {{ carr.nombre }}
-  </ion-select-option>
-</ion-select>
-</ion-item>
-<ion-item>
-  <ion-label>Género</ion-label>
-  <ion-select v-model="formData.gender" placeholder="Selecciona un género">
-    <ion-select-option value="Male">Male</ion-select-option>
-    <ion-select-option value="Female">Female</ion-select-option>
-  </ion-select>
-</ion-item>
-
-      <!-- Botones -->
-      <ion-button expand="block" type="submit">Guardar Cambios</ion-button>
-      <ion-button expand="block" fill="clear" color="medium" @click="closeSettings">Cancelar</ion-button>
-    </form>
-
-  </ion-content>
-</ion-modal>
+            <ion-button expand="block" type="submit">Guardar Cambios</ion-button>
+            <ion-button expand="block" fill="clear" color="medium" @click="closeSettings">Cancelar</ion-button>
+          </form>
+        </ion-content>
+      </ion-modal>
 
       <!-- Modal Seguidores -->
       <ion-modal :is-open="showFollowersModal" @didDismiss="closeFollowers">
@@ -298,28 +215,16 @@
         <ion-content>
           <ion-list>
             <ion-item v-if="seguidores.length === 0">
-              <ion-avatar slot="start">
-                <img src="https://www.gravatar.com/avatar/?d=mp&f=y" />
-              </ion-avatar>
+              <ion-avatar slot="start"><img src="https://www.gravatar.com/avatar/?d=mp&f=y" /></ion-avatar>
               <ion-label>No hay seguidores</ion-label>
             </ion-item>
-                        <ion-item
-              v-for="(f, i) in seguidores"
-              :key="i"
-              @click="$router.push(`/tabs/perfil/${f.username}`); closeFollowers()"
-            >
-              <ion-avatar slot="start">
-                <img
-                  :src="f.imagen_url || 'https://www.gravatar.com/avatar/?d=mp&f=y'"
-                />
-              </ion-avatar>
-
+            <ion-item button v-for="(f, i) in seguidores" :key="i" @click="goToUserProfile(f)">
+              <ion-avatar slot="start"><img :src="f.imagen_url || 'https://www.gravatar.com/avatar/?d=mp&f=y'" /></ion-avatar>
               <ion-label>
-                <h3>{{ f.name || f.username || "Usuario" }}</h3>
-                <p class="ion-text-wrap">@{{ f.username }}</p>
+                <h3>{{ f.name || f.username || 'Usuario' }}</h3>
+                <p class="ion-text-wrap">@{{ f.username || '' }}</p>
               </ion-label>
             </ion-item>
-
           </ion-list>
         </ion-content>
       </ion-modal>
@@ -337,36 +242,22 @@
         <ion-content>
           <ion-list>
             <ion-item v-if="siguiendo.length === 0">
-              <ion-avatar slot="start">
-                <img src="https://www.gravatar.com/avatar/?d=mp&f=y" />
-              </ion-avatar>
+              <ion-avatar slot="start"><img src="https://www.gravatar.com/avatar/?d=mp&f=y" /></ion-avatar>
               <ion-label>No sigue a nadie</ion-label>
             </ion-item>
-            <ion-item
-            v-for="(f, i) in siguiendo"
-            :key="i"
-          @click="$router.push(`/tabs/perfil/${f.username}`); closeFollowing()"
-          >
-            <ion-avatar slot="start">
-              <img :src="f.imagen_url || 'https://www.gravatar.com/avatar/?d=mp&f=y'" />
-            </ion-avatar>
-
-            <ion-label>
-              <h3>{{ f.name || f.username || "Usuario" }}</h3>
-              <p class="ion-text-wrap">@{{ f.username || "" }}</p>
-            </ion-label>
-          </ion-item>
-
+            <ion-item button v-for="(f, i) in siguiendo" :key="i" @click="goToUserProfile(f)">
+              <ion-avatar slot="start"><img :src="f.imagen_url || 'https://www.gravatar.com/avatar/?d=mp&f=y'" /></ion-avatar>
+              <ion-label>
+                <h3>{{ f.name || f.username || 'Usuario' }}</h3>
+                <p class="ion-text-wrap">@{{ f.username || '' }}</p>
+              </ion-label>
+            </ion-item>
           </ion-list>
         </ion-content>
       </ion-modal>
 
       <!-- Menu Popover -->
-      <ion-popover
-        :is-open="isMenuOpen"
-        @didDismiss="closeMenu"
-        trigger="open-menu-button"
-      >
+      <ion-popover :is-open="isMenuOpen" @didDismiss="closeMenu" trigger="open-menu-button">
         <ion-content>
           <ion-list>
             <ion-item button @click="handleLogout">
@@ -408,9 +299,10 @@ import {
   IonCol,
   IonPopover,
   IonInput,
-  IonSelect,      
-  IonSelectOption 
+  IonSelect,
+  IonSelectOption,
 } from "@ionic/vue";
+
 import {
   ellipsisVerticalOutline,
   grid,
@@ -421,10 +313,10 @@ import {
   documentOutline,
   notifications,
 } from "ionicons/icons";
+
 import { UniversidadService } from "@/services/universidad";
 import postsService from "@/services/postsService";
 import { AuthService } from "@/services/auth";
-import router from "../router";
 
 export default {
   name: "PerfilView",
@@ -455,8 +347,8 @@ export default {
     IonCol,
     IonPopover,
     IonInput,
-    IonSelect,      
-  IonSelectOption 
+    IonSelect,
+    IonSelectOption,
   },
   data() {
     return {
@@ -464,33 +356,33 @@ export default {
       seguidores: [],
       siguiendo: [],
       canciones: [],
-      universidad: "",
-      carrera: "",
+      archivos: [],
+      universidad: null,
+      carrera: null,
       universidades: [],
       carreras: [],
-      archivos: [],
       loading: false,
-      isMe: true, //ver si el que esta viendo el perfil soy yo
+      isMe: true,
       error: null,
       selectedTab: "1",
       currentPage: 1,
       lastPage: 1,
       hasMorePages: false,
       isDarkMode: false,
-      user: { imagen_url: null, name: "Usuario", username: "usuario" },
-      user_viewer: {imagen_url: null,name: "Usuario", username: "usuario"},
+      user: { imagen_url: null, name: "Usuario", username: "usuario", id: null },
+      user_viewer: { imagen_url: null, name: "Usuario", username: "usuario", id: null },
       formData: {
         id: null,
-        name: '',
-        username: '',
-        email: '',
-        profession: '',
-        gender: '',
+        name: "",
+        username: "",
+        email: "",
+        profession: "",
+        gender: "",
         universidad_id: null,
         carrera_id: null,
-        gender: '',
       },
       isAuthenticated: false,
+      // icons
       ellipsisVerticalOutline,
       grid,
       folderOutline,
@@ -499,260 +391,191 @@ export default {
       personCircle,
       documentOutline,
       notifications,
-      // modals
+      // modals/menu
       showFollowersModal: false,
       showFollowingModal: false,
-      showSettingsModal:false,
-      // menu
+      showSettingsModal: false,
       isMenuOpen: false,
     };
   },
-  async created() {
-    // Verificar autenticación
-    this.isAuthenticated = AuthService.isAuthenticated();
 
+  async created() {
+    this.isAuthenticated = AuthService.isAuthenticated();
     await this.loadCurrentUser();
     this.loadDarkModePreference();
-    // Cargar datos del perfil después de obtener el usuario
-    if (this.user && this.user.id) {
+
+    // Si user cargado con id, obtener datos del perfil
+    if (this.user && (this.user.id || this.user.username)) {
       await this.getProfileData();
     }
   },
-  ionViewWillEnter() {
-    // Actualizar estado de autenticación cada vez que se entra a la vista
-    this.isAuthenticated = AuthService.isAuthenticated();
-  },
+
   methods: {
+    // carga el usuario actual y decide si mostrar perfil propio o ajeno según ruta
     async loadCurrentUser() {
       try {
-        // Primero intenta obtener el usuario del localStorage
         const localUser = AuthService.getUser();
         if (localUser) {
-          this.user = localUser;
           this.user_viewer = localUser;
         }
-        // Luego valida el token con la API y actualiza los datos (en background, sin bloquear)
+
+        // validar token y obtener user actualizado si es posible
         try {
           const apiUser = await AuthService.fetchProfile();
           if (apiUser) {
             this.user_viewer = apiUser;
-            this.isMeUser();
-            if(this.isMe){
-              this.user = apiUser;
-              this.loadUniversidades();
-              this.getCarrera();
-            }
-            else{
-              const usuario_username = this.$route.params.username ? this.$route.params.username : 'me';
-              const apiUser = await AuthService.fetchForeignProfile(usuario_username);
-               this.user = apiUser.data;
-            }
           }
-
         } catch (apiError) {
-          // Si falla la validación con la API
           console.warn("No se pudo validar el token con la API:", apiError);
-
-          // Solo redirigimos al login si es un error 401 (token inválido)
           if (apiError.response?.status === 401) {
-            AuthService.logout();
+            await AuthService.logout();
             this.$router.replace("/login");
+            return;
+          } else if (!localUser) {
+            this.$router.replace("/login");
+            return;
           }
-          // Si es otro tipo de error (red, servidor caído, etc.) y tenemos usuario local, continuamos
-          else if (!localUser) {
-            // Solo redirigimos si no hay usuario local tampoco
-            this.$router.replace("/login");
+        }
+
+        // determinar parámetro de ruta
+        const routeParam = (this.$route.params.username || "me").toString().trim();
+        const paramLower = routeParam.toLowerCase();
+
+        // si es 'me' o coincide con el viewer => perfil propio
+        if (paramLower === "me" || (this.user_viewer.username && paramLower === this.user_viewer.username.toLowerCase())) {
+          this.isMe = true;
+          this.user = this.user_viewer;
+          await this.loadUniversidades();
+          await this.getCarrera();
+        } else {
+          // perfil ajeno: fetch by username
+          this.isMe = false;
+          try {
+            const usuario = await AuthService.fetchForeignProfile(routeParam);
+            // fetchForeignProfile devuelve el objeto usuario (res.data)
+            this.user = usuario;
+          } catch (err) {
+            console.error("Error al obtener perfil foráneo:", err);
+            if (err.response?.status === 401) {
+              await AuthService.logout();
+              this.$router.replace("/login");
+              return;
+            }
+            this.error = "No se pudo cargar el perfil solicitado.";
           }
         }
       } catch (error) {
         console.error("Error cargando usuario:", error);
-        // Solo redirige si es un error crítico
         if (!AuthService.isAuthenticated()) {
           this.$router.replace("/login");
         }
       }
     },
+
     async loadUniversidades() {
       try {
         const response = await UniversidadService.getUniversidades();
-        this.universidad =
-          response.data.find((u) => u.id === this.user.universidad_id) || null;
-       } catch (error) {
-        console.error("Error al cargar universidades:", error);
-        // No mostrar error al usuario, simplemente no tendrá filtros
-      }
-    },
-
-    //funcion para actualizar perfil y recargar pagina
-      async updateProfile() {
-      try {
-        await AuthService.updateProfile(this.formData)
-        router.go(0); // Recargar la página
-         this.closeSettings()
-
+        this.universidades = response.data || [];
+        this.universidad = this.universidades.find((u) => u.id === this.user.universidad_id) || null;
       } catch (error) {
-       console.log(error);
-      }},
-   async getCarrera(){
-    try {
-        const response = await UniversidadService.getAllCarreras();
-        this.carrera =
-          response.data.find((u) => u.id === this.user.carrera_id) || null;
-       } catch (error) {
         console.error("Error al cargar universidades:", error);
-        // No mostrar error al usuario, simplemente no tendrá filtros
       }
     },
-    async isMeUser(){
-       const parametro = this.$route.params.username.toLowerCase();
-       this.isMe = parametro.trim() == 'me' || parametro.trim() == this.user_viewer.username.trim() ? true : false;
+
+    async getCarrera() {
+      try {
+        const response = await UniversidadService.getAllCarreras();
+        this.carreras = response.data || [];
+        this.carrera = this.carreras.find((c) => c.id === this.user.carrera_id) || null;
+      } catch (error) {
+        console.error("Error al cargar carreras:", error);
+      }
     },
+
     loadDarkModePreference() {
       const savedMode = localStorage.getItem("darkMode");
-      if (savedMode !== null) {
-        this.isDarkMode = savedMode === "true";
-      } else {
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
-        this.isDarkMode = prefersDark.matches;
-      }
+      if (savedMode !== null) this.isDarkMode = savedMode === "true";
+      else this.isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
       this.applyDarkMode();
     },
-    toggleDarkMode() {
-      this.isDarkMode = !this.isDarkMode;
-      localStorage.setItem("darkMode", this.isDarkMode.toString());
-      this.applyDarkMode();
-    },
+
     applyDarkMode() {
-      document.documentElement.classList.toggle(
-        "ion-palette-dark",
-        this.isDarkMode
-      );
+      document.documentElement.classList.toggle("ion-palette-dark", this.isDarkMode);
       if (this.isDarkMode) {
-        document.documentElement.style.setProperty(
-          "--ion-background-color",
-          "#121212"
-        );
-        document.documentElement.style.setProperty(
-          "--ion-card-background",
-          "#1E1E1E"
-        );
+        document.documentElement.style.setProperty("--ion-background-color", "#121212");
+        document.documentElement.style.setProperty("--ion-card-background", "#1E1E1E");
       } else {
-        document.documentElement.style.setProperty(
-          "--ion-background-color",
-          "#F3F4F6"
-        );
-        document.documentElement.style.setProperty(
-          "--ion-card-background",
-          "#FFFFFF"
-        );
+        document.documentElement.style.setProperty("--ion-background-color", "#F3F4F6");
+        document.documentElement.style.setProperty("--ion-card-background", "#FFFFFF");
       }
     },
+
+    // posts / paginación
     async fetchPosts(page = 1) {
-      // No cambiar el estado de loading si es una página mayor a 1
-      if (page === 1) {
-        this.loading = true;
-      }
+      if (page === 1) this.loading = true;
       this.error = null;
-
       try {
-        console.log("[PERFIL] Obteniendo posts del usuario, página:", page);
+        // usar ID o username según lo que tenga user
+        const userId = this.user.id || this.user.username;
+        const postsResponse = await AuthService.getPosts(userId, page);
 
-        // Obtener posts específicos del usuario desde el backend
-        const postsResponse = await AuthService.getPosts(this.user.id);
-
-        console.log("[PERFIL] Respuesta de posts:", postsResponse);
-
-        // Manejar diferentes estructuras de respuesta
+        // normalizar estructura
         let postsData = [];
+        if (Array.isArray(postsResponse)) postsData = postsResponse;
+        else if (postsResponse?.data) {
+          postsData = Array.isArray(postsResponse.data) ? postsResponse.data : postsResponse.data.data || [];
+        } else if (postsResponse?.data?.data) postsData = postsResponse.data.data;
 
-        if (postsResponse?.success && postsResponse?.data) {
-          // Si viene con success: true y data
-          if (Array.isArray(postsResponse.data)) {
-            postsData = postsResponse.data;
-          } else if (postsResponse.data.data) {
-            postsData = postsResponse.data.data;
-          }
-        } else if (postsResponse?.data) {
-          // Si solo viene data
-          if (Array.isArray(postsResponse.data)) {
-            postsData = postsResponse.data;
-          } else if (postsResponse.data.data) {
-            postsData = postsResponse.data.data;
-          }
-        }
-
-        // Si la respuesta tiene paginación
-        if (postsResponse?.data?.current_page) {
-          this.currentPage = postsResponse.data.current_page;
-          this.lastPage = postsResponse.data.last_page || 1;
+        // paginación posible
+        if (postsResponse?.data?.current_page || postsResponse?.current_page) {
+          const pag = postsResponse.data || postsResponse;
+          this.currentPage = pag.current_page || 1;
+          this.lastPage = pag.last_page || 1;
           this.hasMorePages = this.currentPage < this.lastPage;
         } else {
-          // Sin paginación, solo una página
-          this.currentPage = 1;
+          this.currentPage = page;
           this.lastPage = 1;
           this.hasMorePages = false;
         }
 
-        // Asignar posts
-        if (page === 1) {
-          this.posts = postsData;
-        } else {
-          this.posts = [...this.posts, ...postsData];
-        }
-
-        console.log("[PERFIL] Posts totales cargados:", this.posts.length);
+        if (page === 1) this.posts = postsData;
+        else this.posts = [...this.posts, ...postsData];
       } catch (err) {
         console.error("[PERFIL] Error al obtener posts:", err);
         this.error = err.message || "Error al cargar posts";
-        if (page === 1) {
-          this.posts = [];
-        }
+        if (page === 1) this.posts = [];
       } finally {
-        if (page === 1) {
-          this.loading = false;
-        }
+        if (page === 1) this.loading = false;
       }
     },
+
     async loadMorePosts(event) {
       if (this.hasMorePages) {
         await this.fetchPosts(this.currentPage + 1);
       }
       event.target.complete();
     },
+
+    // Cargar seguidores/seguidos y posts
     async getProfileData() {
       try {
-        console.log(
-          "[PERFIL] Cargando datos del perfil para usuario:",
-          this.user.id
-        );
-
         this.loading = true;
+        const userId = this.user.id || this.user.username;
 
-        // Cargar seguidores y seguidos en paralelo
         const [followersResponse, followingResponse] = await Promise.all([
-          AuthService.getFollowers(this.user.id),
-          AuthService.getFollowing(this.user.id),
+          AuthService.getFollowers(userId),
+          AuthService.getFollowing(userId),
         ]);
 
-        console.log("[PERFIL] Respuestas recibidas:", {
-          followers: followersResponse,
-          following: followingResponse,
-        });
+        // normalizar arrays
+        this.seguidores = followersResponse?.followers || followersResponse?.data || followersResponse || [];
+        this.siguiendo = followingResponse?.following || followingResponse?.data || followingResponse || [];
 
-        // Asignar seguidores
-        this.seguidores = followersResponse?.followers || [];
-        console.log("[PERFIL] Seguidores cargados:", this.seguidores.length);
-
-        // Asignar seguidos
-        this.siguiendo = followingResponse?.following || [];
-        console.log("[PERFIL] Seguidos cargados:", this.siguiendo.length);
-
-        // Cargar posts usando el método fetchPosts que ya maneja paginación
+        // cargar posts
         await this.fetchPosts(1);
       } catch (error) {
         console.error("[PERFIL] Error al cargar datos del perfil:", error);
         this.error = "Error al cargar los datos del perfil";
-        // Inicializar arrays vacíos en caso de error
         this.seguidores = [];
         this.siguiendo = [];
         this.posts = [];
@@ -760,9 +583,9 @@ export default {
         this.loading = false;
       }
     },
+
     openFollowers() {
-      console.log("Opening followers modal");
-       this.showFollowersModal = true;
+      this.showFollowersModal = true;
     },
     closeFollowers() {
       this.showFollowersModal = false;
@@ -773,58 +596,101 @@ export default {
     closeFollowing() {
       this.showFollowingModal = false;
     },
-   async openSettings(){
-     try {
-    const [unisResp, carrResp] = await Promise.all([
-      UniversidadService.getUniversidades(),
-      UniversidadService.getAllCarreras()
-    ]);
 
-    this.universidades = unisResp.data;
-    this.carreras = carrResp.data;
-
-    this.formData = {
-      ...this.user,
-      universidad_id: this.user.universidad_id ? Number(this.user.universidad_id) : null,
-      carrera_id: this.user.carrera_id ? Number(this.user.carrera_id) : null
-    };
-
-    this.showSettingsModal = true;
-  } catch (error) {
-    console.error("Error al cargar universidades o carreras:", error);
-  }
-      },
-    closeSettings(){
-      this.showSettingsModal =false
+    async openSettings() {
+      try {
+        const [unisResp, carrResp] = await Promise.all([
+          UniversidadService.getUniversidades(),
+          UniversidadService.getAllCarreras(),
+        ]);
+        this.universidades = unisResp.data || [];
+        this.carreras = carrResp.data || [];
+        this.formData = {
+          ...this.user,
+          universidad_id: this.user.universidad_id ? Number(this.user.universidad_id) : (this.user.universidad?.id ? Number(this.user.universidad.id) : null),
+          carrera_id: this.user.carrera_id ? Number(this.user.carrera_id) : (this.user.carrera?.id ? Number(this.user.carrera.id) : null),
+        };
+        this.showSettingsModal = true;
+      } catch (error) {
+        console.error("Error al cargar universidades o carreras:", error);
+      }
     },
+    closeSettings() {
+      this.showSettingsModal = false;
+    },
+
+    async updateProfile() {
+      try {
+        await AuthService.updateProfile(this.formData);
+        // refrescar datos del perfil y del usuario local
+        await this.loadCurrentUser();
+        await this.getProfileData();
+        this.closeSettings();
+      } catch (error) {
+        console.error("Error al actualizar perfil:", error);
+      }
+    },
+
     openMenu() {
       this.isMenuOpen = true;
     },
     closeMenu() {
       this.isMenuOpen = false;
     },
+
     async handleLogout() {
       try {
-        // Cerrar el menú primero
         this.closeMenu();
-
-        // Cerrar sesión usando AuthService (esto limpia localStorage)
-        // Esperamos a que termine completamente
         await AuthService.logout();
-
-        // Pequeña pausa para asegurar que el localStorage se limpió
         await new Promise((resolve) => setTimeout(resolve, 100));
-
-        // Usar window.location para forzar una navegación completa
-        // Esto asegura que todo el estado se limpie correctamente
         window.location.href = "/welcome";
       } catch (error) {
         console.error("Error al cerrar sesión:", error);
-        // En caso de error, igualmente limpiar y redirigir
         localStorage.removeItem("auth_token");
         localStorage.removeItem("user");
         window.location.href = "/welcome";
       }
+    },
+
+    goToPostDetail(postId) {
+      if (!postId) return;
+      this.$router.push(`/post/${postId}`);
+    },
+
+    goToUserProfile(user) {
+      this.closeFollowers();
+      this.closeFollowing();
+      const identifier = user.username || user.id;
+      if (!identifier) return;
+      // si es el mismo usuario que vemos, no navegamos
+      if ((this.user_viewer.username && identifier === this.user_viewer.username) || (this.user.id && identifier === this.user.id)) {
+        return;
+      }
+      this.$router.push(`/tabs/perfil/${identifier}`);
+    },
+
+    getFileName(filePath) {
+      if (!filePath) return "";
+      const parts = filePath.split("/");
+      return parts[parts.length - 1];
+    },
+  },
+
+  computed: {
+    postsImagenTexto() {
+      return this.posts.filter((post) => {
+        const tipo = (post.tipo_contenido || "").toString().toLowerCase();
+        return !tipo || tipo === "texto" || tipo === "imagen";
+      });
+    },
+    postsMusicaPlaylist() {
+      return this.posts.filter((post) => (post.tipo_contenido || "").toString().toLowerCase() === "musica");
+    },
+    postsFolders() {
+      return this.posts.filter((post) => {
+        const tipo = (post.tipo_contenido || "").toString().toLowerCase();
+        return tipo === "archivo" || (post.archivo && tipo !== "musica");
+      });
     },
   },
 };
@@ -1004,7 +870,7 @@ ion-segment-button {
 }
 
 .post-card {
-  background-color: #f3f4f6;
+  background-color: #F3F4F6;
   border-radius: 12px;
   height: 120px;
   display: flex;
@@ -1013,6 +879,9 @@ ion-segment-button {
   justify-content: center;
   padding: 12px;
   transition: background-color 0.2s;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
 }
 
 .post-card:active {
@@ -1025,11 +894,30 @@ ion-segment-button {
   margin-bottom: 8px;
 }
 
+.post-thumbnail {
+  width: 100%;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+
 .post-title {
   margin: 0;
   font-size: 11px;
   text-align: center;
   color: #374151;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.post-subtitle {
+  margin: 2px 0 0 0;
+  font-size: 9px;
+  text-align: center;
+  color: #6B7280;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
