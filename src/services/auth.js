@@ -284,18 +284,62 @@ export const AuthService = {
     }
   },
 
+  /**
+   * Actualiza los datos del perfil del usuario
+   * @param {Object} data - Datos del perfil a actualizar
+   * @returns {Promise} Respuesta con el usuario actualizado
+   */
   async updateProfile(data) {
     try {
-      // PUT /profile para actualizar datos del usuario
-      const res = await api.put("/user/edit", data);
+      // Usar POST con _method=PUT para compatibilidad con Laravel
+      const formData = new FormData();
+      
+      // Agregar _method para method spoofing
+      formData.append('_method', 'PUT');
+      
+      // Campos obligatorios - siempre deben enviarse
+      const requiredFields = ['id', 'name', 'username', 'email'];
+      requiredFields.forEach(field => {
+        if (data[field]) {
+          formData.append(field, String(data[field]));
+        }
+      });
 
-      if (res.data) {
-        localStorage.setItem(USER_KEY, JSON.stringify(res.data));
+      // Campos opcionales - solo si tienen valor
+      const optionalFields = ['profession', 'gender', 'universidad_id', 'carrera_id'];
+      optionalFields.forEach(field => {
+        if (data[field] !== null && data[field] !== undefined && data[field] !== '') {
+          formData.append(field, String(data[field]));
+        }
+      });
+
+      // Debug: Mostrar qué se está enviando
+      console.log('[AUTH] Actualizando perfil con:');
+      for (let pair of formData.entries()) {
+        console.log(`  ${pair[0]}: ${pair[1]}`);
+      }
+
+      const res = await api.post("/user/edit", formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const userData = res.data?.data || res.data;
+
+      if (userData) {
+        const rememberMe = localStorage.getItem(REMEMBER_KEY) === "true";
+        this.setUser(userData, rememberMe);
       }
 
       return res.data;
     } catch (error) {
       console.error("Error al actualizar perfil:", error);
+      console.error("Detalles del error:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        errors: error.response?.data?.errors
+      });
       throw error;
     }
   },

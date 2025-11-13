@@ -238,7 +238,11 @@
                     </ion-toolbar>
                 </ion-header>
                 <ion-content class="ion-padding">
-                    <form @submit.prevent="updateProfile">
+                    <ion-list>
+                        <ion-list-header>
+                            <ion-label>Información Personal</ion-label>
+                        </ion-list-header>
+
                         <ion-item lines="full">
                             <ion-input label="Nombre completo" label-placement="floating" v-model="formData.name"
                                 required></ion-input>
@@ -258,6 +262,12 @@
                             <ion-input label="Profesión" label-placement="floating"
                                 v-model="formData.profession"></ion-input>
                         </ion-item>
+                    </ion-list>
+
+                    <ion-list>
+                        <ion-list-header>
+                            <ion-label>Información Académica</ion-label>
+                        </ion-list-header>
 
                         <ion-item lines="full">
                             <ion-label position="floating">Universidad</ion-label>
@@ -277,6 +287,12 @@
                                 </ion-select-option>
                             </ion-select>
                         </ion-item>
+                    </ion-list>
+
+                    <ion-list>
+                        <ion-list-header>
+                            <ion-label>Otros Datos</ion-label>
+                        </ion-list-header>
 
                         <ion-item lines="full">
                             <ion-label position="floating">Género</ion-label>
@@ -286,12 +302,12 @@
                                 <ion-select-option value="Other">Otro</ion-select-option>
                             </ion-select>
                         </ion-item>
+                    </ion-list>
 
-                        <ion-button expand="block" type="submit" class="ion-margin-top" :disabled="savingProfile">
-                            <ion-spinner v-if="savingProfile" name="crescent"></ion-spinner>
-                            <span v-else>Guardar Cambios</span>
-                        </ion-button>
-                    </form>
+                    <ion-button expand="block" @click="updateProfile" class="ion-margin-top" :disabled="savingProfile">
+                        <ion-spinner v-if="savingProfile" name="crescent"></ion-spinner>
+                        <span v-else>Guardar Cambios</span>
+                    </ion-button>
                 </ion-content>
             </ion-modal>
 
@@ -421,6 +437,7 @@ import {
     IonButtons,
     IonTitle,
     IonList,
+    IonListHeader,
     IonItem,
     IonAvatar,
     IonButton,
@@ -491,6 +508,7 @@ export default {
         IonButtons,
         IonTitle,
         IonList,
+        IonListHeader,
         IonItem,
         IonAvatar,
         IonButton,
@@ -1151,8 +1169,14 @@ export default {
 
         async openSettings() {
             try {
+                // Solo copiar los campos que se pueden editar
                 this.formData = {
-                    ...this.user,
+                    id: this.user.id,
+                    name: this.user.name || '',
+                    username: this.user.username || '',
+                    email: this.user.email || '',
+                    profession: this.user.profession || '',
+                    gender: this.user.gender || '',
                     universidad_id: this.user.universidad_id
                         ? Number(this.user.universidad_id)
                         : this.user.universidad?.id ? Number(this.user.universidad.id) : null,
@@ -1171,25 +1195,54 @@ export default {
         },
 
         async updateProfile() {
+            // Validar campos obligatorios
+            if (!this.formData.name || !this.formData.username || !this.formData.email) {
+                await this.showToast("Por favor completa los campos obligatorios", "warning");
+                return;
+            }
+
+            // Validar email
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(this.formData.email)) {
+                await this.showToast("Por favor ingresa un email válido", "warning");
+                return;
+            }
+
             this.savingProfile = true;
 
             try {
                 const updatedUser = await AuthService.updateProfile(this.formData);
 
                 if (updatedUser) {
-                    const rememberMe = localStorage.getItem("remember_me") === "true";
-                    AuthService.setUser(updatedUser.data || updatedUser, rememberMe);
-
-                    this.user = updatedUser.data || updatedUser;
-                    this.user_viewer = updatedUser.data || updatedUser;
+                    const userData = updatedUser.data || updatedUser;
+                    
+                    // Actualizar usuario en la sesión
+                    this.user = { ...userData };
+                    this.user_viewer = { ...userData };
+                    
+                    // Recargar universidades por si cambió la relación
+                    await this.loadUniversidades();
                 }
 
-                await this.loadUniversidades();
                 await this.showToast("Perfil actualizado correctamente", "success");
                 this.closeSettings();
             } catch (error) {
-                console.error("Error al actualizar perfil:", error);
-                await this.showToast("Error al actualizar el perfil", "danger");
+                let errorMessage = "Error al actualizar el perfil";
+
+                if (error.response?.status === 422) {
+                    // Errores de validación
+                    if (error.response.data?.errors) {
+                        const errors = error.response.data.errors;
+                        const firstError = Object.values(errors)[0];
+                        errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+                    } else if (error.response.data?.message) {
+                        errorMessage = error.response.data.message;
+                    }
+                } else if (error.response?.data?.message) {
+                    errorMessage = error.response.data.message;
+                }
+
+                await this.showToast(errorMessage, "danger");
             } finally {
                 this.savingProfile = false;
             }
