@@ -333,6 +333,40 @@ class PostsService {
       return { success: false, error: errorMessage };
     }
   }
+
+  /**
+   * Elimina un post
+   * @param {number} postId - ID del post a eliminar
+   * @returns {Promise<Object>} Respuesta de la API
+   */
+  async deletePost(postId) {
+    try {
+      const response = await api.delete(`/posts/${postId}`);
+      return {
+        success: true,
+        data: response.data?.data || response.data,
+        message: response.data?.message || "Post eliminado exitosamente"
+      };
+    } catch (err) {
+      let errorMessage = "Error al eliminar el post";
+
+      if (err.response) {
+        if (err.response.status === 401) {
+          errorMessage = "No tienes permiso para eliminar este post";
+        } else if (err.response.status === 403) {
+          errorMessage = "No puedes eliminar este post";
+        } else if (err.response.status === 404) {
+          errorMessage = "Post no encontrado";
+        } else {
+          errorMessage = err.response.data?.message || "Error del servidor";
+        }
+      } else if (err.request) {
+        errorMessage = "No se pudo conectar con el servidor";
+      }
+
+      return { success: false, error: errorMessage };
+    }
+  }
 }
 
 // Exportar instancia singleton del servicio

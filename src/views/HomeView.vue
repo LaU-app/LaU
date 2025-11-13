@@ -4,8 +4,18 @@
             @toggleDarkMode="toggleDarkMode" />
 
         <ion-content>
+            <!-- Pull to Refresh -->
+            <ion-refresher slot="fixed" @ionRefresh="handleRefresh($event)">
+                <ion-refresher-content
+                    pulling-icon="chevron-down-circle-outline"
+                    pulling-text="Desliza para actualizar"
+                    refreshing-spinner="crescent"
+                    refreshing-text="Actualizando...">
+                </ion-refresher-content>
+            </ion-refresher>
+
             <div class="container">
-                <div v-if="loading" class="loading-container">
+                <div v-if="loading && !isRefreshing" class="loading-container">
                     <ion-spinner name="crescent"></ion-spinner>
                     <ion-text>
                         <p>Cargando posts...</p>
@@ -54,7 +64,7 @@
 </template>
 
 <script>
-import { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, alertController } from '@ionic/vue'
+import { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, alertController } from '@ionic/vue'
 import AppHeader from '@/components/AppHeader.vue'
 import CreatePostCard from '@/components/CreatePostCard.vue'
 import PostCard from '@/components/PostCard.vue'
@@ -64,7 +74,7 @@ import { useDarkMode } from '@/utils/useDarkMode'
 
 export default {
     name: 'HomeView',
-    components: { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, AppHeader, CreatePostCard, PostCard },
+    components: { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, AppHeader, CreatePostCard, PostCard },
     data() {
         return {
             posts: [],
@@ -77,7 +87,8 @@ export default {
             feedType: 'public', // 'public', 'personalized', o 'error'
             totalPosts: 0,
             alertTimer: null,
-            isAuthenticated: false
+            isAuthenticated: false,
+            isRefreshing: false
         }
     },
     setup() {
@@ -105,6 +116,7 @@ export default {
 
         // Verificar si se viene de crear un post (state en router)
         const postCreated = window.history.state?.postCreated
+        const postDeleted = window.history.state?.postDeleted
 
         // Si el usuario acaba de iniciar sesión, recargar datos
         if (this.isAuthenticated && this.user.username === 'invitado') {
@@ -116,6 +128,12 @@ export default {
             this.fetchPosts(1)
             // Limpiar el state para evitar recargas múltiples
             window.history.replaceState({ ...window.history.state, postCreated: false }, '')
+        } else if (postDeleted) {
+            // Si viene de eliminar un post, refrescar el feed
+            console.log('🗑️ Post eliminado - Actualizando feed...')
+            this.fetchPosts(1)
+            // Limpiar el state
+            window.history.replaceState({ ...window.history.state, postDeleted: false }, '')
         }
 
         // Programar el alert solo si NO está autenticado y no hay timer activo
@@ -290,9 +308,13 @@ export default {
             }
             event.target.complete()
         },
-        async doRefresh(event) {
+        async handleRefresh(event) {
+            // Marcar que estamos refrescando para no mostrar el loading duplicado
+            this.isRefreshing = true
+            // Recargar desde la primera página
             this.currentPage = 1
             await this.fetchPosts(1)
+            this.isRefreshing = false
             event.target.complete()
         },
         handlePostCreated(newPost) {

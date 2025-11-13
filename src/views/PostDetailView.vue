@@ -8,6 +8,11 @@
                     </ion-button>
                 </ion-buttons>
                 <ion-title>Detalle de Publicación</ion-title>
+                <ion-buttons slot="end" v-if="isMyPost">
+                    <ion-button @click="confirmDelete" color="danger">
+                        <ion-icon :icon="trashOutline" slot="icon-only"></ion-icon>
+                    </ion-button>
+                </ion-buttons>
             </ion-toolbar>
         </ion-header>
 
@@ -173,7 +178,8 @@ import {
     IonCardHeader,
     IonCardContent,
     IonCardTitle,
-    toastController
+    toastController,
+    alertController
 } from '@ionic/vue'
 import {
     arrowBack,
@@ -181,7 +187,8 @@ import {
     alertCircle,
     send,
     chatbubbleOutline,
-    downloadOutline
+    downloadOutline,
+    trashOutline
 } from 'ionicons/icons'
 import MusicPlayer from '@/components/MusicPlayer.vue'
 import PostActions from '@/components/PostActions.vue'
@@ -200,6 +207,12 @@ const error = ref(null)
 const newComment = ref('')
 const commentInputRef = ref(null)
 const currentUser = ref(null)
+
+// Computed para verificar si el post es del usuario actual
+const isMyPost = computed(() => {
+    if (!post.value || !currentUser.value) return false
+    return post.value.user_id === currentUser.value.id || post.value.user?.id === currentUser.value.id
+})
 
 // Cargar datos del usuario actual
 onMounted(async () => {
@@ -492,6 +505,73 @@ const submitComment = async () => {
 
         const toast = await toastController.create({
             message: errorMessage,
+            duration: 3000,
+            position: 'bottom',
+            color: 'danger'
+        })
+        await toast.present()
+    }
+}
+
+// Función para confirmar eliminación del post
+const confirmDelete = async () => {
+    const alert = await alertController.create({
+        header: '¿Eliminar publicación?',
+        message: 'Esta acción no se puede deshacer. ¿Estás seguro de que deseas eliminar esta publicación?',
+        buttons: [
+            {
+                text: 'Cancelar',
+                role: 'cancel',
+                cssClass: 'alert-button-cancel'
+            },
+            {
+                text: 'Eliminar',
+                cssClass: 'alert-button-danger',
+                handler: async () => {
+                    await deletePost()
+                }
+            }
+        ],
+        cssClass: 'custom-alert-delete'
+    })
+
+    await alert.present()
+}
+
+// Función para eliminar el post
+const deletePost = async () => {
+    try {
+        const result = await postsService.deletePost(post.value.id)
+
+        if (result.success) {
+            const toast = await toastController.create({
+                message: result.message || 'Publicación eliminada',
+                duration: 2000,
+                position: 'bottom',
+                color: 'success'
+            })
+            await toast.present()
+
+            // Esperar un momento para que se vea el toast y luego volver al feed
+            setTimeout(() => {
+                router.push({
+                    path: '/tabs/tab1',
+                    state: { postDeleted: true }
+                })
+            }, 500)
+        } else {
+            const toast = await toastController.create({
+                message: result.error || 'Error al eliminar la publicación',
+                duration: 3000,
+                position: 'bottom',
+                color: 'danger'
+            })
+            await toast.present()
+        }
+    } catch (err) {
+        console.error('Error eliminando post:', err)
+        const toast = await toastController.create({
+            message: 'Error al eliminar la publicación',
             duration: 3000,
             position: 'bottom',
             color: 'danger'
@@ -876,5 +956,23 @@ const submitComment = async () => {
 
 .comment-input-wrapper ion-input .input-bottom {
     display: none !important;
+}
+
+/* Estilos para la alerta de eliminación */
+:global(.custom-alert-delete) {
+    --backdrop-opacity: 0.6;
+}
+
+:global(.custom-alert-delete .alert-wrapper) {
+    border-radius: 16px;
+}
+
+:global(.alert-button-danger) {
+    color: var(--ion-color-danger) !important;
+    font-weight: 600;
+}
+
+:global(.alert-button-cancel) {
+    color: var(--ion-color-medium) !important;
 }
 </style>
