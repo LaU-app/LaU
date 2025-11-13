@@ -24,8 +24,15 @@
 
                     <!-- Lista de posts -->
                     <div class="posts-list">
-                        <PostCard v-for="post in posts" :key="post.id" :post="post" @like="handleLike"
-                            @comment="handleComment" @share="handleShare" @imageError="handleImageError" />
+                        <PostCard 
+                            v-for="post in posts" 
+                            :key="post.id" 
+                            :post="post" 
+                            v-memo="[post.id, post.likes_count, post.user_has_liked, post.comments_count]"
+                            @like="handleLike"
+                            @comment="handleComment" 
+                            @share="handleShare" 
+                            @imageError="handleImageError" />
                     </div>
 
                     <ion-card v-if="!loading && !error && posts.length === 0">

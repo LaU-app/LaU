@@ -34,10 +34,10 @@
                         <div class="post-header">
                             <ion-avatar class="post-avatar">
                                 <img v-if="post.user?.imagen_url" :src="post.user.imagen_url"
-                                    :alt="post.user?.name || 'Usuario'" @error="handleImageError" />
+                                    :alt="post.user?.name || 'Usuario'" loading="lazy" @error="handleImageError" />
                                 <ion-icon v-else :icon="personCircle" size="large"></ion-icon>
                             </ion-avatar>
-                            <div class="post-user-info">
+                            <div class="post-user-info" v-once>
                                 <ion-text>
                                     <h3>{{ post.user?.name || 'Usuario' }}</h3>
                                 </ion-text>
@@ -110,7 +110,11 @@
                     <ion-card-content class="comments-content">
                         <!-- Comments List -->
                         <div v-if="post.comentarios && post.comentarios.length > 0" class="comments-list">
-                            <CommentItem v-for="comment in post.comentarios" :key="comment.id" :comment="comment" />
+                            <CommentItem 
+                                v-for="comment in post.comentarios" 
+                                :key="comment.id" 
+                                :comment="comment"
+                                v-memo="[comment.id, comment.texto]" />
                         </div>
 
                         <!-- No Comments State -->
@@ -126,7 +130,7 @@
                         <div class="comment-input-container">
                             <ion-avatar class="current-user-avatar">
                                 <img v-if="currentUser?.imagen_url" :src="currentUser.imagen_url"
-                                    :alt="currentUser?.name || 'Tú'" />
+                                    :alt="currentUser?.name || 'Tú'" loading="lazy" />
                                 <ion-icon v-else :icon="personCircle"></ion-icon>
                             </ion-avatar>
                             <div class="comment-input-wrapper">

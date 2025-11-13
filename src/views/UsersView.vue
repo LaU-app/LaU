@@ -10,8 +10,8 @@
                 <ion-title>Miembros de laÚ</ion-title>
             </ion-toolbar>
             <ion-toolbar>
-                <ion-searchbar v-model="searchText" placeholder="Buscar por Nombre, Universidad..." :debounce="300"
-                    :search-icon="searchOutline" @ionInput="filterUsers($event)">
+                <ion-searchbar v-model="searchText" placeholder="Buscar por Nombre, Universidad..." :debounce="500"
+                    :search-icon="searchOutline" @ionInput="filterUsers">
                 </ion-searchbar>
             </ion-toolbar>
         </ion-header>
@@ -63,9 +63,9 @@
                 </ion-row>
             </ion-grid>
             <ion-list v-if="!loading && filteredUsers.length > 0">
-                <ion-item v-for="(u, index) in filteredUsers" :key="index">
+                <ion-item v-for="(u, index) in filteredUsers" :key="index" v-memo="[u.id, followingIds.includes(u.id)]">
                     <ion-avatar slot="start">
-                        <img v-if="u.imagen_url" :src="u.imagen_url" alt="avatar" @error="handleImageError" />
+                        <img v-if="u.imagen_url" :src="u.imagen_url" alt="avatar" loading="lazy" @error="handleImageError" />
                         <ion-icon v-else :icon="personCircle" class="avatar-icon"></ion-icon>
                     </ion-avatar>
                     <ion-label>

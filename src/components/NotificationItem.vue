@@ -4,7 +4,7 @@
         <!-- Avatar del usuario que generó la notificación -->
         <ion-avatar slot="start">
             <img v-if="notification.from_user_data?.imagen_url" :src="notification.from_user_data.imagen_url"
-                :alt="notification.from_user_data?.name || 'Usuario'" @error="handleImageError" />
+                :alt="notification.from_user_data?.name || 'Usuario'" loading="lazy" @error="handleImageError" />
             <ion-icon v-else :icon="personCircle" size="large"></ion-icon>
         </ion-avatar>
 
@@ -34,7 +34,7 @@
         <!-- Thumbnail del post relacionado (si existe) -->
         <ion-thumbnail v-if="notification.post_data?.imagen_url" slot="end" class="post-thumbnail">
             <img :src="notification.post_data.imagen_url" :alt="notification.post_data.titulo || 'Post'"
-                @error="handlePostImageError" />
+                loading="lazy" @error="handlePostImageError" />
         </ion-thumbnail>
 
         <!-- Icono según el tipo de notificación -->

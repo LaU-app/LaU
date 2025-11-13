@@ -3,7 +3,7 @@
         <ion-card-content>
             <div class="create-post-input">
                 <ion-avatar class="create-post-avatar">
-                    <img v-if="user.imagen_url" :src="user.imagen_url" alt="Usuario" />
+                    <img v-if="user.imagen_url" :src="user.imagen_url" alt="Usuario" loading="lazy" />
                     <ion-icon v-else :icon="personCircle" size="large"></ion-icon>
                 </ion-avatar>
                 <div class="input-container">

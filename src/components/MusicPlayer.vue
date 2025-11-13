@@ -3,7 +3,7 @@
         <ion-card-content class="music-content">
             <ion-thumbnail class="album-art">
                 <img v-if="post.itunes_artwork_url" :src="post.itunes_artwork_url"
-                    :alt="post.itunes_track_name || 'Album'" @error="$emit('imageError', $event)" />
+                    :alt="post.itunes_track_name || 'Album'" loading="lazy" @error="$emit('imageError', $event)" />
                 <div v-else class="placeholder-art">
                     <ion-icon :icon="musicalNotesOutline"></ion-icon>
                 </div>

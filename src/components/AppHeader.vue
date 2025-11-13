@@ -35,6 +35,7 @@
               v-if="user?.imagen_url"
               :src="user.imagen_url"
               :alt="user.nombre || 'Usuario'"
+              loading="lazy"
             />
             <ion-icon
               v-else

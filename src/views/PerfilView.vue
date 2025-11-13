@@ -59,7 +59,7 @@
                 <div class="profile-header-row">
                     <ion-avatar class="profile-avatar" @click="isMe ? openImagePicker() : null"
                         :style="{ cursor: isMe ? 'pointer' : 'default' }">
-                        <img v-if="user.imagen_url" :src="user.imagen_url" alt="Foto de perfil" />
+                        <img v-if="user.imagen_url" :src="user.imagen_url" alt="Foto de perfil" loading="lazy" />
                         <ion-icon v-else :icon="personCircle" class="profile-avatar-icon"></ion-icon>
                         <div v-if="isMe" class="avatar-overlay">
                             <ion-icon :icon="cameraOutline" color="light"></ion-icon>
@@ -137,10 +137,14 @@
                     <div v-if="selectedTab === 'posts'">
                         <ion-grid>
                             <ion-row>
-                                <ion-col v-for="post in postsImagenTexto" :key="post.id" size="6">
+                                <ion-col 
+                                    v-for="post in postsImagenTexto" 
+                                    :key="post.id" 
+                                    size="6"
+                                    v-memo="[post.id, post.imagen_url]">
                                     <div class="post-card" @click="goToPostDetail(post.id)">
                                         <img v-if="post.imagen_url" :src="post.imagen_url" class="post-thumbnail"
-                                            :alt="post.titulo || 'Post'" />
+                                            :alt="post.titulo || 'Post'" loading="lazy" />
                                         <div v-else class="post-placeholder">
                                             <ion-icon :icon="documentTextOutline" size="large"
                                                 color="medium"></ion-icon>
@@ -163,7 +167,11 @@
                     <div v-else-if="selectedTab === 'archivos'">
                         <ion-grid>
                             <ion-row>
-                                <ion-col v-for="post in postsArchivos" :key="post.id" size="6">
+                                <ion-col 
+                                    v-for="post in postsArchivos" 
+                                    :key="post.id" 
+                                    size="6"
+                                    v-memo="[post.id, post.titulo]">
                                     <div class="file-card" @click="goToPostDetail(post.id)">
                                         <div class="file-icon-container">
                                             <ion-icon :icon="documentAttachOutline" size="large"
@@ -187,12 +195,16 @@
                     <div v-else>
                         <ion-grid>
                             <ion-row>
-                                <ion-col v-for="post in postsMusica" :key="post.id" size="6">
+                                <ion-col 
+                                    v-for="post in postsMusica" 
+                                    :key="post.id" 
+                                    size="6"
+                                    v-memo="[post.id, getMusicCover(post)]">
                                     <div class="music-card" @click="goToPostDetail(post.id)">
                                         <!-- Buscar imagen en múltiples campos posibles -->
                                         <img v-if="getMusicCover(post)" :src="getMusicCover(post)"
                                             class="music-thumbnail" :alt="post.track_name || post.titulo || 'Portada'"
-                                            @error="handleImageError($event, post)" />
+                                            loading="lazy" @error="handleImageError($event, post)" />
                                         <ion-icon v-else :icon="musicalNoteOutline" size="large" color="medium"
                                             class="music-icon"></ion-icon>
                                         <div class="music-info">
