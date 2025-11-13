@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "620970885957",
+    "project_id": "lau-app-f3312",
+    "storage_bucket": "lau-app-f3312.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:620970885957:android:7dc69e3abee8c7f88af42c",
+        "android_client_info": {
+          "package_name": "io.ionic.lauapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAa_ut5hBi6rSwHWN-oU4DoTIJEZYhIYHw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -31,9 +31,9 @@ npm-debug.log*
 /plugins
 /www
 
-# Firebase configuration files (IMPORTANT: DO NOT COMMIT)
-google-services.json
-android/app/google-services.json
+# Firebase configuration files (IMPORTANT: DO NOT COMMIT keys/secrets)
+# Note: service account keys must stay ignored; allowing Android's
+# `android/app/google-services.json` to be committed when explicitly needed.
 GoogleService-Info.plist
 ios/App/GoogleService-Info.plist
 

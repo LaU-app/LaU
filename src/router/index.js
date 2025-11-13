@@ -50,6 +50,18 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/tasks",
+    name: "Tasks",
+    component: () => import("@/views/TasksView.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/tasks/:id",
+    name: "TaskDetail",
+    component: () => import("@/views/TaskDetailView.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/tabs/",
     component: TabsPage,
     children: [
