@@ -29,22 +29,20 @@
 
                 <div class="stat-box highlight" @click="$emit('open-pomodoro')">
                     <div class="stat-value">
-                        <!-- Ionic blue flame SVG, outline if 0, filled if >=1, fully inline-styled, no class -->
                         <span v-if="stats.pomodoros_today < 1">
-                            <svg width="24" height="24" viewBox="0 0 24 24"
-                                style="vertical-align: middle; margin-right: 4px;" xmlns="http://www.w3.org/2000/svg">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="#3880ff" stroke-width="1.75" stroke-linecap="round"
+                                stroke-linejoin="round">
                                 <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                <path stroke="#3880ff" stroke-width="1.75" stroke-linecap="round"
-                                    stroke-linejoin="round" fill="none"
+                                <path
                                     d="M12 10.941c2.333 -3.308 .167 -7.823 -1 -8.941c0 3.395 -2.235 5.299 -3.667 6.706c-1.43 1.408 -2.333 3.621 -2.333 5.588c0 3.704 3.134 6.706 7 6.706s7 -3.002 7 -6.706c0 -1.712 -1.232 -4.403 -2.333 -5.588c-2.084 3.353 -3.257 3.353 -4.667 2.235" />
                             </svg>
                         </span>
                         <span v-else>
-                            <svg width="24" height="24" viewBox="0 0 24 24"
-                                style="vertical-align: middle; margin-right: 4px;" xmlns="http://www.w3.org/2000/svg">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="#3880ff">
                                 <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                <path fill="#3880ff" stroke="#3880ff" stroke-width="2" stroke-linecap="round"
-                                    stroke-linejoin="round"
+                                <path
                                     d="M10 2c0 -.88 1.056 -1.331 1.692 -.722c1.958 1.876 3.096 5.995 1.75 9.12l-.08 .174l.012 .003c.625 .133 1.203 -.43 2.303 -2.173l.14 -.224a1 1 0 0 1 1.582 -.153c1.334 1.435 2.601 4.377 2.601 6.27c0 4.265 -3.591 7.705 -8 7.705s-8 -3.44 -8 -7.706c0 -2.252 1.022 -4.716 2.632 -6.301l.605 -.589c.241 -.236 .434 -.43 .618 -.624c1.43 -1.512 2.145 -2.924 2.145 -4.78" />
                             </svg>
                         </span>
@@ -55,12 +53,12 @@
 
                 <div class="stat-box">
                     <div class="stat-value">
-                        <!-- Custom Hourglass SVG for Pomodoros This Week -->
+                        <!-- Custom Hourglass SVG for Pomodoros This Week, azul directo -->
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                             style="vertical-align: middle; margin-right: 4px;">
-                            <path :fill="stats.pomodoros_this_week > 0 ? 'var(--ion-color-primary)' : 'none'"
-                                :stroke="'var(--ion-color-primary)'" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round"
+                            <path :fill="stats.pomodoros_this_week > 0 ? '#3880ff' : 'none'"
+                                :stroke="stats.pomodoros_this_week > 0 ? '#3880ff' : '#3880ff'" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round"
                                 d="M6 2h12M6 22h12M6 2c0 6 6 6 6 10s-6 4-6 10M18 2c0 6-6 6-6 10s6 4 6 10" />
                         </svg>
                         {{ stats.pomodoros_this_week }}
@@ -169,7 +167,7 @@ ion-card-title ion-icon {
 }
 
 .stat-box.highlight {
-    background: linear-gradient(135deg, #8A2BE2, #9333EA);
+    background: linear-gradient(135deg, #3880ff, #4bc0ff);
     color: white;
 }
 
@@ -193,7 +191,6 @@ ion-card-title ion-icon {
 .quick-start-btn {
     margin-top: 8px;
     --background: white;
-    --color: #8A2BE2;
     font-weight: 600;
 }
 </style>

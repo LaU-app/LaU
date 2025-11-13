@@ -475,7 +475,7 @@ export default {
 
 .progress-ring-circle {
     fill: none;
-    stroke: #8A2BE2;
+    stroke: #3880ff;
     stroke-width: 8;
     stroke-linecap: round;
     stroke-dasharray: 754;
@@ -483,7 +483,7 @@ export default {
 }
 
 .progress-ring-circle.break {
-    stroke: #8A2BE2;
+    stroke: #3880ff;
 }
 
 .timer-display {
