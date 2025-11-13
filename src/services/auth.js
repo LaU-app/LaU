@@ -25,14 +25,14 @@ export const AuthService = {
       }
 
       // Inicializar notificaciones push después del login exitoso
-      if (pushNotificationsService.isAvailable()) {
-        pushNotificationsService.initialize().catch((err) => {
-          console.error(
-            "Failed to initialize push notifications after login:",
-            err
-          );
-        });
-      }
+      // if (pushNotificationsService.isAvailable()) {
+      //   pushNotificationsService.initialize().catch((err) => {
+      //     console.error(
+      //       "Failed to initialize push notifications after login:",
+      //       err
+      //     );
+      //   });
+      // }
 
       return data;
     } catch (error) {
