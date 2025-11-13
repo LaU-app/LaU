@@ -27,15 +27,6 @@
           </svg>
         </ion-tab-button>
 
-        <ion-tab-button @click="openTasks">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"
-            class="custom-icon">
-            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-            <path
-              d="M12 2l.117 .007a1 1 0 0 1 .876 .876l.007 .117v4l.005 .15a2 2 0 0 0 1.838 1.844l.157 .006h4l.117 .007a1 1 0 0 1 .876 .876l.007 .117v9a3 3 0 0 1 -2.824 2.995l-.176 .005h-10a3 3 0 0 1 -2.995 -2.824l-.005 -.176v-14a3 3 0 0 1 2.824 -2.995l.176 -.005h5zm-2.293 9.293a1 1 0 0 0 -1.414 0l-2 2a1 1 0 0 0 0 1.414l.094 .083a1 1 0 0 0 1.32 -.083l1.293 -1.292l3.293 3.292a1 1 0 0 0 1.414 0l4 -4a1 1 0 0 0 0 -1.414l-.094 -.083a1 1 0 0 0 -1.32 .083l-3.293 3.292l-2.293 -2.292zm8.293 -6.293h-3l-.007 -.117a1 1 0 0 0 -.876 -.876l-.117 -.007v-3l4 4z" />
-          </svg>
-        </ion-tab-button>
-
         <ion-tab-button @click="openNotifications">
           <div class="notification-button-wrapper">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"
@@ -137,11 +128,6 @@ const openUsers = () => {
 // Función para abrir la vista de notificaciones como modal
 const openNotifications = () => {
   router.push('/notifications');
-};
-
-// Función para abrir la vista de tareas
-const openTasks = () => {
-  router.push('/tasks');
 };
 </script>
 

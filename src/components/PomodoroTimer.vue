@@ -38,12 +38,46 @@
                 <!-- Session info -->
                 <div class="session-info" v-if="!isBreak">
                     <div class="info-item">
-                        <ion-icon :icon="flameOutline"></ion-icon>
-                        <span>Sesión {{ sessionCount + 1 }}</span>
+                        <!-- Flame SVG: outline if 0 pomodoros, filled if >=1 -->
+                        <span v-if="totalCompletedToday < 1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="#3880ff" stroke-width="1.75" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path
+                                    d="M12 10.941c2.333 -3.308 .167 -7.823 -1 -8.941c0 3.395 -2.235 5.299 -3.667 6.706c-1.43 1.408 -2.333 3.621 -2.333 5.588c0 3.704 3.134 6.706 7 6.706s7 -3.002 7 -6.706c0 -1.712 -1.232 -4.403 -2.333 -5.588c-2.084 3.353 -3.257 3.353 -4.667 2.235" />
+                            </svg>
+                        </span>
+                        <span v-else>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="#3880ff">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path
+                                    d="M10 2c0 -.88 1.056 -1.331 1.692 -.722c1.958 1.876 3.096 5.995 1.75 9.12l-.08 .174l.012 .003c.625 .133 1.203 -.43 2.303 -2.173l.14 -.224a1 1 0 0 1 1.582 -.153c1.334 1.435 2.601 4.377 2.601 6.27c0 4.265 -3.591 7.705 -8 7.705s-8 -3.44 -8 -7.706c0 -2.252 1.022 -4.716 2.632 -6.301l.605 -.589c.241 -.236 .434 -.43 .618 -.624c1.43 -1.512 2.145 -2.924 2.145 -4.78" />
+                            </svg>
+                        </span>
+                        <span>{{ totalCompletedToday }} hoy</span>
                     </div>
                     <div class="info-item">
-                        <ion-icon :icon="timerOutline"></ion-icon>
-                        <span>{{ totalCompletedToday }} hoy</span>
+                        <!-- Hourglass SVG: outline if 0 pomodoros, filled if >=1 -->
+                        <span v-if="sessionCount < 1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="#888" stroke-width="1.75" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path d="M6 20v-2a6 6 0 1 1 12 0v2a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1z" />
+                                <path d="M6 4v2a6 6 0 1 0 12 0v-2a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1z" />
+                            </svg>
+                        </span>
+                        <span v-else>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="#888">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path
+                                    d="M17 2a2 2 0 0 1 1.995 1.85l.005 .15v2a6.996 6.996 0 0 1 -3.393 6a6.994 6.994 0 0 1 3.388 5.728l.005 .272v2a2 2 0 0 1 -1.85 1.995l-.15 .005h-10a2 2 0 0 1 -1.995 -1.85l-.005 -.15v-2a6.996 6.996 0 0 1 3.393 -6a6.994 6.994 0 0 1 -3.388 -5.728l-.005 -.272v-2a2 2 0 0 1 1.85 -1.995l.15 -.005h10z" />
+                            </svg>
+                        </span>
+                        <span>{{ sessionCount }} sesión</span>
                     </div>
                 </div>
 
@@ -51,23 +85,25 @@
                 <div class="controls">
                     <ion-button v-if="!isRunning && !sessionStarted" expand="block" size="large" @click="start"
                         class="control-btn start-btn">
-                        <ion-icon slot="start" :icon="playOutline"></ion-icon>
+                        <ion-icon :icon="playOutline"></ion-icon>
                         Iniciar {{ isBreak ? 'Descanso' : 'Pomodoro' }}
                     </ion-button>
 
                     <div v-else class="control-buttons">
                         <ion-button v-if="isRunning" expand="block" color="warning" @click="pause" class="control-btn">
-                            <ion-icon slot="start" :icon="pauseOutline"></ion-icon>
+                            <ion-icon :icon="pauseOutline"></ion-icon>
                             Pausar
                         </ion-button>
 
-                        <ion-button v-else expand="block" color="success" @click="resume" class="control-btn">
-                            <ion-icon slot="start" :icon="playOutline"></ion-icon>
+                        <ion-button v-else expand="block" style="--background: #8A2BE2;" @click="resume"
+                            class="control-btn">
+                            <ion-icon :icon="playOutline"></ion-icon>
                             Reanudar
                         </ion-button>
 
-                        <ion-button expand="block" color="danger" @click="confirmStop" class="control-btn">
-                            <ion-icon slot="start" :icon="stopOutline"></ion-icon>
+                        <ion-button expand="block" style="--background: #8A2BE2;" @click="confirmStop"
+                            class="control-btn">
+                            <ion-icon :icon="stopOutline"></ion-icon>
                             Detener
                         </ion-button>
                     </div>
@@ -78,11 +114,11 @@
                     <h3>¿Qué tipo de descanso quieres tomar?</h3>
                     <div class="break-options">
                         <ion-button expand="block" @click="startBreak('short')">
-                            <ion-icon slot="start" :icon="cafeOutline"></ion-icon>
+                            <ion-icon :icon="cafeOutline"></ion-icon>
                             Corto (5 min)
                         </ion-button>
                         <ion-button expand="block" @click="startBreak('long')">
-                            <ion-icon slot="start" :icon="bedOutline"></ion-icon>
+                            <ion-icon :icon="bedOutline"></ion-icon>
                             Largo (15 min)
                         </ion-button>
                         <ion-button expand="block" fill="outline" @click="skipBreak">
@@ -439,7 +475,7 @@ export default {
 
 .progress-ring-circle {
     fill: none;
-    stroke: var(--ion-color-danger);
+    stroke: #8A2BE2;
     stroke-width: 8;
     stroke-linecap: round;
     stroke-dasharray: 754;
@@ -447,7 +483,7 @@ export default {
 }
 
 .progress-ring-circle.break {
-    stroke: var(--ion-color-success);
+    stroke: #8A2BE2;
 }
 
 .timer-display {
@@ -502,7 +538,7 @@ export default {
 }
 
 .start-btn {
-    --background: var(--ion-color-danger);
+    --background: var(--ion-color-primary);
 }
 
 .control-buttons {

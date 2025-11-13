@@ -36,28 +36,71 @@
             <!-- Estadísticas rápidas -->
             <div class="stats-card" v-if="stats">
                 <div class="stat-item">
-                    <ion-icon :icon="checkmarkCircleOutline" class="stat-icon success"></ion-icon>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+                        stroke="#8A2BE2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="stat-icon success">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M10 20.777a8.942 8.942 0 0 1 -2.48 -.969" />
+                        <path d="M14 3.223a9.003 9.003 0 0 1 0 17.554" />
+                        <path d="M4.579 17.093a8.961 8.961 0 0 1 -1.227 -2.592" />
+                        <path d="M3.124 10.5c.16 -.95 .468 -1.85 .9 -2.675l.169 -.305" />
+                        <path d="M6.907 4.579a8.954 8.954 0 0 1 3.093 -1.356" />
+                        <path d="M9 12l2 2l4 -4" />
+                    </svg>
                     <div class="stat-content">
                         <div class="stat-value">{{ stats.completed }}</div>
                         <div class="stat-label">Completadas</div>
                     </div>
                 </div>
                 <div class="stat-item">
-                    <ion-icon :icon="timeOutline" class="stat-icon warning"></ion-icon>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+                        stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="stat-icon warning">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M10 20.777a8.942 8.942 0 0 1 -2.48 -.969" />
+                        <path d="M14 3.223a9.003 9.003 0 0 1 0 17.554" />
+                        <path d="M4.579 17.093a8.961 8.961 0 0 1 -1.227 -2.592" />
+                        <path d="M3.124 10.5c.16 -.95 .468 -1.85 .9 -2.675l.169 -.305" />
+                        <path d="M6.907 4.579a8.954 8.954 0 0 1 3.093 -1.356" />
+                    </svg>
                     <div class="stat-content">
                         <div class="stat-value">{{ stats.in_progress }}</div>
                         <div class="stat-label">En Curso</div>
                     </div>
                 </div>
                 <div class="stat-item">
-                    <ion-icon :icon="alertCircleOutline" class="stat-icon danger"></ion-icon>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+                        stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="stat-icon danger">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M3 12v.01" />
+                        <path d="M7.5 19.8v.01" />
+                        <path d="M4.2 16.5v.01" />
+                        <path d="M4.2 7.5v.01" />
+                        <path d="M12 21a8.994 8.994 0 0 0 6.362 -2.634m1.685 -2.336a9 9 0 0 0 -8.047 -13.03" />
+                        <path d="M3 3l18 18" />
+                    </svg>
                     <div class="stat-content">
-                        <div class="stat-value">{{ stats.overdue }}</div>
-                        <div class="stat-label">Vencidas</div>
+                        <div class="stat-value">{{ stats.pending }}</div>
+                        <div class="stat-label">Pendientes</div>
                     </div>
                 </div>
                 <div class="stat-item">
-                    <ion-icon :icon="flameOutline" class="stat-icon primary"></ion-icon>
+                    <!-- Icono filled cuando hay al menos 1 pomodoro -->
+                    <svg v-if="stats.pomodoros_today > 0" xmlns="http://www.w3.org/2000/svg" width="32" height="32"
+                        viewBox="0 0 24 24" fill="currentColor" class="stat-icon primary">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path
+                            d="M10 2c0 -.88 1.056 -1.331 1.692 -.722c1.958 1.876 3.096 5.995 1.75 9.12l-.08 .174l.012 .003c.625 .133 1.203 -.43 2.303 -2.173l.14 -.224a1 1 0 0 1 1.582 -.153c1.334 1.435 2.601 4.377 2.601 6.27c0 4.265 -3.591 7.705 -8 7.705s-8 -3.44 -8 -7.706c0 -2.252 1.022 -4.716 2.632 -6.301l.605 -.589c.241 -.236 .434 -.43 .618 -.624c1.43 -1.512 2.145 -2.924 2.145 -4.78" />
+                    </svg>
+                    <!-- Icono outline cuando no hay pomodoros -->
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"
+                        stroke-linejoin="round" class="stat-icon primary">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path
+                            d="M12 10.941c2.333 -3.308 .167 -7.823 -1 -8.941c0 3.395 -2.235 5.299 -3.667 6.706c-1.43 1.408 -2.333 3.621 -2.333 5.588c0 3.704 3.134 6.706 7 6.706s7 -3.002 7 -6.706c0 -1.712 -1.232 -4.403 -2.333 -5.588c-2.084 3.353 -3.257 3.353 -4.667 2.235" />
+                    </svg>
                     <div class="stat-content">
                         <div class="stat-value">{{ stats.pomodoros_today }}</div>
                         <div class="stat-label">Pomodoros Hoy</div>
@@ -93,8 +136,22 @@
 
             <!-- Botón flotante de Pomodoro -->
             <ion-fab vertical="bottom" horizontal="end" slot="fixed">
-                <ion-fab-button @click="openPomodoroTimer" :color="hasActiveSession ? 'success' : 'danger'">
-                    <ion-icon :icon="timerOutline"></ion-icon>
+                <ion-fab-button @click="openPomodoroTimer"
+                    :style="{ '--background': hasActiveSession ? '#8A2BE2' : '#8A2BE2' }">
+                    <!-- Icono hourglass: filled si hay pomodoros hoy, outline si no -->
+                    <svg v-if="stats && stats.pomodoros_today > 0" xmlns="http://www.w3.org/2000/svg" width="24"
+                        height="24" viewBox="0 0 24 24" fill="currentColor">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path
+                            d="M17 2a2 2 0 0 1 1.995 1.85l.005 .15v2a6.996 6.996 0 0 1 -3.393 6a6.994 6.994 0 0 1 3.388 5.728l.005 .272v2a2 2 0 0 1 -1.85 1.995l-.15 .005h-10a2 2 0 0 1 -1.995 -1.85l-.005 -.15v-2a6.996 6.996 0 0 1 3.393 -6a6.994 6.994 0 0 1 -3.388 -5.728l-.005 -.272v-2a2 2 0 0 1 1.85 -1.995l.15 -.005h10z" />
+                    </svg>
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M6 20v-2a6 6 0 1 1 12 0v2a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1z" />
+                        <path d="M6 4v2a6 6 0 1 0 12 0v-2a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1z" />
+                    </svg>
                 </ion-fab-button>
             </ion-fab>
         </ion-content>
@@ -111,7 +168,6 @@ import {
 } from '@ionic/vue';
 import {
     addOutline, refreshOutline, checkmarkCircleOutline,
-    timeOutline, alertCircleOutline, flameOutline,
     checkmarkDoneOutline, timerOutline
 } from 'ionicons/icons';
 import { ref, onMounted, computed } from 'vue';
@@ -276,7 +332,6 @@ export default {
             startPomodoroForTask,
             // Icons
             addOutline, refreshOutline, checkmarkCircleOutline,
-            timeOutline, alertCircleOutline, flameOutline,
             checkmarkDoneOutline, timerOutline
         };
     }
@@ -307,7 +362,7 @@ export default {
 }
 
 .stat-icon.success {
-    color: var(--ion-color-success);
+    color: #8A2BE2;
 }
 
 .stat-icon.warning {
@@ -319,7 +374,7 @@ export default {
 }
 
 .stat-icon.primary {
-    color: var(--ion-color-primary);
+    color: #8A2BE2;
 }
 
 .stat-content {
