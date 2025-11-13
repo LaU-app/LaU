@@ -299,6 +299,35 @@ export const AuthService = {
       throw error;
     }
   },
+
+  /**
+   * Actualiza la imagen de perfil del usuario
+   * Usa el mismo endpoint /user/edit pero solo con imagen
+   * @param {FormData} formData - FormData con la imagen y datos del usuario (debe incluir _method=PUT)
+   * @returns {Promise} Respuesta con el usuario actualizado
+   */
+  async updateProfileImage(formData) {
+    try {
+      // IMPORTANTE: Usar POST con _method=PUT porque Laravel no procesa FormData en PUT
+      const res = await api.post("/user/edit", formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const userData = res.data?.data || res.data;
+
+      if (userData) {
+        const rememberMe = localStorage.getItem(REMEMBER_KEY) === "true";
+        this.setUser(userData, rememberMe);
+      }
+
+      return res.data;
+    } catch (error) {
+      console.error("Error al actualizar imagen de perfil:", error);
+      throw error;
+    }
+  },
 };
 
 export default AuthService;
