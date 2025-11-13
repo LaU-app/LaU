@@ -257,9 +257,16 @@
 
       <!-- Modal Settings -->
       <ion-modal :is-open="showSettingsModal" @didDismiss="closeSettings">
-        <ion-content class="settings-modal-content">
-          <h2 class="modal-title">Editar Perfil</h2>
-          <form @submit.prevent="updateProfile" class="settings-form">
+        <ion-content
+          class="settings-modal-content"
+          style="background-color: white"
+        >
+          <form
+            @submit.prevent="updateProfile"
+            class="settings-form"
+            style="background-color: white"
+          >
+            <h2 class="modal-title">Editar Perfil</h2>
             <ion-avatar class="profile-avatar edit-avatar">
               <img
                 v-if="formData.imagen_url"
@@ -271,6 +278,23 @@
                 :icon="personCircle"
                 class="profile-avatar-icon"
               ></ion-icon>
+              <ion-button
+                fill="clear"
+                class="edit-avatar-button"
+                style="position: relative; top: -45px; right: -40px"
+                @click="openImagePicker"
+                ><ion-icon
+                  :icon="pencil"
+                  style="
+                    border: solid gray 1px;
+                    padding: 5px;
+                    border-radius: 50%;
+                    font-size: 18px;
+                    color: #7b2ff7;
+                  "
+                >
+                </ion-icon>
+              </ion-button>
             </ion-avatar>
             <ion-input
               label="Nombre completo"
@@ -343,6 +367,82 @@
               >Cancelar</ion-button
             >
           </form>
+        </ion-content>
+      </ion-modal>
+
+      <!-- Modal image picker -->
+      <ion-modal
+        :is-open="isImagePickerOpen"
+        @didDismiss="isImagePickerOpen = false"
+        style="padding: 10px"
+      >
+        <ion-content class="settings-modal-content">
+          <h2 class="modal-Image-title">Actualizar Foto de Perfil</h2>
+
+          <!-- Vista previa -->
+          <div v-if="imagenPreview" class="vista-previa-imagen">
+            <img :src="imagenPreview" alt="Preview" />
+            <ion-button
+              fill="clear"
+              color="danger"
+              @click="removeImage"
+              class="boton-eliminar"
+            >
+              <ion-icon :icon="closeCircle"></ion-icon>
+            </ion-button>
+          </div>
+
+          <!-- Caja de subida -->
+          <div v-else class="caja-subida" @click="showPhotoActionSheet">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.25"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="icon-medium icon-primary"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path d="M15 8h.01" />
+              <path
+                d="M6 13l2.644 -2.644a1.21 1.21 0 0 1 1.712 0l3.644 3.644"
+              />
+              <path
+                d="M13 13l1.644 -1.644a1.21 1.21 0 0 1 1.712 0l1.644 1.644"
+              />
+              <path d="M4 8v-2a2 2 0 0 1 2 -2h2" />
+              <path d="M4 16v2a2 2 0 0 0 2 2h2" />
+              <path d="M16 4h2a2 2 0 0 1 2 2v2" />
+              <path d="M16 20h2a2 2 0 0 0 2 -2v-2" />
+            </svg>
+            <h3>Tomar o seleccionar foto</h3>
+            <p class="texto-pequeno">Usa tu cámara o elige de la galería</p>
+            <p class="texto-pequeno">JPG, PNG. Máximo 20MB</p>
+            <ion-button fill="outline">Elegir</ion-button>
+          </div>
+
+          <input
+            ref="fileInput"
+            type="file"
+            hidden
+            accept="image/jpeg,image/png,image/jpg"
+            @change="handleFileUpload"
+          />
+
+          <ion-button expand="block" @click="guardarImagen"
+            >Guardar Imagen</ion-button
+          >
+          <ion-button
+            expand="block"
+            fill="clear"
+            color="medium"
+            @click="closeImagePicker"
+            >Cancelar</ion-button
+          >
         </ion-content>
       </ion-modal>
 
@@ -473,6 +573,7 @@ import {
   IonInput,
   IonSelect,
   IonSelectOption,
+  actionSheetController,
 } from "@ionic/vue";
 
 import {
@@ -484,6 +585,11 @@ import {
   personCircle,
   documentOutline,
   notifications,
+  pencil,
+  closeCircle,
+  cameraOutline,
+  imagesOutline,
+  closeOutline,
 } from "ionicons/icons";
 
 import { UniversidadService } from "@/services/universidad";
@@ -564,6 +670,8 @@ export default {
         carrera_id: null,
       },
       isAuthenticated: false,
+      imagenPreview: null,
+      archivo: null,
       // icons
       ellipsisVerticalOutline,
       grid,
@@ -573,11 +681,17 @@ export default {
       personCircle,
       documentOutline,
       notifications,
+      pencil,
+      closeCircle,
+      cameraOutline,
+      imagesOutline,
+      closeOutline,
       // modals/menu
       showFollowersModal: false,
       showFollowingModal: false,
       showSettingsModal: false,
       isMenuOpen: false,
+      isImagePickerOpen: false,
     };
   },
 
@@ -809,6 +923,96 @@ export default {
       }
       event.target.complete();
     },
+    async showPhotoActionSheet() {
+      const actionSheet = await actionSheetController.create({
+        header: "Seleccionar foto",
+        buttons: [
+          {
+            text: "Tomar foto",
+            icon: cameraOutline,
+            handler: () => {
+              this.takePicture();
+            },
+          },
+          {
+            text: "Elegir de la galería",
+            icon: imagesOutline,
+            handler: () => {
+              this.pickFromGallery();
+            },
+          },
+          {
+            text: "Cancelar",
+            icon: closeOutline,
+            role: "cancel",
+          },
+        ],
+      });
+      await actionSheet.present();
+    },
+    async takePicture() {
+      try {
+        const image = await Camera.getPhoto({
+          quality: 90,
+          allowEditing: true,
+          resultType: CameraResultType.Uri,
+          source: CameraSource.Camera,
+        });
+
+        await processImage(image);
+      } catch (error) {
+        console.error("Error al tomar foto:", error);
+        if (error.message !== "User cancelled photos app") {
+          showToast("Error al acceder a la cámara", "danger");
+        }
+      }
+    },
+    async pickFromGallery() {
+      try {
+        const image = await Camera.getPhoto({
+          quality: 90,
+          allowEditing: true,
+          resultType: CameraResultType.Uri,
+          source: CameraSource.Photos,
+        });
+
+        await processImage(image);
+      } catch (error) {
+        console.error("Error al seleccionar foto:", error);
+        if (error.message !== "User cancelled photos app") {
+          showToast("Error al acceder a la galería", "danger");
+        }
+      }
+    },
+
+    async processImage(image) {
+      try {
+        // Mostrar preview
+        this.imagenPreview = image.webPath;
+
+        // Convertir la imagen a un archivo Blob para enviar al servidor
+        const response = await fetch(image.webPath);
+        const blob = await response.blob();
+
+        // Crear un File a partir del Blob
+        const fileName = `photo_${Date.now()}.${image.format || "jpg"}`;
+        const file = new File([blob], fileName, {
+          type: `image/${image.format || "jpeg"}`,
+        });
+
+        // Validar tamaño (20MB según el backend)
+        if (file.size > 20 * 1024 * 1024) {
+          showToast("La imagen no debe superar 20MB", "warning");
+          this.imagenPreview = null;
+          return;
+        }
+
+        this.archivo = file;
+      } catch (error) {
+        console.error("Error al procesar imagen:", error);
+        showToast("Error al procesar la imagen", "danger");
+      }
+    },
 
     // Cargar seguidores/seguidos y posts
     async getProfileData() {
@@ -964,6 +1168,12 @@ export default {
     },
     closeMenu() {
       this.isMenuOpen = false;
+    },
+    openImagePicker() {
+      this.isImagePickerOpen = true;
+    },
+    closeImagePicker() {
+      this.isImagePickerOpen = false;
     },
 
     async handleLogout() {
@@ -1124,6 +1334,62 @@ ion-content {
   margin: 0;
 }
 
+.caja-subida {
+  border: 2px dashed var(--ion-border-color);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: var(--ion-card-background);
+}
+
+.caja-subida:hover {
+  border-color: var(--ion-color-primary);
+  background: var(--ion-color-light);
+}
+
+.caja-subida h3 {
+  margin: 1rem 0 0.5rem 0;
+  font-size: 1.125rem;
+  color: var(--ion-text-color);
+}
+
+.caja-subida .texto-pequeno {
+  font-size: 0.75rem;
+  color: var(--ion-color-medium);
+  margin-bottom: 1rem;
+}
+
+.vista-previa-imagen {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.vista-previa-imagen img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.vista-previa-imagen .boton-eliminar {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  --background: rgba(0, 0, 0, 0.5);
+}
+
+.vista-previa-archivo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border: 1px solid var(--ion-color-medium);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+}
 .profile-name {
   margin-top: 0;
   margin-bottom: 4px;
@@ -1140,12 +1406,37 @@ ion-content {
 
 .settings-form {
   padding: 25px 25px;
+  width: 100%;
+}
+form ion-input {
+  padding-left: 15px !important;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 15px 0;
+}
+
+/* opcional: mantener consistencia con selects/items */
+.settings-form ion-item {
+  margin: 15px 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.settings-form ion-button {
+  text-transform: capitalize;
+}
+.edit-avatar {
+  position: relative;
+  left: 50%;
+  transform: translate(-50%);
 }
 
 .settings-modal-content .modal-title {
+  color: #8a2be2;
   position: relative;
-  top: 16px;
-  left: 30px;
+  text-align: center;
+  font-weight: bolder;
 }
 
 /* Action Buttons */
