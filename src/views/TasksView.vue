@@ -13,28 +13,35 @@
                 </ion-buttons>
             </ion-toolbar>
 
-            <!-- Filtros -->
+            <!-- Vista toggle: Tareas / Podio -->
             <ion-toolbar>
-                <ion-segment v-model="selectedStatus" @ionChange="loadTasks">
-                    <ion-segment-button value="all">
-                        <ion-label>Todas</ion-label>
+                <ion-segment v-model="activeView" @ionChange="onViewChange">
+                    <ion-segment-button value="tasks">
+                        <ion-label>Tareas</ion-label>
                     </ion-segment-button>
-                    <ion-segment-button value="pending">
-                        <ion-label>Pendientes</ion-label>
-                    </ion-segment-button>
-                    <ion-segment-button value="in_progress">
-                        <ion-label>En Curso</ion-label>
-                    </ion-segment-button>
-                    <ion-segment-button value="completed">
-                        <ion-label>Completadas</ion-label>
+                    <ion-segment-button value="podium">
+                        <ion-label>Podio</ion-label>
                     </ion-segment-button>
                 </ion-segment>
+            </ion-toolbar>
+
+            <!-- Filtro de categoría (solo en vista Tareas) -->
+            <ion-toolbar v-if="activeView === 'tasks'">
+                <ion-item lines="none">
+                    <ion-label>Categoría</ion-label>
+                    <ion-select v-model="selectedStatus" interface="popover" @ionChange="loadTasks">
+                        <ion-select-option value="all">Todas</ion-select-option>
+                        <ion-select-option value="pending">Pendientes</ion-select-option>
+                        <ion-select-option value="in_progress">En Curso</ion-select-option>
+                        <ion-select-option value="completed">Completadas</ion-select-option>
+                    </ion-select>
+                </ion-item>
             </ion-toolbar>
         </ion-header>
 
         <ion-content :fullscreen="true">
-            <!-- Estadísticas rápidas -->
-            <div class="stats-card" v-if="stats">
+            <!-- Estadísticas rápidas (solo en vista Tareas) -->
+            <div class="stats-card" v-if="activeView === 'tasks' && stats">
                 <div class="stat-item">
                     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
                         stroke="#8A2BE2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -113,25 +120,31 @@
                 <ion-refresher-content></ion-refresher-content>
             </ion-refresher>
 
-            <div class="tasks-container">
-                <ion-list v-if="tasks.length > 0">
-                    <task-card v-for="task in tasks" :key="task.id" :task="task" @click="openTaskDetail(task)"
-                        @update="loadTasks" @start-pomodoro="startPomodoroForTask" />
-                </ion-list>
+            <div v-if="activeView === 'tasks'" class="tasks-container two-column">
+                <div class="left-column">
+                    <ion-list v-if="tasks.length > 0">
+                        <task-card v-for="task in tasks" :key="task.id" :task="task" @click="openTaskDetail(task)"
+                            @update="loadTasks" @start-pomodoro="startPomodoroForTask" />
+                    </ion-list>
 
-                <div v-else-if="!loading" class="empty-state">
-                    <ion-icon :icon="checkmarkDoneOutline" class="empty-icon"></ion-icon>
-                    <h3>No tienes tareas {{ selectedStatus !== 'all' ? statusText[selectedStatus] : '' }}</h3>
-                    <p>¡Crea una nueva tarea para comenzar!</p>
-                    <ion-button @click="openCreateTask">
-                        <ion-icon slot="start" :icon="addOutline"></ion-icon>
-                        Nueva Tarea
-                    </ion-button>
-                </div>
+                    <div v-else-if="!loading" class="empty-state">
+                        <ion-icon :icon="checkmarkDoneOutline" class="empty-icon"></ion-icon>
+                        <h3>No tienes tareas {{ selectedStatus !== 'all' ? statusText[selectedStatus] : '' }}</h3>
+                        <p>¡Crea una nueva tarea para comenzar!</p>
+                        <ion-button @click="openCreateTask">
+                            <ion-icon slot="start" :icon="addOutline"></ion-icon>
+                            Nueva Tarea
+                        </ion-button>
+                    </div>
 
-                <div v-if="loading" class="loading-state">
-                    <ion-spinner name="crescent"></ion-spinner>
+                    <div v-if="loading" class="loading-state">
+                        <ion-spinner name="crescent"></ion-spinner>
+                    </div>
                 </div>
+            </div>
+
+            <div v-else class="podium-view">
+                <weekly-podium />
             </div>
 
             <!-- Botón flotante de Pomodoro -->
@@ -161,9 +174,9 @@
 <script>
 import {
     IonPage, IonHeader, IonToolbar, IonTitle, IonContent,
-    IonButton, IonButtons, IonIcon, IonList, IonSegment,
-    IonSegmentButton, IonLabel, IonRefresher, IonRefresherContent,
-    IonSpinner, IonFab, IonFabButton,
+    IonButton, IonButtons, IonIcon, IonList,
+    IonLabel, IonRefresher, IonRefresherContent, IonSegment, IonSegmentButton,
+    IonSpinner, IonFab, IonFabButton, IonItem, IonSelect, IonSelectOption,
     modalController, toastController
 } from '@ionic/vue';
 import {
@@ -177,15 +190,16 @@ import pomodoroService from '@/services/pomodoroService';
 import TaskCard from '@/components/TaskCard.vue';
 import CreateTaskModal from '@/components/CreateTaskModal.vue';
 import PomodoroTimer from '@/components/PomodoroTimer.vue';
+import WeeklyPodium from '@/components/WeeklyPodium.vue';
 
 export default {
     name: 'TasksView',
     components: {
         IonPage, IonHeader, IonToolbar, IonTitle, IonContent,
-        IonButton, IonButtons, IonIcon, IonList, IonSegment,
-        IonSegmentButton, IonLabel, IonRefresher, IonRefresherContent,
-        IonSpinner, IonFab, IonFabButton,
-        TaskCard
+        IonButton, IonButtons, IonIcon, IonList,
+        IonLabel, IonRefresher, IonRefresherContent,
+        IonSpinner, IonFab, IonFabButton, IonItem, IonSelect, IonSelectOption, IonSegment, IonSegmentButton,
+        TaskCard, WeeklyPodium
     },
     setup() {
         const router = useRouter();
@@ -194,30 +208,23 @@ export default {
         const selectedStatus = ref('all');
         const loading = ref(false);
         const hasActiveSession = ref(false);
+        const filtersState = ref({ order: null });
+        const activeView = ref('tasks');
+
+        const onViewChange = () => {
+            // when switching views, refresh relevant data
+            if (activeView.value === 'podium') {
+                // ensure podium data loads (WeeklyPodium will fetch on mount), but refresh stats too
+                loadStats();
+            } else {
+                loadTasks();
+            }
+        };
 
         const statusText = {
             pending: 'pendientes',
             in_progress: 'en curso',
             completed: 'completadas'
-        };
-
-        const loadTasks = async () => {
-            loading.value = true;
-            try {
-                const filters = {};
-                if (selectedStatus.value !== 'all') {
-                    filters.status = selectedStatus.value;
-                }
-                filters.sortBy = 'priority';
-
-                const response = await tasksService.getTasks(filters);
-                tasks.value = response.data.data || response.data;
-            } catch (error) {
-                console.error('Error al cargar tareas:', error);
-                showToast('Error al cargar tareas', 'danger');
-            } finally {
-                loading.value = false;
-            }
         };
 
         const loadStats = async () => {
@@ -251,8 +258,30 @@ export default {
             event.target.complete();
         };
 
+        const loadTasks = async () => {
+            loading.value = true;
+            try {
+                const filters = {};
+                if (selectedStatus.value !== 'all') {
+                    filters.status = selectedStatus.value;
+                }
+                // default sort (server may apply its own)
+                filters.sort_by = 'created_at';
+
+                const response = await tasksService.getTasks(filters);
+                tasks.value = response.data.data || response.data;
+            } catch (error) {
+                console.error('Error al cargar tareas:', error);
+                showToast('Error al cargar tareas', 'danger');
+            } finally {
+                loading.value = false;
+            }
+        };
+
+
         const openCreateTask = async () => {
             const modal = await modalController.create({
+
                 component: CreateTaskModal
             });
 
@@ -322,6 +351,9 @@ export default {
             selectedStatus,
             loading,
             hasActiveSession,
+            filtersState,
+            activeView,
+            onViewChange,
             statusText,
             loadTasks,
             refreshTasks,
@@ -362,7 +394,7 @@ export default {
 }
 
 .stat-icon.success {
-    color: #8A2BE2;
+    color: #3880ff;
 }
 
 .stat-icon.warning {
@@ -374,7 +406,7 @@ export default {
 }
 
 .stat-icon.primary {
-    color: #8A2BE2;
+    color: #3880ff;
 }
 
 .stat-content {
@@ -432,7 +464,5 @@ export default {
     padding: 48px;
 }
 
-ion-segment {
-    padding: 0 16px;
-}
+/* segment removed; selects used for ordering */
 </style>

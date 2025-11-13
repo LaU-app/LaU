@@ -41,7 +41,7 @@
                                 </svg>
                                 <!-- Completada -->
                                 <svg v-else-if="task.status === 'completed'" xmlns="http://www.w3.org/2000/svg"
-                                    width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8A2BE2"
+                                    width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3880ff"
                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                                     <path d="M10 20.777a8.942 8.942 0 0 1 -2.48 -.969" />
@@ -188,13 +188,13 @@
                                 <ion-icon
                                     :icon="session.status === 'completed' ? checkmarkCircleOutline : closeCircleOutline"
                                     slot="start"
-                                    :style="{ color: session.status === 'completed' ? '#8A2BE2' : 'var(--ion-color-danger)' }"></ion-icon>
+                                    :style="{ color: session.status === 'completed' ? '#3880ff' : 'var(--ion-color-danger)' }"></ion-icon>
                                 <ion-label>
                                     <h3>{{ formatSessionDuration(session.duration_seconds) }} min</h3>
                                     <p>{{ formatDate(session.started_at) }}</p>
                                 </ion-label>
                                 <ion-chip
-                                    :style="{ '--background': session.status === 'completed' ? '#8A2BE2' : 'var(--ion-color-danger)', '--color': '#fff' }"
+                                    :style="{ '--background': session.status === 'completed' ? '#3880ff' : 'var(--ion-color-danger)', '--color': '#fff' }"
                                     slot="end">
                                     {{ session.status === 'completed' ? 'Completado' : 'Cancelado' }}
                                 </ion-chip>
@@ -205,7 +205,7 @@
 
                 <!-- Actions -->
                 <div class="actions-container">
-                    <ion-button v-if="task.status !== 'completed'" expand="block" style="--background: #8A2BE2;"
+                    <ion-button v-if="task.status !== 'completed'" expand="block" style="--background: #3880ff;"
                         @click="confirmComplete">
                         <ion-icon slot="start" :icon="checkmarkCircleOutline"></ion-icon>
                         Marcar como Completada

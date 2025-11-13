@@ -19,17 +19,21 @@ export default {
   async getTasks({
     status = null,
     priority = null,
+    search = null,
     sortBy = "created_at",
     sortOrder = "desc",
     overdue = false,
+    page = null,
   } = {}) {
     try {
       const params = {};
       if (status) params.status = status;
       if (priority) params.priority = priority;
+      if (search) params.search = search;
       if (overdue) params.overdue = true;
       params.sort_by = sortBy;
       params.sort_order = sortOrder;
+      if (page) params.page = page;
 
       const response = await api.get("/tasks", { params });
 

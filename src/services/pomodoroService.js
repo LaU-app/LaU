@@ -262,6 +262,28 @@ export default {
   },
 
   /**
+   * Obtener ranking semanal de pomodoros (podio)
+   */
+  async getWeeklyLeaderboard() {
+    try {
+      const response = await api.get("/pomodoro/leaderboard", {
+        params: { period: "week" },
+      });
+      // cache result
+      await pomodoroStorage.setItem("leaderboard_week", response.data.data);
+      return response.data;
+    } catch (error) {
+      console.error(
+        "[PomodoroService] Error al obtener leaderboard semanal:",
+        error
+      );
+      const cached = await pomodoroStorage.getItem("leaderboard_week");
+      if (cached) return { success: true, data: cached };
+      throw error;
+    }
+  },
+
+  /**
    * Sincronizar cola de pendientes
    */
   async flushSyncQueue() {
