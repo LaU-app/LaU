@@ -113,7 +113,7 @@
                         <div v-else class="caja-subida" @click="openMusicSearch">
                             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"
                                 fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"
-                                stroke-linejoin="round" class="icon-medium icon-primary">
+                                stroke-linejoin="round" class="icon-medium" style="color: #8A2BE2">
                                 <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                                 <path d="M3 17a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
                                 <path d="M13 17a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
@@ -333,11 +333,7 @@ const loadCurrentUser = async () => {
 
 // Inicializar el tipo desde la ruta
 onMounted(async () => {
-    // Cargar usuario si está autenticado
-    if (isAuthenticated.value) {
-        await loadCurrentUser()
-    }
-
+    // Establecer el tipo ANTES de cargar el usuario para evitar animación
     const tipoParam = route.params.tipo
     if (tipoParam && ['foto', 'musica', 'archivo'].includes(tipoParam)) {
         tipo.value = tipoParam
@@ -347,17 +343,23 @@ onMounted(async () => {
         const basePath = isInTabs.value ? '/tabs/create-post' : '/create-post'
         router.replace(`${basePath}/foto`)
     }
-    
-    // Marcar como inicializado después de establecer el tipo inicial
+
+    // Marcar como inicializado INMEDIATAMENTE para prevenir el watch
     isInitialized.value = true
+
+    // Cargar usuario después (esto no afecta la UI del tipo)
+    if (isAuthenticated.value) {
+        await loadCurrentUser()
+    }
 })
 
 // Actualizar la ruta cuando cambia el tipo (sin agregar al historial y SIN animación de página)
 watch(tipo, (nuevoTipo, tipoAnterior) => {
     // Solo ejecutar el watch después de la inicialización
     if (!isInitialized.value) return
-    
-    if (tipoAnterior && route.params.tipo !== nuevoTipo) {
+
+    // Solo actualizar si realmente cambió y es diferente a la ruta actual
+    if (tipoAnterior && nuevoTipo !== tipoAnterior && route.params.tipo !== nuevoTipo) {
         // Detener audio si está reproduciéndose al cambiar de tipo
         if (trackPreviewRef.value) {
             trackPreviewRef.value.stopAudio()

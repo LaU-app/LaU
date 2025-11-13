@@ -129,12 +129,16 @@
                                     :alt="currentUser?.name || 'Tú'" />
                                 <ion-icon v-else :icon="personCircle"></ion-icon>
                             </ion-avatar>
-                            <ion-input ref="commentInputRef" v-model="newComment" placeholder="Escribe un comentario..."
-                                class="comment-input" @keyup.enter="submitComment">
-                            </ion-input>
-                            <ion-button fill="clear" @click="submitComment" :disabled="!newComment.trim()"
-                                class="send-button">
-                                <ion-icon :icon="sendOutline" color="primary"></ion-icon>
+                            <div class="comment-input-wrapper">
+                                <ion-input ref="commentInputRef" v-model="newComment"
+                                    placeholder="Escribe un comentario..." class="comment-input"
+                                    @keyup.enter="submitComment">
+                                </ion-input>
+                                <div class="comment-input-line"></div>
+                            </div>
+                            <ion-button fill="solid" shape="round" size="small" color="primary" @click="submitComment"
+                                :disabled="!newComment.trim()" class="send-comment-button">
+                                <ion-icon :icon="send"></ion-icon>
                             </ion-button>
                         </div>
                     </ion-card-content>
@@ -171,7 +175,7 @@ import {
     arrowBack,
     personCircle,
     alertCircle,
-    sendOutline,
+    send,
     chatbubbleOutline,
     downloadOutline
 } from 'ionicons/icons'
@@ -704,23 +708,111 @@ const submitComment = async () => {
     flex-shrink: 0;
 }
 
-.comment-input {
+/* Wrapper para el input con línea animada como Login/Register */
+.comment-input-wrapper {
+    position: relative;
     flex: 1;
-    --background: var(--ion-color-light);
+}
+
+.comment-input {
+    --background: rgba(55, 65, 81, 0.1);
     --padding-start: 1rem;
     --padding-end: 1rem;
-    border-radius: 12px;
-    min-height: 40px;
+    --padding-top: 0.75rem;
+    --padding-bottom: 0.75rem;
+    --placeholder-color: rgba(55, 65, 81, 0.5);
+    --placeholder-opacity: 1;
+    --color: rgba(31, 41, 55, 0.9);
+    --border-radius: 0.5rem 0.5rem 0 0;
+    min-height: 48px;
+    font-size: 0.95rem;
+    border: none !important;
+    position: relative;
+    z-index: 1;
 }
 
-.send-button {
-    --padding-start: 0.5rem;
-    --padding-end: 0.5rem;
+.comment-input::part(native) {
+    border-radius: 0.5rem 0.5rem 0 0 !important;
+    background: rgba(55, 65, 81, 0.1) !important;
+}
+
+/* Ocultar la línea por defecto de Ionic */
+.comment-input {
+    --highlight-height: 0px;
+    --highlight-color: transparent !important;
+    --highlight-color-focused: transparent !important;
+}
+
+/* Fondo base del wrapper */
+.comment-input-wrapper::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: rgba(55, 65, 81, 0.3);
+    z-index: 5;
+}
+
+/* Línea animada del input */
+.comment-input-line {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--ion-color-primary);
+    transition: width 0.3s ease;
+    z-index: 20;
+}
+
+.comment-input-wrapper:focus-within .comment-input-line {
+    width: 100%;
+}
+
+.comment-input-wrapper:focus-within::after {
+    display: none;
+}
+
+/* Estilos para el botón de enviar comentario */
+.send-comment-button {
+    --padding-start: 10px;
+    --padding-end: 10px;
     margin: 0;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
 }
 
-.send-button ion-icon {
-    font-size: 1.5rem;
+.send-comment-button ion-icon {
+    color: white;
+    font-size: 1.2rem;
+}
+
+/* Modo oscuro - icono gris como el fondo */
+.ion-palette-dark .send-comment-button ion-icon {
+    color: var(--ion-background-color, #1e1e1e);
+}
+
+/* Botón deshabilitado */
+.send-comment-button:disabled {
+    opacity: 0.4;
+}
+
+/* Modo oscuro - ajustes de color del texto */
+.ion-palette-dark .comment-input {
+    --background: rgba(55, 65, 81, 0.5);
+    --color: #FFFFFF;
+    --placeholder-color: rgba(255, 255, 255, 0.6);
+}
+
+.ion-palette-dark .comment-input::part(native) {
+    background: rgba(55, 65, 81, 0.5) !important;
+}
+
+.ion-palette-dark .comment-input-wrapper::after {
+    background: rgba(55, 65, 81, 0.5);
 }
 
 /* File Attachment Styles */
@@ -762,5 +854,23 @@ const submitComment = async () => {
     margin: 0.25rem 0 0 0;
     font-size: 0.8rem;
     color: var(--ion-color-medium);
+}
+</style>
+
+<style>
+/* Estilos globales sin scoped para el input de comentarios */
+.comment-input-wrapper ion-input {
+    --highlight-color-focused: transparent !important;
+    --highlight-color-valid: transparent !important;
+    --highlight-color-invalid: transparent !important;
+    --highlight-height: 0 !important;
+}
+
+.comment-input-wrapper ion-input .input-highlight {
+    display: none !important;
+}
+
+.comment-input-wrapper ion-input .input-bottom {
+    display: none !important;
 }
 </style>

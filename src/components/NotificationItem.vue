@@ -132,13 +132,15 @@ const handlePostImageError = (event) => {
     --min-height: 80px;
     margin-bottom: 8px;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: all 0.2s ease;
     border-bottom: 1px solid var(--ion-border-color);
+    border-left: 6px solid transparent;
 }
 
 .notification-item.unread {
-    --background: var(--ion-color-primary-tint);
-    border-left: 3px solid var(--ion-color-primary);
+    border-left: 6px solid var(--ion-color-primary);
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
 }
 
 .notification-item:hover {
