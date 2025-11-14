@@ -2,6 +2,11 @@
     <ion-page>
         <ion-header>
             <ion-toolbar>
+                <ion-buttons slot="start">
+                    <ion-button fill="clear" @click="goBack" aria-label="Cerrar">
+                        <ion-icon :icon="closeOutline"></ion-icon>
+                    </ion-button>
+                </ion-buttons>
                 <ion-title>Mis Tareas</ion-title>
                 <ion-buttons slot="end">
                     <ion-button @click="openCreateTask">
@@ -102,8 +107,8 @@
                     </svg>
                     <!-- Icono outline cuando no hay pomodoros -->
                     <svg v-else xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"
-                        fill="none" stroke="#3880ff" stroke-width="1.75" stroke-linecap="round"
-                        stroke-linejoin="round" class="stat-icon primary">
+                        fill="none" stroke="#3880ff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+                        class="stat-icon primary">
                         <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                         <path
                             d="M12 10.941c2.333 -3.308 .167 -7.823 -1 -8.941c0 3.395 -2.235 5.299 -3.667 6.706c-1.43 1.408 -2.333 3.621 -2.333 5.588c0 3.704 3.134 6.706 7 6.706s7 -3.002 7 -6.706c0 -1.712 -1.232 -4.403 -2.333 -5.588c-2.084 3.353 -3.257 3.353 -4.667 2.235" />
@@ -181,7 +186,7 @@ import {
 } from '@ionic/vue';
 import {
     addOutline, refreshOutline, checkmarkCircleOutline,
-    checkmarkDoneOutline, timerOutline
+    checkmarkDoneOutline, timerOutline, closeOutline
 } from 'ionicons/icons';
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
@@ -203,6 +208,14 @@ export default {
     },
     setup() {
         const router = useRouter();
+        const goBack = () => {
+            // If there is history, go back; otherwise navigate to home/tab1
+            if (window.history.length > 1) {
+                router.back();
+            } else {
+                router.push('/tabs/tab1');
+            }
+        };
         const tasks = ref([]);
         const stats = ref(null);
         const selectedStatus = ref('all');
@@ -345,6 +358,7 @@ export default {
             refreshTasks();
         });
 
+        // expose goBack to template
         return {
             tasks,
             stats,
@@ -364,7 +378,8 @@ export default {
             startPomodoroForTask,
             // Icons
             addOutline, refreshOutline, checkmarkCircleOutline,
-            checkmarkDoneOutline, timerOutline
+            checkmarkDoneOutline, timerOutline, closeOutline,
+            goBack
         };
     }
 };

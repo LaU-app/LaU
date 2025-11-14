@@ -13,17 +13,17 @@
         </ion-title>
         <ion-buttons slot="end">
           <ion-button fill="clear" @click="toggleDarkMode">
-            <ion-icon
-              :icon="isDarkMode ? sunny : moon"
-              class="header-icon"
-            ></ion-icon>
+            <ion-icon :icon="isDarkMode ? sunny : moon" class="header-icon"></ion-icon>
           </ion-button>
-          <ion-button
-            v-if="isMe"
-            id="open-menu-button"
-            fill="clear"
-            @click="toggleMenu"
-          >
+          <ion-button fill="clear" @click="goToTasks" aria-label="Ir a Tareas" class="tasks-header-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"
+              class="header-hourglass">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path
+                d="M17 2a2 2 0 0 1 1.995 1.85l.005 .15v2a6.996 6.996 0 0 1 -3.393 6a6.994 6.994 0 0 1 3.388 5.728l.005 .272v2a2 2 0 0 1 -1.85 1.995l-.15 .005h-10a2 2 0 0 1 -1.995 -1.85l-.005 -.15v-2a6.996 6.996 0 0 1 3.393 -6a6.994 6.994 0 0 1 -3.388 -5.728l-.005 -.272v-2a2 2 0 0 1 1.85 -1.995l.15 -.005h10z" />
+            </svg>
+          </ion-button>
+          <ion-button v-if="isMe" id="open-menu-button" fill="clear" @click="toggleMenu">
             <ion-icon :icon="ellipsisVertical" class="header-icon"></ion-icon>
           </ion-button>
         </ion-buttons>
@@ -47,31 +47,19 @@
       <!-- Loading Skeleton -->
       <div v-if="loading && !user.id" class="profile-section ion-padding">
         <div class="ion-text-center">
-          <ion-skeleton-text
-            animated
-            style="
+          <ion-skeleton-text animated style="
               width: 80px;
               height: 80px;
               border-radius: 50%;
               margin: 0 auto;
-            "
-          ></ion-skeleton-text>
-          <ion-skeleton-text
-            animated
-            style="width: 60%; margin: 12px auto"
-          ></ion-skeleton-text>
-          <ion-skeleton-text
-            animated
-            style="width: 80%; margin: 8px auto"
-          ></ion-skeleton-text>
+            "></ion-skeleton-text>
+          <ion-skeleton-text animated style="width: 60%; margin: 12px auto"></ion-skeleton-text>
+          <ion-skeleton-text animated style="width: 80%; margin: 8px auto"></ion-skeleton-text>
         </div>
         <ion-grid class="stats-grid">
           <ion-row>
             <ion-col size="4" v-for="i in 3" :key="i">
-              <ion-skeleton-text
-                animated
-                style="width: 60%; margin: 0 auto"
-              ></ion-skeleton-text>
+              <ion-skeleton-text animated style="width: 60%; margin: 0 auto"></ion-skeleton-text>
             </ion-col>
           </ion-row>
         </ion-grid>
@@ -81,22 +69,10 @@
       <div v-else class="profile-section ion-text-center ion-padding">
         <!-- Avatar y botón de menú -->
         <div class="profile-header-row">
-          <ion-avatar
-            class="profile-avatar"
-            @click="isMe ? openImagePicker() : null"
-            :style="{ cursor: isMe ? 'pointer' : 'default' }"
-          >
-            <img
-              v-if="user.imagen_url"
-              :src="user.imagen_url"
-              alt="Foto de perfil"
-              loading="lazy"
-            />
-            <ion-icon
-              v-else
-              :icon="personCircle"
-              class="profile-avatar-icon"
-            ></ion-icon>
+          <ion-avatar class="profile-avatar" @click="isMe ? openImagePicker() : null"
+            :style="{ cursor: isMe ? 'pointer' : 'default' }">
+            <img v-if="user.imagen_url" :src="user.imagen_url" alt="Foto de perfil" loading="lazy" />
+            <ion-icon v-else :icon="personCircle" class="profile-avatar-icon"></ion-icon>
             <div v-if="isMe" class="avatar-overlay">
               <ion-icon :icon="cameraOutline" color="light"></ion-icon>
             </div>
@@ -111,12 +87,10 @@
             user.universidad?.nombre ||
             "Sin información académica"
           }}
-          <br
-            v-if="
-              (universidad?.nombre || user.universidad?.nombre) &&
-              (carrera?.nombre || user.carrera?.nombre)
-            "
-          />
+          <br v-if="
+            (universidad?.nombre || user.universidad?.nombre) &&
+            (carrera?.nombre || user.carrera?.nombre)
+          " />
           {{ carrera?.nombre || user.carrera?.nombre || "" }}
         </p>
 
@@ -125,9 +99,7 @@
           <ion-button v-if="!isMe" color="primary" @click="handleFollow">
             {{ isFollowing ? "Siguiendo" : "Seguir" }}
           </ion-button>
-          <ion-button v-else color="primary" @click="openSettings"
-            >Editar Perfil</ion-button
-          >
+          <ion-button v-else color="primary" @click="openSettings">Editar Perfil</ion-button>
         </div>
 
         <!-- Contadores -->
@@ -179,26 +151,12 @@
           <div v-if="selectedTab === 'posts'">
             <ion-grid>
               <ion-row>
-                <ion-col
-                  v-for="post in postsImagenTexto"
-                  :key="post.id"
-                  size="6"
-                  v-memo="[post.id, post.imagen_url]"
-                >
+                <ion-col v-for="post in postsImagenTexto" :key="post.id" size="6" v-memo="[post.id, post.imagen_url]">
                   <div class="post-card" @click="goToPostDetail(post.id)">
-                    <img
-                      v-if="post.imagen_url"
-                      :src="post.imagen_url"
-                      class="post-thumbnail"
-                      :alt="post.titulo || 'Post'"
-                      loading="lazy"
-                    />
+                    <img v-if="post.imagen_url" :src="post.imagen_url" class="post-thumbnail"
+                      :alt="post.titulo || 'Post'" loading="lazy" />
                     <div v-else class="post-placeholder">
-                      <ion-icon
-                        :icon="documentTextOutline"
-                        size="large"
-                        color="medium"
-                      ></ion-icon>
+                      <ion-icon :icon="documentTextOutline" size="large" color="medium"></ion-icon>
                     </div>
                     <div class="post-info">
                       <p class="post-title">{{ post.titulo || "Post" }}</p>
@@ -210,15 +168,8 @@
                 </ion-col>
               </ion-row>
             </ion-grid>
-            <div
-              v-if="postsImagenTexto.length === 0 && !loadingPosts"
-              class="empty-message"
-            >
-              <ion-icon
-                :icon="imagesOutline"
-                size="large"
-                color="medium"
-              ></ion-icon>
+            <div v-if="postsImagenTexto.length === 0 && !loadingPosts" class="empty-message">
+              <ion-icon :icon="imagesOutline" size="large" color="medium"></ion-icon>
               <p>Aún no hay publicaciones</p>
             </div>
           </div>
@@ -227,19 +178,10 @@
           <div v-else-if="selectedTab === 'archivos'">
             <ion-grid>
               <ion-row>
-                <ion-col
-                  v-for="post in postsArchivos"
-                  :key="post.id"
-                  size="6"
-                  v-memo="[post.id, post.titulo]"
-                >
+                <ion-col v-for="post in postsArchivos" :key="post.id" size="6" v-memo="[post.id, post.titulo]">
                   <div class="file-card" @click="goToPostDetail(post.id)">
                     <div class="file-icon-container">
-                      <ion-icon
-                        :icon="documentAttachOutline"
-                        size="large"
-                        color="primary"
-                      ></ion-icon>
+                      <ion-icon :icon="documentAttachOutline" size="large" color="primary"></ion-icon>
                     </div>
                     <div class="file-info">
                       <p class="file-title">{{ post.titulo || "Archivo" }}</p>
@@ -251,15 +193,8 @@
                 </ion-col>
               </ion-row>
             </ion-grid>
-            <div
-              v-if="postsArchivos.length === 0 && !loadingPosts"
-              class="empty-message"
-            >
-              <ion-icon
-                :icon="folderOpenOutline"
-                size="large"
-                color="medium"
-              ></ion-icon>
+            <div v-if="postsArchivos.length === 0 && !loadingPosts" class="empty-message">
+              <ion-icon :icon="folderOpenOutline" size="large" color="medium"></ion-icon>
               <p>Sin archivos todavía</p>
             </div>
           </div>
@@ -268,29 +203,14 @@
           <div v-else>
             <ion-grid>
               <ion-row>
-                <ion-col
-                  v-for="post in postsMusica"
-                  :key="post.id"
-                  size="6"
-                  v-memo="[post.id, getMusicCover(post)]"
-                >
+                <ion-col v-for="post in postsMusica" :key="post.id" size="6" v-memo="[post.id, getMusicCover(post)]">
                   <div class="music-card" @click="goToPostDetail(post.id)">
                     <!-- Buscar imagen en múltiples campos posibles -->
-                    <img
-                      v-if="getMusicCover(post)"
-                      :src="getMusicCover(post)"
-                      class="music-thumbnail"
-                      :alt="post.track_name || post.titulo || 'Portada'"
-                      loading="lazy"
-                      @error="handleImageError($event, post)"
-                    />
-                    <ion-icon
-                      v-else
-                      :icon="musicalNoteOutline"
-                      size="large"
-                      color="medium"
-                      class="music-icon"
-                    ></ion-icon>
+                    <img v-if="getMusicCover(post)" :src="getMusicCover(post)" class="music-thumbnail"
+                      :alt="post.track_name || post.titulo || 'Portada'" loading="lazy"
+                      @error="handleImageError($event, post)" />
+                    <ion-icon v-else :icon="musicalNoteOutline" size="large" color="medium"
+                      class="music-icon"></ion-icon>
                     <div class="music-info">
                       <p class="music-title">
                         {{
@@ -300,10 +220,7 @@
                           "Sin título"
                         }}
                       </p>
-                      <p
-                        class="music-artist"
-                        v-if="post.itunes_artist_name || post.artist_name"
-                      >
+                      <p class="music-artist" v-if="post.itunes_artist_name || post.artist_name">
                         {{ post.itunes_artist_name || post.artist_name }}
                       </p>
                     </div>
@@ -311,15 +228,8 @@
                 </ion-col>
               </ion-row>
             </ion-grid>
-            <div
-              v-if="postsMusica.length === 0 && !loadingPosts"
-              class="empty-message"
-            >
-              <ion-icon
-                :icon="musicalNotesOutline"
-                size="large"
-                color="medium"
-              ></ion-icon>
+            <div v-if="postsMusica.length === 0 && !loadingPosts" class="empty-message">
+              <ion-icon :icon="musicalNotesOutline" size="large" color="medium"></ion-icon>
               <p>No hay música compartida</p>
             </div>
           </div>
@@ -331,15 +241,9 @@
         </div>
 
         <!-- Infinite Scroll -->
-        <ion-infinite-scroll
-          v-if="!loadingPosts && hasMorePages"
-          @ionInfinite="loadMorePosts"
-          threshold="100px"
-        >
-          <ion-infinite-scroll-content
-            loading-spinner="bubbles"
-            loading-text="Cargando más..."
-          ></ion-infinite-scroll-content>
+        <ion-infinite-scroll v-if="!loadingPosts && hasMorePages" @ionInfinite="loadMorePosts" threshold="100px">
+          <ion-infinite-scroll-content loading-spinner="bubbles"
+            loading-text="Cargando más..."></ion-infinite-scroll-content>
         </ion-infinite-scroll>
       </div>
 
@@ -360,39 +264,21 @@
             </ion-list-header>
 
             <ion-item lines="full">
-              <ion-input
-                label="Nombre completo"
-                label-placement="floating"
-                v-model="formData.name"
-                required
-              ></ion-input>
+              <ion-input label="Nombre completo" label-placement="floating" v-model="formData.name"
+                required></ion-input>
             </ion-item>
 
             <ion-item lines="full">
-              <ion-input
-                label="Username"
-                label-placement="floating"
-                v-model="formData.username"
-                required
-              ></ion-input>
+              <ion-input label="Username" label-placement="floating" v-model="formData.username" required></ion-input>
             </ion-item>
 
             <ion-item lines="full">
-              <ion-input
-                type="email"
-                label="Correo"
-                label-placement="floating"
-                v-model="formData.email"
-                required
-              ></ion-input>
+              <ion-input type="email" label="Correo" label-placement="floating" v-model="formData.email"
+                required></ion-input>
             </ion-item>
 
             <ion-item lines="full">
-              <ion-input
-                label="Profesión"
-                label-placement="floating"
-                v-model="formData.profession"
-              ></ion-input>
+              <ion-input label="Profesión" label-placement="floating" v-model="formData.profession"></ion-input>
             </ion-item>
           </ion-list>
 
@@ -403,16 +289,8 @@
 
             <ion-item lines="full">
               <ion-label position="floating">Universidad</ion-label>
-              <ion-select
-                v-model="formData.universidad_id"
-                placeholder="Selecciona"
-                interface="action-sheet"
-              >
-                <ion-select-option
-                  v-for="uni in universidades"
-                  :key="uni.id"
-                  :value="Number(uni.id)"
-                >
+              <ion-select v-model="formData.universidad_id" placeholder="Selecciona" interface="action-sheet">
+                <ion-select-option v-for="uni in universidades" :key="uni.id" :value="Number(uni.id)">
                   {{ uni.nombre }}
                 </ion-select-option>
               </ion-select>
@@ -420,16 +298,8 @@
 
             <ion-item lines="full">
               <ion-label position="floating">Carrera</ion-label>
-              <ion-select
-                v-model="formData.carrera_id"
-                placeholder="Selecciona"
-                interface="action-sheet"
-              >
-                <ion-select-option
-                  v-for="carr in carreras"
-                  :key="carr.id"
-                  :value="Number(carr.id)"
-                >
+              <ion-select v-model="formData.carrera_id" placeholder="Selecciona" interface="action-sheet">
+                <ion-select-option v-for="carr in carreras" :key="carr.id" :value="Number(carr.id)">
                   {{ carr.nombre }}
                 </ion-select-option>
               </ion-select>
@@ -443,11 +313,7 @@
 
             <ion-item lines="full">
               <ion-label position="floating">Género</ion-label>
-              <ion-select
-                v-model="formData.gender"
-                placeholder="Selecciona"
-                interface="action-sheet"
-              >
+              <ion-select v-model="formData.gender" placeholder="Selecciona" interface="action-sheet">
                 <ion-select-option value="Male">Masculino</ion-select-option>
                 <ion-select-option value="Female">Femenino</ion-select-option>
                 <ion-select-option value="Other">Otro</ion-select-option>
@@ -455,12 +321,7 @@
             </ion-item>
           </ion-list>
 
-          <ion-button
-            expand="block"
-            @click="updateProfile"
-            class="ion-margin-top"
-            :disabled="savingProfile"
-          >
+          <ion-button expand="block" @click="updateProfile" class="ion-margin-top" :disabled="savingProfile">
             <ion-spinner v-if="savingProfile" name="crescent"></ion-spinner>
             <span v-else>Guardar Cambios</span>
           </ion-button>
@@ -481,33 +342,20 @@
           <!-- Vista previa -->
           <div v-if="imagenPreview" class="preview-container">
             <img :src="imagenPreview" alt="Preview" />
-            <ion-button
-              fill="clear"
-              color="danger"
-              @click="removeImage"
-              class="remove-btn"
-            >
+            <ion-button fill="clear" color="danger" @click="removeImage" class="remove-btn">
               <ion-icon slot="icon-only" :icon="closeCircle"></ion-icon>
             </ion-button>
           </div>
 
           <!-- Selector de imagen -->
           <div v-else class="upload-box" @click="showPhotoActionSheet">
-            <ion-icon
-              :icon="cameraOutline"
-              size="large"
-              color="primary"
-            ></ion-icon>
+            <ion-icon :icon="cameraOutline" size="large" color="primary"></ion-icon>
             <h3>Seleccionar o tomar foto</h3>
             <p>JPG, PNG. Máximo 20MB</p>
           </div>
 
-          <ion-button
-            expand="block"
-            @click="guardarImagen"
-            :disabled="!archivo || uploadingImage"
-            class="ion-margin-top"
-          >
+          <ion-button expand="block" @click="guardarImagen" :disabled="!archivo || uploadingImage"
+            class="ion-margin-top">
             <ion-spinner v-if="uploadingImage" name="crescent"></ion-spinner>
             <span v-else>Guardar Imagen</span>
           </ion-button>
@@ -529,19 +377,11 @@
             <ion-item v-if="seguidores.length === 0">
               <ion-label class="ion-text-center">No hay seguidores</ion-label>
             </ion-item>
-            <ion-item
-              button
-              v-for="follower in seguidores"
-              :key="follower.id"
-              @click="goToUserProfile(follower)"
-            >
+            <ion-item button v-for="follower in seguidores" :key="follower.id" @click="goToUserProfile(follower)">
               <ion-avatar slot="start">
-                <img
-                  :src="
-                    follower.imagen_url ||
-                    'https://www.gravatar.com/avatar/?d=mp&f=y'
-                  "
-                />
+                <img :src="follower.imagen_url ||
+                  'https://www.gravatar.com/avatar/?d=mp&f=y'
+                  " />
               </ion-avatar>
               <ion-label>
                 <h3>{{ follower.name || follower.username }}</h3>
@@ -567,19 +407,11 @@
             <ion-item v-if="siguiendo.length === 0">
               <ion-label class="ion-text-center">No sigue a nadie</ion-label>
             </ion-item>
-            <ion-item
-              button
-              v-for="following in siguiendo"
-              :key="following.id"
-              @click="goToUserProfile(following)"
-            >
+            <ion-item button v-for="following in siguiendo" :key="following.id" @click="goToUserProfile(following)">
               <ion-avatar slot="start">
-                <img
-                  :src="
-                    following.imagen_url ||
-                    'https://www.gravatar.com/avatar/?d=mp&f=y'
-                  "
-                />
+                <img :src="following.imagen_url ||
+                  'https://www.gravatar.com/avatar/?d=mp&f=y'
+                  " />
               </ion-avatar>
               <ion-label>
                 <h3>{{ following.name || following.username }}</h3>
@@ -591,11 +423,7 @@
       </ion-modal>
 
       <!-- Menu Popover -->
-      <ion-popover
-        :is-open="isMenuOpen"
-        @didDismiss="closeMenu"
-        trigger="open-menu-button"
-      >
+      <ion-popover :is-open="isMenuOpen" @didDismiss="closeMenu" trigger="open-menu-button">
         <ion-content>
           <ion-list>
             <ion-item button @click="handleLogout">
@@ -1428,13 +1256,13 @@ export default {
           universidad_id: this.user.universidad_id
             ? Number(this.user.universidad_id)
             : this.user.universidad?.id
-            ? Number(this.user.universidad.id)
-            : null,
+              ? Number(this.user.universidad.id)
+              : null,
           carrera_id: this.user.carrera_id
             ? Number(this.user.carrera_id)
             : this.user.carrera?.id
-            ? Number(this.user.carrera.id)
-            : null,
+              ? Number(this.user.carrera.id)
+              : null,
         };
         this.showSettingsModal = true;
       } catch (error) {
@@ -1640,6 +1468,10 @@ export default {
       this.$router.push(`/tabs/post/${postId}`);
     },
 
+    goToTasks() {
+      this.$router.push('/tasks');
+    },
+
     goToUserProfile(user) {
       this.closeFollowers();
       this.closeFollowing();
@@ -1703,6 +1535,7 @@ ion-header ion-toolbar {
   --background: var(--app-background);
   --color: var(--app-text);
   --border-color: var(--app-border);
+  position: relative;
 }
 
 .logo-container {
@@ -1729,10 +1562,19 @@ ion-header ion-button:hover .header-icon {
 }
 
 .username-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   text-align: center;
   font-size: 14px;
   font-weight: 600;
   padding: 0;
+}
+
+.header-hourglass {
+  width: 24px;
+  height: 24px;
+  color: #6b7280;
 }
 
 .username-purple {
@@ -1820,9 +1662,11 @@ ion-content {
   font-weight: 600;
   color: var(--ion-text-color);
 }
+
 ion-select {
   padding-top: 5px;
 }
+
 .profile-description {
   font-size: 12px;
   color: var(--ion-text-color-secondary);
@@ -2077,11 +1921,9 @@ ion-segment-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(
-    135deg,
-    var(--ion-color-primary-tint),
-    var(--ion-color-primary)
-  );
+  background: linear-gradient(135deg,
+      var(--ion-color-primary-tint),
+      var(--ion-color-primary));
 }
 
 .file-icon-container ion-icon {
