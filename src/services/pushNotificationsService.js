@@ -1,4 +1,5 @@
 import { PushNotifications } from "@capacitor/push-notifications";
+import { LocalNotifications } from "@capacitor/local-notifications";
 import api from "./api";
 
 class PushNotificationsService {
@@ -52,8 +53,32 @@ class PushNotificationsService {
     // Listener para cuando se recibe una notificación (app en foreground)
     await PushNotifications.addListener(
       "pushNotificationReceived",
-      (notification) => {
+      // 2. Convertir la función a 'async'
+      async (notification) => {
         console.log("Push notification received:", notification);
+
+        // 3. AÑADIDO: Mostrar una notificación local
+        // ya que la app está en primer plano
+        try {
+          await LocalNotifications.schedule({
+            notifications: [
+              {
+                title: notification.title || "Nueva Notificación",
+                body: notification.body || "",
+                // Usar un ID único (basado en la hora o el ID de la notificación si existe)
+                id: notification.id
+                  ? parseInt(notification.id.replace(/\D/g, "").substring(0, 9))
+                  : new Date().getTime(),
+                extra: notification.data,
+                // Asegúrate de tener un icono 'push_icon.png' en
+                // android/app/src/main/res/drawable-XXXX/
+                smallIcon: "res://push_icon", 
+              },
+            ],
+          });
+        } catch (e) {
+          console.error("Error showing local notification", e);
+        }
 
         // Emitir evento personalizado para que otros componentes lo escuchen
         window.dispatchEvent(
