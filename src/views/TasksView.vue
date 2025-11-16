@@ -318,12 +318,12 @@ export default {
                     taskId: null
                 }
             });
-
             await modal.present();
-
-            const { data } = await modal.onWillDismiss();
-            if (data?.completed) {
+            try {
+                await modal.onDidDismiss();
                 await refreshTasks();
+            } catch (e) {
+                showToast('Error al cerrar el Pomodoro', 'danger');
             }
         };
 
@@ -335,12 +335,12 @@ export default {
                     taskTitle: task.title
                 }
             });
-
             await modal.present();
-
-            const { data } = await modal.onWillDismiss();
-            if (data?.completed) {
+            try {
+                await modal.onDidDismiss();
                 await refreshTasks();
+            } catch (e) {
+                showToast('Error al cerrar el Pomodoro', 'danger');
             }
         };
 
@@ -480,4 +480,34 @@ export default {
 }
 
 /* segment removed; selects used for ordering */
+
+/* Chips oscuros en la lista de tareas con gradiente y mejor contraste */
+ion-chip {
+    background: linear-gradient(90deg, #23272f 0%, #181a20 100%) !important;
+    color: #fff !important;
+    border-radius: 16px !important;
+    font-weight: 600 !important;
+    font-size: 15px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+    border: none !important;
+    padding: 7px 14px !important;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+ion-chip ion-label {
+    color: #fff !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.5px;
+}
+
+ion-chip ion-icon {
+    color: #fff !important;
+    font-size: 18px !important;
+    margin-right: 4px;
+    vertical-align: middle;
+    filter: drop-shadow(0 0 2px #000);
+}
 </style>

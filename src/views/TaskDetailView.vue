@@ -41,7 +41,7 @@
                                 </svg>
                                 <!-- Completada -->
                                 <svg v-else-if="task.status === 'completed'" xmlns="http://www.w3.org/2000/svg"
-                                    width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3880ff"
+                                    width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8A2BE2"
                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                                     <path d="M10 20.777a8.942 8.942 0 0 1 -2.48 -.969" />
@@ -87,21 +87,23 @@
                     <ion-card-content>
                         <ion-list>
                             <ion-item v-if="task.due_date">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                    fill="currentColor" slot="start">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                    <path
-                                        d="M16 2c.183 0 .355 .05 .502 .135l.033 .02c.28 .177 .465 .49 .465 .845v1h1a3 3 0 0 1 2.995 2.824l.005 .176v12a3 3 0 0 1 -2.824 2.995l-.176 .005h-12a3 3 0 0 1 -2.995 -2.824l-.005 -.176v-12a3 3 0 0 1 2.824 -2.995l.176 -.005h1v-1a1 1 0 0 1 .514 -.874l.093 -.046l.066 -.025l.1 -.029l.107 -.019l.12 -.007q .083 0 .161 .013l.122 .029l.04 .012l.06 .023c.328 .135 .568 .44 .61 .806l.007 .117v1h6v-1a1 1 0 0 1 1 -1m3 7h-14v9.625c0 .705 .386 1.286 .883 1.366l.117 .009h12c.513 0 .936 -.53 .993 -1.215l.007 -.16z" />
-                                    <path
-                                        d="M9.015 13a1 1 0 0 1 -1 1a1.001 1.001 0 1 1 -.005 -2c.557 0 1.005 .448 1.005 1" />
-                                    <path
-                                        d="M13.015 13a1 1 0 0 1 -1 1a1.001 1.001 0 1 1 -.005 -2c.557 0 1.005 .448 1.005 1" />
-                                    <path
-                                        d="M17.02 13a1 1 0 0 1 -1 1a1.001 1.001 0 1 1 -.005 -2c.557 0 1.005 .448 1.005 1" />
-                                    <path d="M12.02 15a1 1 0 0 1 0 2a1.001 1.001 0 1 1 -.005 -2z" />
-                                    <path
-                                        d="M9.015 16a1 1 0 0 1 -1 1a1.001 1.001 0 1 1 -.005 -2c.557 0 1.005 .448 1.005 1" />
-                                </svg>
+                                <template v-slot:start>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                        fill="currentColor">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                        <path
+                                            d="M16 2c.183 0 .355 .05 .502 .135l.033 .02c.28 .177 .465 .49 .465 .845v1h1a3 3 0 0 1 2.995 2.824l.005 .176v12a3 3 0 0 1 -2.824 2.995l-.176 .005h-12a3 3 0 0 1 -2.995 -2.824l-.005 -.176v-12a3 3 0 0 1 2.824 -2.995l.176 -.005h1v-1a1 1 0 0 1 .514 -.874l.093 -.046l.066 -.025l.1 -.029l.107 -.019l.12 -.007q .083 0 .161 .013l.122 .029l.04 .012l.06 .023c.328 .135 .568 .44 .61 .806l.007 .117v1h6v-1a1 1 0 0 1 1 -1m3 7h-14v9.625c0 .705 .386 1.286 .883 1.366l.117 .009h12c.513 0 .936 -.53 .993 -1.215l.007 -.16z" />
+                                        <path
+                                            d="M9.015 13a1 1 0 0 1 -1 1a1.001 1.001 0 1 1 -.005 -2c.557 0 1.005 .448 1.005 1" />
+                                        <path
+                                            d="M13.015 13a1 1 0 0 1 -1 1a1.001 1.001 0 1 1 -.005 -2c.557 0 1.005 .448 1.005 1" />
+                                        <path
+                                            d="M17.02 13a1 1 0 0 1 -1 1a1.001 1.001 0 1 1 -.005 -2c.557 0 1.005 .448 1.005 1" />
+                                        <path d="M12.02 15a1 1 0 0 1 0 2a1.001 1.001 0 1 1 -.005 -2z" />
+                                        <path
+                                            d="M9.015 16a1 1 0 0 1 -1 1a1.001 1.001 0 1 1 -.005 -2c.557 0 1.005 .448 1.005 1" />
+                                    </svg>
+                                </template>
                                 <ion-label>
                                     <h3>Vencimiento</h3>
                                     <p>{{ formatDate(task.due_date) }}</p>
@@ -109,12 +111,14 @@
                             </ion-item>
 
                             <ion-item>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                    fill="currentColor" slot="start">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                    <path
-                                        d="M17 3.34a10 10 0 1 1 -15 8.66l.005 -.324a10 10 0 0 1 14.995 -8.336m-5 2.66a1 1 0 0 0 -1 1v5.026l.009 .105l.02 .107l.04 .129l.048 .102l.046 .078l.042 .06l.069 .08l.088 .083l.083 .062l3 2a1 1 0 1 0 1.11 -1.664l-2.555 -1.704v-4.464a1 1 0 0 0 -.883 -.993z" />
-                                </svg>
+                                <template v-slot:start>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                        fill="currentColor">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                        <path
+                                            d="M17 3.34a10 10 0 1 1 -15 8.66l.005 -.324a10 10 0 0 1 14.995 -8.336m-5 2.66a1 1 0 0 0 -1 1v5.026l.009 .105l.02 .107l.04 .129l.048 .102l.046 .078l.042 .06l.069 .08l.088 .083l.083 .062l3 2a1 1 0 1 0 1.11 -1.664l-2.555 -1.704v-4.464a1 1 0 0 0 -.883 -.993z" />
+                                    </svg>
+                                </template>
                                 <ion-label>
                                     <h3>Creada</h3>
                                     <p>{{ formatDate(task.created_at) }}</p>
@@ -122,12 +126,14 @@
                             </ion-item>
 
                             <ion-item v-if="task.completed_at">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                    fill="currentColor" slot="start">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                    <path
-                                        d="M17 3.34a10 10 0 1 1 -14.995 8.984l-.005 -.324l.005 -.324a10 10 0 0 1 14.995 -8.336zm-1.293 5.953a1 1 0 0 0 -1.32 -.083l-.094 .083l-3.293 3.292l-1.293 -1.292l-.094 -.083a1 1 0 0 0 -1.403 1.403l.083 .094l2 2l.094 .083a1 1 0 0 0 1.226 0l.094 -.083l4 -4l.083 -.094a1 1 0 0 0 -.083 -1.32z" />
-                                </svg>
+                                <template v-slot:start>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                        fill="currentColor">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                        <path
+                                            d="M17 3.34a10 10 0 1 1 -14.995 8.984l-.005 -.324l.005 -.324a10 10 0 0 1 14.995 -8.336zm-1.293 5.953a1 1 0 0 0 -1.32 -.083l-.094 .083l-3.293 3.292l-1.293 -1.292l-.094 -.083a1 1 0 0 0 -1.403 1.403l.083 .094l2 2l.094 .083a1 1 0 0 0 1.226 0l.094 -.083l4 -4l.083 -.094a1 1 0 0 0 -.083 -1.32z" />
+                                    </svg>
+                                </template>
                                 <ion-label>
                                     <h3>Completada</h3>
                                     <p>{{ formatDate(task.completed_at) }}</p>
@@ -365,8 +371,8 @@ export default {
 
             await modal.present();
 
-            const { data } = await modal.onWillDismiss();
-            if (data?.completed) {
+            const { data } = await modal.onDidDismiss();
+            if (data) {
                 await loadTask();
             }
         };
@@ -502,9 +508,56 @@ export default {
 }
 
 .priority-chip {
-    --background: #e5e7eb;
-    --color: #6b7280;
+    --background: var(--app-card);
+    --color: var(--app-text-secondary);
     margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 16px;
+    font-weight: 500;
+    font-size: 14px;
+    box-shadow: none;
+    background: var(--app-card) !important;
+    color: var(--app-text-secondary) !important;
+    padding: 6px 12px !important;
+    border: none !important;
+}
+
+.priority-chip ion-icon {
+    color: var(--app-text-secondary) !important;
+    font-size: 18px;
+    margin-right: 4px;
+    vertical-align: middle;
+    filter: none;
+}
+
+.priority-chip ion-label {
+    color: var(--app-text-secondary) !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.5px;
+}
+
+/* Forzar modo oscuro en todos los chips de la lista de tareas */
+ion-chip {
+    background: var(--app-card) !important;
+    color: var(--app-text-secondary) !important;
+    border-radius: 16px !important;
+    font-weight: 500 !important;
+    font-size: 14px !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 6px 12px !important;
+}
+
+ion-chip ion-label {
+    color: var(--app-text-secondary) !important;
+}
+
+ion-chip ion-icon {
+    color: var(--app-text-secondary) !important;
+    fill: var(--app-text-secondary) !important;
 }
 
 .task-description {
@@ -586,5 +639,10 @@ ion-card-title ion-icon {
 
 .actions-container ion-button {
     height: 48px;
+}
+
+/* Mejorar contraste en modo claro y mantener legibilidad en ambos modos */
+ion-item p {
+    color: var(--ion-text-color) !important;
 }
 </style>

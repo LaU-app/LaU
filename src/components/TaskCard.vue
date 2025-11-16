@@ -64,29 +64,29 @@
                             </svg>
                             <ion-label>{{ formatDueDate(task.due_date) }}</ion-label>
                         </ion-chip>
-
                         <ion-chip size="small" class="priority-chip">
                             <ion-icon :icon="flagOutline"></ion-icon>
                             <ion-label>{{ getPriorityText() }}</ion-label>
                         </ion-chip>
 
                         <ion-chip v-if="task.estimated_pomodoros" size="small">
-                            <!-- Icono filled cuando está completo -->
-                            <svg v-if="task.completed_pomodoros >= task.estimated_pomodoros"
-                                xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                                fill="currentColor" style="margin-right: 4px;">
-                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                <path
-                                    d="M10 2c0 -.88 1.056 -1.331 1.692 -.722c1.958 1.876 3.096 5.995 1.75 9.12l-.08 .174l.012 .003c.625 .133 1.203 -.43 2.303 -2.173l.14 -.224a1 1 0 0 1 1.582 -.153c1.334 1.435 2.601 4.377 2.601 6.27c0 4.265 -3.591 7.705 -8 7.705s-8 -3.44 -8 -7.706c0 -2.252 1.022 -4.716 2.632 -6.301l.605 -.589c.241 -.236 .434 -.43 .618 -.624c1.43 -1.512 2.145 -2.924 2.145 -4.78" />
-                            </svg>
-                            <!-- Icono outline cuando no está completo -->
-                            <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"
-                                stroke-linejoin="round" style="margin-right: 4px;">
-                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                <path
-                                    d="M12 10.941c2.333 -3.308 .167 -7.823 -1 -8.941c0 3.395 -2.235 5.299 -3.667 6.706c-1.43 1.408 -2.333 3.621 -2.333 5.588c0 3.704 3.134 6.706 7 6.706s7 -3.002 7 -6.706c0 -1.712 -1.232 -4.403 -2.333 -5.588c-2.084 3.353 -3.257 3.353 -4.667 2.235" />
-                            </svg>
+                            <template v-if="task.completed_pomodoros >= task.estimated_pomodoros">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="currentColor" style="margin-right: 4px;">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path
+                                        d="M10 2c0 -.88 1.056 -1.331 1.692 -.722c1.958 1.876 3.096 5.995 1.75 9.12l-.08 .174l.012 .003c.625 .133 1.203 -.43 2.303 -2.173l.14 -.224a1 1 0 0 1 1.582 -.153c1.334 1.435 2.601 4.377 2.601 6.27c0 4.265 -3.591 7.705 -8 7.705s-8 -3.44 -8 -7.706c0 -2.252 1.022 -4.716 2.632 -6.301l.605 -.589c.241 -.236 .434 -.43 .618 -.624c1.43 -1.512 2.145 -2.924 2.145 -4.78" />
+                                </svg>
+                            </template>
+                            <template v-else>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"
+                                    stroke-linejoin="round" style="margin-right: 4px;">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path
+                                        d="M12 10.941c2.333 -3.308 .167 -7.823 -1 -8.941c0 3.395 -2.235 5.299 -3.667 6.706c-1.43 1.408 -2.333 3.621 -2.333 5.588c0 3.704 3.134 6.706 7 6.706s7 -3.002 7 -6.706c0 -1.712 -1.232 -4.403 -2.333 -5.588c-2.084 3.353 -3.257 3.353 -4.667 2.235" />
+                                </svg>
+                            </template>
                             <ion-label>{{ task.completed_pomodoros }}/{{ task.estimated_pomodoros }}</ion-label>
                         </ion-chip>
                     </div>
@@ -328,20 +328,70 @@ const showToast = async (message, color) => {
     flex-shrink: 0;
 }
 
-/* Los colores de los iconos de estado se definen inline en el SVG */
-
+/* Chips adaptativos para modo claro y oscuro */
 .due-date-chip {
-    --background: #e5e7eb;
-    --color: #6b7280;
+    --background: var(--app-card);
+    --color: var(--app-text-secondary);
 }
 
 .due-date-chip svg {
-    fill: #6b7280;
+    fill: var(--app-text-secondary);
+}
+
+/* Modo claro: fondo gris claro, texto e ícono gris oscuro */
+.priority-chip {
+    --background: var(--app-card);
+    --color: var(--app-text-secondary);
+}
+
+
+.priority-chip ion-icon {
+    color: var(--app-text-secondary);
+}
+
+@media (prefers-color-scheme: dark) {
+    .due-date-chip {
+        --background: var(--app-card) !important;
+        --color: var(--app-text-secondary) !important;
+    }
+
+    .due-date-chip svg {
+        fill: var(--app-text-secondary) !important;
+    }
+
+    .priority-chip {
+        --background: var(--app-card) !important;
+        --color: var(--app-text-secondary) !important;
+    }
+
+    .priority-chip ion-icon {
+        color: var(--app-text-secondary) !important;
+    }
+}
+
+/* Elimina el forzado de fondo y color en ion-chip para respetar el tema */
+ion-chip {
+    border-radius: 16px;
+    font-weight: 500;
+    font-size: 14px;
+    box-shadow: none;
+    border: none;
 }
 
 .priority-chip {
-    --background: #e5e7eb;
-    --color: #6b7280;
+    --background: var(--app-card);
+    --color: var(--app-text-secondary);
+}
+
+.priority-chip ion-icon {
+    color: var(--app-text-secondary);
+}
+
+ion-chip ion-icon {
+    font-size: 16px;
+    margin-right: 4px;
+    vertical-align: middle;
+    filter: none;
 }
 
 .pomodoro-btn {

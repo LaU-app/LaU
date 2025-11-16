@@ -253,7 +253,8 @@ export default {
                     sessionStarted.value = true;
                 } catch (error) {
                     console.error('Error starting pomodoro:', error);
-                    showToast('Error al iniciar Pomodoro', 'danger');
+                    await showToast('Error al iniciar Pomodoro', 'danger');
+                    await dismissModal(false);
                     return;
                 }
             }
@@ -316,7 +317,8 @@ export default {
                     totalCompletedToday.value++;
                 } catch (error) {
                     console.error('Error completing pomodoro:', error);
-                    showToast('Error al completar Pomodoro', 'danger');
+                    await showToast('Error al completar Pomodoro', 'danger');
+                    await dismissModal(false);
                 }
             }
         };
@@ -354,7 +356,8 @@ export default {
                 }
             }
 
-            dismissModal(false);
+            await dismissModal(false);
+            return;
         };
 
         const startBreak = (type) => {
@@ -366,15 +369,21 @@ export default {
             start();
         };
 
-        const skipBreak = () => {
-            dismissModal(true);
+        const skipBreak = async () => {
+            await dismissModal(true);
+            return;
         };
 
         const dismissModal = async (completed = false) => {
             if (intervalId.value) {
                 clearInterval(intervalId.value);
+                intervalId.value = null;
             }
-            await modalController.dismiss({ completed });
+            try {
+                await modalController.dismiss({ completed });
+            } catch (err) {
+                console.error('Error dismissing modal:', err);
+            }
         };
 
         const showToast = async (message, color) => {
