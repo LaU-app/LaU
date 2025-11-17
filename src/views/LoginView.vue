@@ -225,7 +225,7 @@ export default {
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: url('https://res.cloudinary.com/dj848z4er/image/upload/v1761539266/163cbcbe-e000-49a9-88ee-90a000621c08.png');
+    background-image: url('https://res.cloudinary.com/dj848z4er/image/upload/v1763388919/b0c89a4c-efd1-4bc5-b5c0-496c74cf7b5a.png');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;

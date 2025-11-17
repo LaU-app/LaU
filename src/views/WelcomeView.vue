@@ -10,12 +10,19 @@
 
                 <!-- Carousel de características -->
                 <swiper :modules="modules" :slides-per-view="1" :space-between="16"
-                    :autoplay="{ delay: 3000, disableOnInteraction: false }" :pagination="{ clickable: true }"
+                    :autoplay="{ delay: 2000, disableOnInteraction: false }" :pagination="{ clickable: true }"
                     @slideChange="onSlideChange" class="welcome-swiper">
                     <swiper-slide>
                         <div class="slide-content">
                             <div class="slide-image"
-                                :style="{ backgroundImage: `url(https://res.cloudinary.com/dj848z4er/image/upload/v1761525211/IMG_20240315_104900_b1fjqj.jpg)` }">
+                                :style="{ backgroundImage: `url(https://res.cloudinary.com/dj848z4er/image/upload/v1763387499/868880be-255e-4fbe-a418-b44fedcaa078.png)` }">
+                            </div>
+                        </div>
+                    </swiper-slide>
+                    <swiper-slide>
+                        <div class="slide-content">
+                            <div class="slide-image"
+                                :style="{ backgroundImage: `url(https://res.cloudinary.com/dj848z4er/image/upload/v1763387590/4540d462-86c3-4811-a609-1798115f80f1.png)` }">
                             </div>
                         </div>
                     </swiper-slide>
@@ -29,7 +36,21 @@
                     <swiper-slide>
                         <div class="slide-content">
                             <div class="slide-image"
-                                :style="{ backgroundImage: `url(https://res.cloudinary.com/dj848z4er/image/upload/v1761539611/bbe58127-5095-4028-872e-e45343abe39d.png)` }">
+                                :style="{ backgroundImage: `url(https://res.cloudinary.com/dj848z4er/image/upload/v1763312430/5e4c8acf-c144-4132-b006-598f35ab3f65.png)` }">
+                            </div>
+                        </div>
+                    </swiper-slide>
+                    <swiper-slide>
+                        <div class="slide-content">
+                            <div class="slide-image"
+                                :style="{ backgroundImage: `url(https://res.cloudinary.com/dj848z4er/image/upload/v1763311420/8d3a4027-f443-44d1-af71-1c55ecca78f6.png)` }">
+                            </div>
+                        </div>
+                    </swiper-slide>
+                    <swiper-slide>
+                        <div class="slide-content">
+                            <div class="slide-image"
+                                :style="{ backgroundImage: `url(https://res.cloudinary.com/dj848z4er/image/upload/v1763389457/484970f6-1c45-49d0-bdb9-ed5fc3037d41.png)` }">
                             </div>
                         </div>
                     </swiper-slide>
