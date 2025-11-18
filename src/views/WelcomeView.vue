@@ -10,7 +10,7 @@
 
                 <!-- Carousel de características -->
                 <swiper :modules="modules" :slides-per-view="1" :space-between="16"
-                    :autoplay="{ delay: 2000, disableOnInteraction: false }" :pagination="{ clickable: true }"
+                    :autoplay="{ delay: 2600, disableOnInteraction: false }" :pagination="{ clickable: true }"
                     @slideChange="onSlideChange" class="welcome-swiper">
                     <swiper-slide>
                         <div class="slide-content">
@@ -29,7 +29,7 @@
                     <swiper-slide>
                         <div class="slide-content">
                             <div class="slide-image"
-                                :style="{ backgroundImage: `url(https://res.cloudinary.com/dj848z4er/image/upload/v1761328457/5a965478-9727-444f-9832-eb1e0c37d497.png)` }">
+                                :style="{ backgroundImage: `url(https://res.cloudinary.com/dj848z4er/image/upload/v1763492476/ef7205ec-d026-4b74-b0cd-5529553c8dbc.png)` }">
                             </div>
                         </div>
                     </swiper-slide>

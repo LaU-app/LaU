@@ -16,25 +16,20 @@
             </ion-toolbar>
         </ion-header>
 
-        <ion-content :fullscreen="true">
-            <!-- Loading State -->
+        <ion-content :fullscreen="true" ref="ionContentRef">
             <div v-if="loading" class="loading-container">
                 <ion-spinner name="crescent"></ion-spinner>
                 <p>Cargando publicación...</p>
             </div>
 
-            <!-- Error State -->
             <div v-else-if="error" class="error-container">
                 <ion-icon :icon="alertCircle" size="large" color="danger"></ion-icon>
                 <p>{{ error }}</p>
                 <ion-button @click="loadPost">Reintentar</ion-button>
             </div>
 
-            <!-- Post Detail -->
             <div v-else-if="post" class="post-detail-container">
-                <!-- Post Card Principal -->
                 <ion-card class="post-card">
-                    <!-- Post Header -->
                     <ion-card-header>
                         <div class="post-header">
                             <ion-avatar class="post-avatar">
@@ -54,9 +49,7 @@
                         </div>
                     </ion-card-header>
 
-                    <!-- Post Content -->
                     <ion-card-content>
-                        <!-- Título y/o Descripción o Texto (Dinámico) -->
                         <ion-text v-if="post.titulo || post.descripcion || post.texto">
                             <h2 v-if="post.titulo" class="post-title">{{ post.titulo }}</h2>
                             <p v-if="post.descripcion" class="post-description">{{ post.descripcion }}</p>
@@ -64,21 +57,17 @@
                                 post.texto }}</p>
                         </ion-text>
 
-                        <!-- Imagen Post -->
                         <div v-if="post.tipo === 'imagen' && post.imagen_url" class="post-media">
                             <ion-img :src="post.imagen_url" :alt="post.titulo || 'Post'" @ionError="handleImageError">
                             </ion-img>
                         </div>
 
-                        <!-- Música Post -->
                         <div v-else-if="post.tipo === 'musica'" class="music-player">
                             <MusicPlayer :post="post" @imageError="handleImageError" />
                         </div>
 
-                        <!-- Archivo Post -->
                         <div v-else-if="post.tipo === 'archivo' && post.archivo_url" class="file-attachment">
                             <div class="file-info">
-                                <!-- Ícono dinámico según tipo de archivo -->
                                 <div class="file-icon-container" v-html="getFileIcon(post.archivo)"></div>
                                 <div class="file-details">
                                     <h4>{{ getFileName(post.archivo) }}</h4>
@@ -86,25 +75,16 @@
                                 </div>
                             </div>
                             <ion-button fill="outline" size="small" @click.stop="downloadFile(post.archivo_url)">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                    stroke-linejoin="round">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                    <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" />
-                                    <path d="M7 11l5 5l5 -5" />
-                                    <path d="M12 4l0 12" />
-                                </svg>
+                                <ion-icon :icon="downloadOutline"></ion-icon>
                             </ion-button>
                         </div>
                     </ion-card-content>
                     <br>
-                    <!-- Post Actions -->
                     <ion-card-content class="post-footer">
                         <PostActions :post="post" @like="handleLike" @comment="focusCommentInput" />
                     </ion-card-content>
                 </ion-card>
 
-                <!-- Comments Card -->
                 <ion-card class="comments-card">
                     <ion-card-header>
                         <ion-card-title class="comments-title">
@@ -113,16 +93,11 @@
                     </ion-card-header>
 
                     <ion-card-content class="comments-content">
-                        <!-- Comments List -->
                         <div v-if="post.comentarios && post.comentarios.length > 0" class="comments-list">
-                            <CommentItem 
-                                v-for="comment in post.comentarios" 
-                                :key="comment.id" 
-                                :comment="comment"
-                                v-memo="[comment.id, comment.texto]" />
+                            <CommentItem v-for="comment in post.comentarios" :key="comment.id" :comment="comment"
+                                @reply="startReply" v-memo="[comment.id, comment.texto, comment.children?.length]" />
                         </div>
 
-                        <!-- No Comments State -->
                         <div v-else class="no-comments">
                             <ion-icon :icon="chatbubbleOutline" class="no-comments-icon"></ion-icon>
                             <ion-text color="medium">
@@ -131,24 +106,34 @@
                             </ion-text>
                         </div>
 
-                        <!-- Input de comentario dentro de la card -->
                         <div class="comment-input-container">
-                            <ion-avatar class="current-user-avatar">
-                                <img v-if="currentUser?.imagen_url" :src="currentUser.imagen_url"
-                                    :alt="currentUser?.name || 'Tú'" loading="lazy" />
-                                <ion-icon v-else :icon="personCircle"></ion-icon>
-                            </ion-avatar>
-                            <div class="comment-input-wrapper">
-                                <ion-input ref="commentInputRef" v-model="newComment"
-                                    placeholder="Escribe un comentario..." class="comment-input"
-                                    @keyup.enter="submitComment">
-                                </ion-input>
-                                <div class="comment-input-line"></div>
+                            <div v-if="replyingToComment" class="replying-indicator">
+                                <ion-text color="medium">
+                                    <small>Respondiendo a <b>{{ replyingToComment.user?.name }}</b></small>
+                                </ion-text>
+                                <ion-button fill="clear" size="small" @click="cancelReply">
+                                    <ion-icon slot="icon-only" :icon="closeCircle"></ion-icon>
+                                </ion-button>
                             </div>
-                            <ion-button fill="solid" shape="round" size="small" color="primary" @click="submitComment"
-                                :disabled="!newComment.trim()" class="send-comment-button">
-                                <ion-icon :icon="send"></ion-icon>
-                            </ion-button>
+
+                            <div class="input-row">
+                                <ion-avatar class="current-user-avatar">
+                                    <img v-if="currentUser?.imagen_url" :src="currentUser.imagen_url"
+                                        :alt="currentUser?.name || 'Tú'" loading="lazy" />
+                                    <ion-icon v-else :icon="personCircle"></ion-icon>
+                                </ion-avatar>
+                                <div class="comment-input-wrapper">
+                                    <ion-input ref="commentInputRef" v-model="newComment"
+                                        :placeholder="replyingToComment ? 'Escribe tu respuesta...' : 'Escribe un comentario...'"
+                                        class="comment-input" @keyup.enter="submitComment">
+                                    </ion-input>
+                                    <div class="comment-input-line"></div>
+                                </div>
+                                <ion-button fill="solid" shape="round" size="small" color="primary"
+                                    @click="submitComment" :disabled="!newComment.trim()" class="send-comment-button">
+                                    <ion-icon :icon="send"></ion-icon>
+                                </ion-button>
+                            </div>
                         </div>
                     </ion-card-content>
                 </ion-card>
@@ -158,7 +143,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
     IonPage,
@@ -188,7 +173,8 @@ import {
     send,
     chatbubbleOutline,
     downloadOutline,
-    trashOutline
+    trashOutline,
+    closeCircle
 } from 'ionicons/icons'
 import MusicPlayer from '@/components/MusicPlayer.vue'
 import PostActions from '@/components/PostActions.vue'
@@ -206,7 +192,9 @@ const loading = ref(true)
 const error = ref(null)
 const newComment = ref('')
 const commentInputRef = ref(null)
+const ionContentRef = ref(null)
 const currentUser = ref(null)
+const replyingToComment = ref(null)
 
 // Computed para verificar si el post es del usuario actual
 const isMyPost = computed(() => {
@@ -214,7 +202,6 @@ const isMyPost = computed(() => {
     return post.value.user_id === currentUser.value.id || post.value.user?.id === currentUser.value.id
 })
 
-// Cargar datos del usuario actual
 onMounted(async () => {
     currentUser.value = AuthService.getUser()
     await loadPost()
@@ -226,26 +213,18 @@ const loadPost = async () => {
 
     try {
         const postId = route.params.id
-        if (!postId) {
-            throw new Error('ID de publicación no válido')
-        }
+        if (!postId) throw new Error('ID de publicación no válido')
 
         const response = await api.getPostById(postId)
 
         if (response.data.success) {
             const postData = response.data.data
-
-            // Obtener ID del usuario actual para calcular user_has_liked
             const currentUserId = AuthService.getUser()?.id
 
-            // Calcular user_has_liked igual que en el feed
             let hasLiked = false;
-
             if (postData.user_has_liked !== undefined) {
-                // Si el backend envía user_has_liked, usarlo
                 hasLiked = postData.user_has_liked;
             } else if (postData.likes && Array.isArray(postData.likes) && currentUserId) {
-                // Si no viene user_has_liked pero sí el array de likes, calcularlo
                 hasLiked = postData.likes.some(like =>
                     like.user_id === currentUserId ||
                     like.usuario_id === currentUserId ||
@@ -253,26 +232,15 @@ const loadPost = async () => {
                 );
             }
 
-            // Asignar el post con user_has_liked calculado
             post.value = {
                 ...postData,
                 user_has_liked: hasLiked,
                 likes_count: postData.likes_count !== undefined ? postData.likes_count : (postData.likes?.length || 0)
             }
-
-            // Log para debugging
-            console.log('[PostDetailView] Post cargado:', {
-                id: post.value.id,
-                user_has_liked_backend: postData.user_has_liked,
-                user_has_liked_calculado: hasLiked,
-                likes_count: post.value.likes_count,
-                currentUserId: currentUserId
-            })
         } else {
             throw new Error(response.data.message || 'Error al cargar la publicación')
         }
     } catch (err) {
-        console.error('Error cargando post:', err)
         error.value = err.response?.data?.message || err.message || 'No se pudo cargar la publicación'
     } finally {
         loading.value = false
@@ -284,7 +252,6 @@ const goBack = () => {
 }
 
 const handleImageError = (event) => {
-    console.warn('Error cargando imagen:', event)
     if (event.target) {
         event.target.src = 'https://via.placeholder.com/150?text=Sin+Imagen'
     }
@@ -294,7 +261,6 @@ const getFileName = (filePath) => {
     if (!filePath) return 'Archivo'
     const parts = filePath.split('/')
     const fileName = parts[parts.length - 1]
-    // Remover timestamp del nombre
     return fileName.replace(/^\d+_/, '')
 }
 
@@ -327,33 +293,18 @@ const handleLike = async () => {
     try {
         if (!post.value) return
 
-        // Guardar estado anterior por si hay que revertir
         const previousLikedState = post.value.user_has_liked
         const previousLikesCount = post.value.likes_count || 0
 
-        console.log('[PostDetailView] Like click - Estado antes:', {
-            postId: post.value.id,
-            user_has_liked: previousLikedState,
-            likes_count: previousLikesCount
-        })
-
-        // Actualizar UI optimistamente
+        // Optimismo UI
         post.value.user_has_liked = !previousLikedState
         post.value.likes_count = post.value.user_has_liked
             ? previousLikesCount + 1
             : Math.max(0, previousLikesCount - 1)
 
-        console.log('[PostDetailView] Like click - Estado optimista:', {
-            postId: post.value.id,
-            user_has_liked: post.value.user_has_liked,
-            likes_count: post.value.likes_count
-        })
-
-        // Hacer petición al backend
         const result = await postsService.likePost(post.value.id)
 
         if (result.success && result.data) {
-            // Actualizar con datos reales del backend
             post.value.user_has_liked = result.data.user_has_liked !== undefined
                 ? result.data.user_has_liked
                 : !previousLikedState
@@ -361,16 +312,9 @@ const handleLike = async () => {
                 ? result.data.likes_count
                 : post.value.likes_count
 
-            console.log('[PostDetailView] Like click - Estado final del backend:', {
-                postId: post.value.id,
-                user_has_liked: post.value.user_has_liked,
-                likes_count: post.value.likes_count
-            })
-
-            // Solo mostrar mensaje cuando se agrega like
             if (post.value.user_has_liked) {
                 const toast = await toastController.create({
-                    message: '❤️ Like agregado',
+                    message: 'Like agregado',
                     duration: 1500,
                     position: 'bottom',
                     color: 'danger'
@@ -378,52 +322,68 @@ const handleLike = async () => {
                 await toast.present()
             }
         } else {
-            console.error('[PostDetailView] Like falló, revirtiendo:', result.error)
-            // Si falla, revertir al estado anterior
+            // Revertir
             post.value.user_has_liked = previousLikedState
             post.value.likes_count = previousLikesCount
-
-            const toast = await toastController.create({
-                message: 'Error al dar like',
-                duration: 2000,
-                position: 'bottom',
-                color: 'danger'
-            })
-            await toast.present()
         }
     } catch (err) {
-        console.error('Error al dar like:', err)
-        // Recargar el post para obtener el estado correcto
         await loadPost()
     }
 }
 
-const handleShare = async () => {
-    try {
-        // TODO: Implementar lógica de compartir
-        console.log('Compartir post:', post.value.id)
-        const toast = await toastController.create({
-            message: 'Función de compartir próximamente',
-            duration: 2000,
-            position: 'bottom',
-            color: 'medium'
-        })
-        await toast.present()
-    } catch (err) {
-        console.error('Error al compartir:', err)
-    }
+// --- Lógica de Comentarios y Respuestas ---
+
+const startReply = (comment) => {
+    replyingToComment.value = comment
+    // Opcional: agregar @Username al inicio
+    // newComment.value = `@${comment.user?.username || ''} `
+
+    nextTick(() => {
+        if (commentInputRef.value) {
+            commentInputRef.value.$el.setFocus()
+        }
+    })
+}
+
+const cancelReply = () => {
+    replyingToComment.value = null
+    newComment.value = ''
 }
 
 const focusCommentInput = () => {
+    cancelReply() // Asegurar que no esté respondiendo a nadie si clickea el icono general
     if (commentInputRef.value) {
         commentInputRef.value.$el.setFocus()
     }
 }
 
+// Función recursiva para encontrar el comentario padre y añadir la respuesta
+const recursivelyAddReply = (commentsArray, parentId, newCommentObject) => {
+    for (let i = 0; i < commentsArray.length; i++) {
+        const comment = commentsArray[i];
+
+        // Encontramos al padre directo
+        if (comment.id === parentId) {
+            if (!comment.children) {
+                comment.children = [];
+            }
+            comment.children.push(newCommentObject);
+            return true; // Éxito
+        }
+
+        // Buscar en los hijos de este comentario
+        if (comment.children && comment.children.length > 0) {
+            if (recursivelyAddReply(comment.children, parentId, newCommentObject)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 const submitComment = async () => {
     if (!newComment.value.trim()) return
 
-    // Verificar autenticación
     if (!AuthService.isAuthenticated()) {
         const toast = await toastController.create({
             message: 'Debes iniciar sesión para comentar',
@@ -437,10 +397,13 @@ const submitComment = async () => {
 
     try {
         const comentarioTexto = newComment.value.trim()
+        const parentId = replyingToComment.value?.id || null
+        const isReply = parentId !== null
 
-        // Intentar diferentes endpoints que el backend podría tener configurados
         let response
         let success = false
+
+        // Endpoints posibles
         const endpoints = [
             { url: `/posts/${post.value.id}/comments`, method: 'post' },
             { url: `/posts/${post.value.id}/comentarios`, method: 'post' },
@@ -451,60 +414,75 @@ const submitComment = async () => {
         for (const endpoint of endpoints) {
             try {
                 const requestBody = endpoint.body
-                    ? { ...endpoint.body, comentario: comentarioTexto }
-                    : { comentario: comentarioTexto }
+                    ? { ...endpoint.body, comentario: comentarioTexto, parent_id: parentId }
+                    : { comentario: comentarioTexto, parent_id: parentId }
 
                 response = await api.post(endpoint.url, requestBody)
                 success = true
-                console.log(`✅ Comentario enviado exitosamente usando: ${endpoint.url}`)
                 break
             } catch (endpointError) {
-                if (endpointError.response?.status === 404) {
-                    console.log(`❌ Endpoint no encontrado: ${endpoint.url}`)
-                    continue // Probar siguiente endpoint
-                }
-                // Si es otro tipo de error (no 404), lanzarlo
+                if (endpointError.response?.status === 404) continue
                 throw endpointError
             }
         }
 
-        if (!success) {
-            throw new Error('No se encontró un endpoint válido para comentarios. Contacta al administrador del backend.')
-        }
+        if (!success) throw new Error('Error de conexión')
 
         if (response.data.success !== false) {
+            const nuevoComentario = response.data.data || response.data;
+
+            // Completar datos de usuario si faltan (optimismo)
+            if (!nuevoComentario.user && currentUser.value) {
+                nuevoComentario.user = {
+                    id: currentUser.value.id,
+                    name: currentUser.value.name,
+                    username: currentUser.value.username,
+                    imagen_url: currentUser.value.imagen_url
+                }
+            }
+
+            // Si el backend no devuelve time_ago
+            if (!nuevoComentario.time_ago) {
+                nuevoComentario.time_ago = 'ahora';
+            }
+
+            // Inicializar array si no existe
+            if (!post.value.comentarios) {
+                post.value.comentarios = [];
+            }
+
+            // Inserción Reactiva
+            if (isReply) {
+                recursivelyAddReply(post.value.comentarios, parentId, nuevoComentario);
+            } else {
+                post.value.comentarios.push(nuevoComentario);
+            }
+
             const toast = await toastController.create({
-                message: 'Comentario agregado',
+                message: isReply ? 'Respuesta enviada' : 'Comentario agregado',
                 duration: 1500,
                 position: 'bottom',
                 color: 'success'
             })
             await toast.present()
 
-            // Limpiar input
+            // Limpiar UI
+            cancelReply()
             newComment.value = ''
 
-            // Recargar post para obtener comentarios actualizados
-            await loadPost()
+            // Scroll al fondo suavemente
+            setTimeout(() => {
+                if (ionContentRef.value) {
+                    ionContentRef.value.$el.scrollToBottom(300);
+                }
+            }, 100);
+
         } else {
             throw new Error(response.data.message || 'Error al agregar comentario')
         }
     } catch (err) {
-        console.error('Error al enviar comentario:', err)
-        let errorMessage = 'Error al enviar comentario'
-
-        if (err.response?.status === 404) {
-            errorMessage = 'La funcionalidad de comentarios no está disponible en el servidor'
-        } else if (err.response?.status === 401) {
-            errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente'
-        } else if (err.response?.status === 422) {
-            errorMessage = err.response?.data?.message || 'Datos inválidos para el comentario'
-        } else {
-            errorMessage = err.response?.data?.message || err.message || errorMessage
-        }
-
         const toast = await toastController.create({
-            message: errorMessage,
+            message: 'Error al enviar comentario',
             duration: 3000,
             position: 'bottom',
             color: 'danger'
@@ -513,11 +491,10 @@ const submitComment = async () => {
     }
 }
 
-// Función para confirmar eliminación del post
 const confirmDelete = async () => {
     const alert = await alertController.create({
         header: '¿Eliminar publicación?',
-        message: 'Esta acción no se puede deshacer. ¿Estás seguro de que deseas eliminar esta publicación?',
+        message: 'Esta acción no se puede deshacer.',
         buttons: [
             {
                 text: 'Cancelar',
@@ -538,21 +515,17 @@ const confirmDelete = async () => {
     await alert.present()
 }
 
-// Función para eliminar el post
 const deletePost = async () => {
     try {
         const result = await postsService.deletePost(post.value.id)
-
         if (result.success) {
             const toast = await toastController.create({
-                message: result.message || 'Publicación eliminada',
+                message: 'Publicación eliminada',
                 duration: 2000,
                 position: 'bottom',
                 color: 'success'
             })
             await toast.present()
-
-            // Esperar un momento para que se vea el toast y luego volver al feed
             setTimeout(() => {
                 router.push({
                     path: '/tabs/tab1',
@@ -560,18 +533,11 @@ const deletePost = async () => {
                 })
             }, 500)
         } else {
-            const toast = await toastController.create({
-                message: result.error || 'Error al eliminar la publicación',
-                duration: 3000,
-                position: 'bottom',
-                color: 'danger'
-            })
-            await toast.present()
+            throw new Error(result.error)
         }
     } catch (err) {
-        console.error('Error eliminando post:', err)
         const toast = await toastController.create({
-            message: 'Error al eliminar la publicación',
+            message: 'Error al eliminar',
             duration: 3000,
             position: 'bottom',
             color: 'danger'
@@ -584,8 +550,6 @@ const deletePost = async () => {
 <style scoped>
 @import '../theme/colors.css';
 @import '../theme/home.css';
-
-
 
 .loading-container,
 .error-container {
@@ -699,55 +663,8 @@ const deletePost = async () => {
 .comments-list {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.5rem;
     padding: 1rem 0;
-}
-
-.comment-item {
-    display: flex;
-    gap: 0.75rem;
-    padding: 0 1rem;
-}
-
-.comment-avatar {
-    width: 36px;
-    height: 36px;
-    flex-shrink: 0;
-    margin-top: 0.25rem;
-}
-
-.comment-content {
-    flex: 1;
-    min-width: 0;
-}
-
-.comment-bubble {
-    background: var(--ion-color-light);
-    border-radius: 16px;
-    padding: 0.75rem 1rem;
-    margin-bottom: 0.25rem;
-}
-
-.comment-user {
-    margin: 0 0 0.25rem 0;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--ion-color-dark);
-}
-
-.comment-text {
-    margin: 0;
-    font-size: 0.95rem;
-    line-height: 1.4;
-    color: var(--ion-color-step-700);
-    word-wrap: break-word;
-}
-
-.comment-meta {
-    font-size: 0.75rem;
-    color: var(--ion-color-medium);
-    margin: 0;
-    padding-left: 0.5rem;
 }
 
 .no-comments {
@@ -778,12 +695,28 @@ const deletePost = async () => {
 /* Comment Input Container */
 .comment-input-container {
     display: flex;
-    align-items: center;
-    gap: 0.75rem;
+    flex-direction: column;
     padding: 1rem;
     margin-top: 1rem;
     border-top: 1px solid var(--ion-color-light-shade);
     background: var(--ion-card-background);
+}
+
+.replying-indicator {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--ion-color-light);
+    padding: 0.5rem 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    border-left: 3px solid var(--ion-color-primary);
+}
+
+.input-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
 }
 
 .comment-input-container .current-user-avatar {
@@ -792,7 +725,7 @@ const deletePost = async () => {
     flex-shrink: 0;
 }
 
-/* Wrapper para el input con línea animada como Login/Register */
+/* Wrapper para el input con línea animada */
 .comment-input-wrapper {
     position: relative;
     flex: 1;
@@ -820,7 +753,6 @@ const deletePost = async () => {
     background: rgba(55, 65, 81, 0.1) !important;
 }
 
-/* Ocultar la línea por defecto de Ionic */
 .comment-input {
     --highlight-height: 0px;
     --highlight-color: transparent !important;
@@ -874,17 +806,15 @@ const deletePost = async () => {
     font-size: 1.2rem;
 }
 
-/* Modo oscuro - icono gris como el fondo */
 .ion-palette-dark .send-comment-button ion-icon {
     color: var(--ion-background-color, #1e1e1e);
 }
 
-/* Botón deshabilitado */
 .send-comment-button:disabled {
     opacity: 0.4;
 }
 
-/* Modo oscuro - ajustes de color del texto */
+/* Modo oscuro */
 .ion-palette-dark .comment-input {
     --background: rgba(55, 65, 81, 0.5);
     --color: #FFFFFF;
@@ -942,7 +872,7 @@ const deletePost = async () => {
 </style>
 
 <style>
-/* Estilos globales sin scoped para el input de comentarios */
+/* Estilos globales */
 .comment-input-wrapper ion-input {
     --highlight-color-focused: transparent !important;
     --highlight-color-valid: transparent !important;
@@ -958,7 +888,6 @@ const deletePost = async () => {
     display: none !important;
 }
 
-/* Estilos para la alerta de eliminación */
 :global(.custom-alert-delete) {
     --backdrop-opacity: 0.6;
 }
