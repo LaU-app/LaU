@@ -57,13 +57,8 @@
 
       <!-- Lista de notificaciones -->
       <ion-list v-else-if="notifications.length > 0" class="notifications-list">
-        <NotificationItem 
-          v-for="notification in notifications" 
-          :key="notification.id" 
-          :notification="notification"
-          v-memo="[notification.id, notification.read_at]"
-          @read="handleMarkAsRead" 
-          @click="handleNotificationClick" />
+        <NotificationItem v-for="notification in notifications" :key="notification.id" :notification="notification"
+          v-memo="[notification.id, notification.read_at]" @read="handleMarkAsRead" @click="handleNotificationClick" />
 
         <!-- Infinite scroll para cargar más -->
         <ion-infinite-scroll v-if="hasMorePages" @ionInfinite="loadMoreNotifications($event)" threshold="100px">
@@ -282,12 +277,12 @@ const showActionSheet = async () => {
         icon: checkmarkCircleOutline,
         handler: markAllAsRead
       },
-      {
-        text: 'Eliminar leídas',
-        icon: trashOutline,
-        role: 'destructive',
-        handler: clearReadNotifications
-      },
+      // {
+      //   text: 'Eliminar leídas',
+      //   icon: trashOutline,
+      //   role: 'destructive',
+      //   handler: clearReadNotifications
+      // },
       {
         text: 'Cancelar',
         role: 'cancel'
