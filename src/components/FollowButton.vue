@@ -9,7 +9,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { IonButton, IonIcon, IonLabel, IonSpinner, toastController } from '@ionic/vue';
 import { personAddOutline, checkmarkOutline } from 'ionicons/icons';
 import { followersService } from '@/services/followersService';
@@ -34,6 +34,18 @@ const emit = defineEmits(['follow', 'unfollow', 'update']);
 const isFollowing = ref(props.initialFollowStatus);
 const isLoading = ref(false);
 const localFollowersCount = ref(props.followersCount);
+
+// Observar cambios en initialFollowStatus para actualizar el estado interno
+watch(() => props.initialFollowStatus, (newValue) => {
+    console.log('[FollowButton] initialFollowStatus cambió:', newValue, 'para userId:', props.userId);
+    isFollowing.value = newValue;
+});
+
+// Observar cambios en followersCount
+watch(() => props.followersCount, (newValue) => {
+    console.log('[FollowButton] followersCount cambió:', newValue, 'para userId:', props.userId);
+    localFollowersCount.value = newValue;
+});
 
 const buttonText = computed(() => {
     if (isLoading.value) return 'Procesando...';

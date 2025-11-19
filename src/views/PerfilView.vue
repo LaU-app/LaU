@@ -96,9 +96,8 @@
 
         <!-- Botón Seguir / Editar -->
         <div class="action-buttons">
-          <ion-button v-if="!isMe" color="primary" @click="handleFollow">
-            {{ isFollowing ? "Siguiendo" : "Seguir" }}
-          </ion-button>
+          <FollowButton v-if="!isMe" :key="`follow-${user.id}`" :userId="user.id" :initialFollowStatus="isFollowing"
+            :followersCount="stats.seguidores" @update="handleFollowUpdate" />
           <ion-button v-else color="primary" @click="openSettings">Editar Perfil</ion-button>
         </div>
 
@@ -499,6 +498,8 @@ import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { UniversidadService } from "@/services/universidad";
 import { AuthService } from "@/services/auth";
 import { useDarkMode } from "@/utils/useDarkMode";
+import FollowButton from '@/components/FollowButton.vue';
+import { followersService } from '@/services/followersService';
 
 export default {
   name: "PerfilView",
@@ -541,6 +542,7 @@ export default {
     IonRefresher,
     IonRefresherContent,
     IonSkeletonText,
+    FollowButton,
   },
   data() {
     return {
@@ -764,6 +766,11 @@ export default {
         if (this.user?.id) {
           // Cargar datos en paralelo para mejor rendimiento
           await Promise.all([this.loadProfileData(), this.loadUniversidades()]);
+
+          // Verificar estado de seguimiento DESPUÉS de cargar todos los datos
+          if (!this.isMe) {
+            await this.checkFollowStatus();
+          }
         }
       } catch (err) {
         console.error("[PERFIL] Error al inicializar:", err);
@@ -781,6 +788,9 @@ export default {
       this.hasMorePages = false;
       this.error = null;
       this.stats = { posts: 0, seguidores: 0, siguiendo: 0 };
+      this.isFollowing = false;
+      this.isMe = false;
+      console.log('[PerfilView] Estado reseteado');
     },
 
     async loadCurrentUser() {
@@ -824,6 +834,12 @@ export default {
           this.isMe = false;
           const response = await AuthService.fetchForeignProfile(routeParam);
           this.user = response.data || response;
+
+          console.log('[PerfilView] Perfil ajeno cargado:', {
+            userId: this.user.id,
+            username: this.user.username,
+            is_following: this.user.is_following
+          });
         }
       } catch (error) {
         console.error("[PERFIL] Error cargando usuario:", error);
@@ -834,6 +850,7 @@ export default {
     async loadProfileData() {
       try {
         const userId = this.user.id || this.user.username;
+        console.log('[PerfilView] Cargando datos del perfil para userId:', userId);
 
         // Cargar todos los datos en paralelo
         const [postsResponse, followersResponse, followingResponse] =
@@ -843,17 +860,23 @@ export default {
             AuthService.getFollowing(userId).catch(() => ({ following: [] })),
           ]);
 
+        console.log('[PerfilView] Respuesta de seguidores (raw):', followersResponse);
+        console.log('[PerfilView] Respuesta de seguidos (raw):', followingResponse);
+
         // Procesar posts
         this.processPosts(postsResponse);
 
         // Procesar seguidores
         this.seguidores = this.extractDataArray(followersResponse, "followers");
+        console.log('[PerfilView] Seguidores procesados:', this.seguidores.length, this.seguidores);
 
         // Procesar seguidos
         this.siguiendo = this.extractDataArray(followingResponse, "following");
+        console.log('[PerfilView] Seguidos procesados:', this.siguiendo.length);
 
         // Actualizar estadísticas
         this.updateStats();
+        console.log('[PerfilView] Estadísticas:', this.stats);
       } catch (error) {
         console.error("[PERFIL] Error al cargar datos:", error);
         throw error;
@@ -887,16 +910,37 @@ export default {
     },
 
     extractDataArray(response, key) {
+      console.log(`[PerfilView] extractDataArray para key '${key}':`, response);
+
       if (response?.success && response?.data) {
-        if (Array.isArray(response.data.data)) return response.data.data;
-        if (Array.isArray(response.data)) return response.data;
+        if (Array.isArray(response.data.data)) {
+          console.log(`[PerfilView] Retornando desde response.data.data (${response.data.data.length} items)`);
+          return response.data.data;
+        }
+        if (Array.isArray(response.data)) {
+          console.log(`[PerfilView] Retornando desde response.data (${response.data.length} items)`);
+          return response.data;
+        }
       }
       if (response?.data) {
-        if (Array.isArray(response.data.data)) return response.data.data;
-        if (Array.isArray(response.data)) return response.data;
+        if (Array.isArray(response.data.data)) {
+          console.log(`[PerfilView] Retornando desde response.data.data (${response.data.data.length} items)`);
+          return response.data.data;
+        }
+        if (Array.isArray(response.data)) {
+          console.log(`[PerfilView] Retornando desde response.data (${response.data.length} items)`);
+          return response.data;
+        }
       }
-      if (response?.[key]) return response[key];
-      if (Array.isArray(response)) return response;
+      if (response?.[key]) {
+        console.log(`[PerfilView] Retornando desde response['${key}'] (${response[key].length} items)`);
+        return response[key];
+      }
+      if (Array.isArray(response)) {
+        console.log(`[PerfilView] Retornando desde response directo (${response.length} items)`);
+        return response;
+      }
+      console.log(`[PerfilView] No se encontraron datos, retornando array vacío`);
       return [];
     },
 
@@ -982,10 +1026,15 @@ export default {
 
     async handleRefresh(event) {
       try {
+        console.log('[PerfilView] Refrescando perfil...');
         this.resetState();
         await this.loadCurrentUser();
         if (this.user?.id) {
           await this.loadProfileData();
+          // Recargar estado de seguimiento después de recargar datos
+          if (!this.isMe) {
+            await this.checkFollowStatus();
+          }
         }
         await this.showToast("Perfil actualizado", "success");
       } catch (error) {
@@ -1339,13 +1388,67 @@ export default {
 
     // ===== SEGUIR/DEJAR DE SEGUIR =====
 
-    async handleFollow() {
-      // TODO: Implementar funcionalidad de seguir
-      this.isFollowing = !this.isFollowing;
-      await this.showToast(
-        this.isFollowing ? "Ahora sigues a este usuario" : "Dejaste de seguir",
-        "success"
-      );
+    async checkFollowStatus() {
+      try {
+        console.log('[PerfilView] ===== VERIFICANDO ESTADO DE SEGUIMIENTO =====');
+        console.log('[PerfilView] Usuario objetivo:', {
+          id: this.user.id,
+          username: this.user.username,
+          is_following: this.user.is_following
+        });
+        console.log('[PerfilView] Usuario actual (viewer):', {
+          id: this.user_viewer?.id,
+          username: this.user_viewer?.username
+        });
+
+        // Opción 1: Verificar si el backend envía is_following directamente
+        if (this.user.is_following !== undefined && this.user.is_following !== null) {
+          this.isFollowing = Boolean(this.user.is_following);
+          console.log('[PerfilView] ✅ Estado desde user.is_following:', this.isFollowing);
+          return;
+        }
+
+        // Opción 2: Verificar en la lista de seguidores cargada (más confiable)
+        if (this.seguidores && this.seguidores.length > 0 && this.user_viewer?.id) {
+          this.isFollowing = this.seguidores.some(follower => {
+            const followerId = follower.follower_id || follower.user_id || follower.id;
+            return followerId === this.user_viewer.id;
+          });
+          console.log('[PerfilView] ✅ Estado desde lista de seguidores:', this.isFollowing);
+          console.log('[PerfilView] Total seguidores:', this.seguidores.length);
+          return;
+        }
+
+        // Opción 3: Consultar la lista de usuarios que sigo
+        const followingIds = await followersService.getFollowingIds();
+        this.isFollowing = followingIds.includes(this.user.id);
+        console.log('[PerfilView] ✅ Estado desde followingIds:', this.isFollowing);
+        console.log('[PerfilView] followingIds:', followingIds);
+      } catch (error) {
+        console.error('[PerfilView] ❌ Error al verificar estado de seguimiento:', error);
+        this.isFollowing = false;
+      }
+    }, handleFollowUpdate(event) {
+      console.log('[PerfilView] Follow actualizado:', event);
+      this.isFollowing = event.isFollowing;
+      this.stats.seguidores = event.followersCount;
+
+      // Actualizar la lista de seguidores si estamos siguiendo
+      if (event.isFollowing && this.user_viewer) {
+        // Agregar el usuario actual a la lista de seguidores si no está
+        const viewerInList = this.seguidores.some(s => s.id === this.user_viewer.id);
+        if (!viewerInList) {
+          this.seguidores.push({
+            id: this.user_viewer.id,
+            name: this.user_viewer.name,
+            username: this.user_viewer.username,
+            imagen_url: this.user_viewer.imagen_url
+          });
+        }
+      } else if (!event.isFollowing && this.user_viewer) {
+        // Remover el usuario actual de la lista de seguidores
+        this.seguidores = this.seguidores.filter(s => s.id !== this.user_viewer.id);
+      }
     },
 
     // ===== MODALES =====
@@ -1683,6 +1786,12 @@ ion-select {
 }
 
 .action-buttons ion-button {
+  text-transform: none;
+  font-weight: 600;
+  min-width: 120px;
+}
+
+.action-buttons .follow-button {
   text-transform: none;
   font-weight: 600;
   min-width: 120px;

@@ -65,11 +65,12 @@
             <ion-list v-if="!loading && filteredUsers.length > 0">
                 <ion-item v-for="(u, index) in filteredUsers" :key="index" v-memo="[u.id, followingIds.includes(u.id)]">
                     <ion-avatar slot="start">
-                        <img v-if="u.imagen_url" :src="u.imagen_url" alt="avatar" loading="lazy" @error="handleImageError" />
+                        <img v-if="u.imagen_url" :src="u.imagen_url" alt="avatar" loading="lazy"
+                            @error="handleImageError" />
                         <ion-icon v-else :icon="personCircle" class="avatar-icon"></ion-icon>
                     </ion-avatar>
                     <ion-label>
-                        <h3>
+                        <h3 @click="goToProfile(u)" style="cursor: pointer;">
                             <strong>
                                 {{ u.name }}
                             </strong>
@@ -497,6 +498,11 @@ export default {
             ev.target.disabled = true;
             ev.target.complete();
         },
+        goToProfile(user) {
+            // Navegar al perfil del usuario usando su username o id
+            const identifier = user.username || user.id;
+            this.$router.push(`/tabs/perfil/${identifier}`);
+        },
     },
 };
 </script>
@@ -712,6 +718,19 @@ ion-content {
     color: var(--ion-text-color-secondary);
     font-size: 16px;
     margin: 0 0 16px 0;
+}
+
+/* Estilos para el nombre clickeable */
+ion-label h3 {
+    transition: color 0.2s ease;
+}
+
+ion-label h3:hover {
+    color: #8A2BE2;
+}
+
+ion-label h3:active {
+    opacity: 0.7;
 }
 
 .no-results ion-button {
