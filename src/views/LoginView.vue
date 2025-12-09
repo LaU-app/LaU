@@ -143,36 +143,36 @@ export default {
         }
     },
     mounted() {
-        oauthService.listenForAuth(async (token, err) => {
-            if (err) {
-                console.error("[OAUTH] Error en callback:", err);
-                this.errorMessage = "Error al iniciar sesión con proveedor.";
-                return;
-            }
+    oauthService.listenForAuth(async (token, err) => {
+        if (err) {
+            console.error("[OAUTH] Error en callback:", err);
+            this.errorMessage = "Error al iniciar sesión con proveedor.";
+            return;
+        }
 
-            console.log("[OAUTH] Token recibido:", token);
+        console.log("[OAUTH] Token recibido:", token);
 
-            // Guardamos el token
-            localStorage.setItem("access_token", token.accessToken);
+        // Guardamos el token
+        localStorage.setItem("access_token", token.accessToken);
 
-            // ID Token (contiene email, nombre, etc.)
-            if (token.idToken) {
-                localStorage.setItem("id_token", token.idToken);
-            }
+        // ID Token (contiene email, nombre, etc.)
+        if (token.idToken) {
+            localStorage.setItem("id_token", token.idToken);
+        }
 
-            // Mostrar toast de éxito
-            const toast = await toastController.create({
-                message: "Inicio de sesión exitoso",
-                duration: 2000,
-                position: "top",
-                cssClass: "success-toast"
-            });
-            await toast.present();
-
-            // Redirigir a tu dashboard
-            this.$router.replace("/tabs/tab1");
+        // Mostrar toast de éxito
+        const toast = await toastController.create({
+            message: "Inicio de sesión exitoso",
+            duration: 2000,
+            position: "top",
+            cssClass: "success-toast"
         });
-    },
+        await toast.present();
+
+        // Redirigir a tu dashboard
+        this.$router.replace("/tabs/tab1");
+    });
+},
     methods: {
         validateForm() {
             // Validación del email y contraseña según el controlador
