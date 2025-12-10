@@ -101,6 +101,11 @@ const routes = [
     component: () => import("@/views/CreatePost.vue"),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/auth/callback',
+    name: 'AuthCallback',
+    component: () => import('@/views/AuthCallback.vue')
+  },
 ];
 
 const router = createRouter({

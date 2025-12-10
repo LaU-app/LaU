@@ -30,7 +30,8 @@
                             <ion-col>
                                 <!-- Login con Google -->
                                 <ion-button expand="block" class="login-google" @click="loginWithGoogle">
-                                    <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973131/pngwing.com_2_mmyosg.png" class="icon-provider" />
+                                    <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973131/pngwing.com_2_mmyosg.png"
+                                        class="icon-provider" />
                                     <span class="text-google">Iniciar con Google</span>
                                 </ion-button>
                             </ion-col>
@@ -38,7 +39,8 @@
                             <ion-col>
                                 <!-- Login con Microsoft -->
                                 <ion-button expand="block" class="login-microsoft" @click="loginWithMicrosoft">
-                                    <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973132/pngwing.com_1_aofhph.png" class="icon-provider" />
+                                    <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973132/pngwing.com_1_aofhph.png"
+                                        class="icon-provider" />
                                     <span class="text-microsoft">Iniciar con Microsoft</span>
                                 </ion-button>
                             </ion-col>
@@ -143,36 +145,31 @@ export default {
         }
     },
     mounted() {
-    oauthService.listenForAuth(async (token, err) => {
-        if (err) {
-            console.error("[OAUTH] Error en callback:", err);
-            this.errorMessage = "Error al iniciar sesión con proveedor.";
-            return;
-        }
+        // Dentro de mounted() -> listenForAuth
+        oauthService.listenForAuth(async (response, error) => {
+            if (error) {
+                console.error("Error OAuth:", error);
+                return;
+            }
 
-        console.log("[OAUTH] Token recibido:", token);
+            if (response) {
+                try {
+                    // AQUÍ ESTÁ LA MAGIA: Enviamos el token a TU API
+                    // response.accessToken es lo que usualmente se envía
+                    const provider = 'google'; // O detecta cuál usaste
 
-        // Guardamos el token
-        localStorage.setItem("access_token", token.accessToken);
+                    console.log("Enviando token al backend...");
+                    await authService.socialLogin(provider, response.accessToken);
 
-        // ID Token (contiene email, nombre, etc.)
-        if (token.idToken) {
-            localStorage.setItem("id_token", token.idToken);
-        }
-
-        // Mostrar toast de éxito
-        const toast = await toastController.create({
-            message: "Inicio de sesión exitoso",
-            duration: 2000,
-            position: "top",
-            cssClass: "success-toast"
+                    // Si todo sale bien, ir al Home
+                    router.push('/tabs/home');
+                } catch (apiError) {
+                    console.error("Error en el backend:", apiError);
+                    // Aquí podrías mostrar una alerta: "Error al crear cuenta"
+                }
+            }
         });
-        await toast.present();
-
-        // Redirigir a tu dashboard
-        this.$router.replace("/tabs/tab1");
-    });
-},
+    },
     methods: {
         validateForm() {
             // Validación del email y contraseña según el controlador
@@ -308,7 +305,7 @@ export default {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.7), transparent);
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.645), rgba(0, 0, 0, 0.201), transparent);
     z-index: 1;
 }
 
@@ -345,7 +342,7 @@ export default {
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
+    justify-content: center;
 }
 
 /* Título */
@@ -376,27 +373,35 @@ export default {
     line-height: 1.5;
 }
 
+ion-grid {
+    padding: 0;
+    margin-bottom: 1rem;
+}
+
 /*botones de login de google y microsoft*/
-.login-google,.login-microsoft{
+.login-google,
+.login-microsoft {
     --background: #FFFFFF;
     font-weight: 900;
+    font-size: 0.7rem;
+    margin: 0;
 }
 
-.text-google{
-    background: linear-gradient(90deg, #DB4437, #F4B400,#0F9D58,#4285F4);
+.text-google {
+    background: linear-gradient(120deg, #DB4437, #F4B400, #0F9D58, #4285F4);
     -webkit-text-fill-color: transparent;
     -webkit-background-clip: text;
 }
 
-.text-microsoft{
-    background: linear-gradient(90deg, #F25022, #7FBA00,#00A4EF,#FFB900);
+.text-microsoft {
+    background: linear-gradient(120deg, #F25022, #7FBA00, #00A4EF, #FFB900);
     -webkit-text-fill-color: transparent;
     -webkit-background-clip: text;
 }
 
-.login-google img,.login-microsoft img{
-    width: 1.5rem; 
-    margin-right: 4%;
+.login-google img,
+.login-microsoft img {
+    width: 1.0rem;
 }
 
 /* Formulario */

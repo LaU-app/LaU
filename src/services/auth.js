@@ -295,33 +295,42 @@ export const AuthService = {
       const formData = new FormData();
 
       // Agregar _method para method spoofing
-      formData.append('_method', 'PUT');
+      formData.append("_method", "PUT");
 
       // Campos obligatorios - siempre deben enviarse
-      const requiredFields = ['id', 'name', 'username', 'email'];
-      requiredFields.forEach(field => {
+      const requiredFields = ["id", "name", "username", "email"];
+      requiredFields.forEach((field) => {
         if (data[field]) {
           formData.append(field, String(data[field]));
         }
       });
 
       // Campos opcionales - solo si tienen valor
-      const optionalFields = ['profession', 'gender', 'universidad_id', 'carrera_id'];
-      optionalFields.forEach(field => {
-        if (data[field] !== null && data[field] !== undefined && data[field] !== '') {
+      const optionalFields = [
+        "profession",
+        "gender",
+        "universidad_id",
+        "carrera_id",
+      ];
+      optionalFields.forEach((field) => {
+        if (
+          data[field] !== null &&
+          data[field] !== undefined &&
+          data[field] !== ""
+        ) {
           formData.append(field, String(data[field]));
         }
       });
 
       // Debug: Mostrar qué se está enviando
-      console.log('[AUTH] Actualizando perfil con:');
+      console.log("[AUTH] Actualizando perfil con:");
       for (let pair of formData.entries()) {
         console.log(`  ${pair[0]}: ${pair[1]}`);
       }
 
       const res = await api.post("/user/edit", formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
 
@@ -338,7 +347,7 @@ export const AuthService = {
       console.error("Detalles del error:", {
         status: error.response?.status,
         data: error.response?.data,
-        errors: error.response?.data?.errors
+        errors: error.response?.data?.errors,
       });
       throw error;
     }
@@ -355,7 +364,7 @@ export const AuthService = {
       // IMPORTANTE: Usar POST con _method=PUT porque Laravel no procesa FormData en PUT
       const res = await api.post("/user/edit", formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
 
@@ -369,6 +378,43 @@ export const AuthService = {
       return res.data;
     } catch (error) {
       console.error("Error al actualizar imagen de perfil:", error);
+      throw error;
+    }
+  },
+
+  async socialLogin(provider, token) {
+    try {
+      console.log("[AUTH] Enviando token social al backend...");
+
+      const res = await api.post("/auth/social-login", {
+        provider: provider,
+        token: token,
+      });
+
+      // 1. ADAPTAR LA RESPUESTA
+      // Tu API devuelve: { success: true, data: { token: '...', user: {...} } }
+      // Necesitamos entrar a res.data.data
+      const sessionData = res.data?.data || res.data;
+
+      if (sessionData?.token) {
+        console.log("[AUTH] Sesión creada correctamente. Guardando...");
+
+        // 2. GUARDAR DATOS (CRÍTICO)
+        // Usamos 'true' para que se guarde en localStorage (persistente)
+        this.setToken(sessionData.token, true);
+
+        if (sessionData.user) {
+          this.setUser(sessionData.user, true);
+        }
+
+        return sessionData;
+      } else {
+        throw new Error(
+          "La respuesta del servidor no contenía un token válido."
+        );
+      }
+    } catch (error) {
+      console.error("[AUTH] Error en socialLogin:", error);
       throw error;
     }
   },
