@@ -25,6 +25,26 @@
                         </p>
                     </div>
 
+                    <ion-grid>
+                        <ion-row>
+                            <ion-col>
+                                <!-- Login con Google -->
+                                <ion-button expand="block" class="login-google" @click="loginWithGoogle">
+                                    <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973131/pngwing.com_2_mmyosg.png" class="icon-provider" />
+                                    <span class="text-google">Iniciar con Google</span>
+                                </ion-button>
+                            </ion-col>
+
+                            <ion-col>
+                                <!-- Login con Microsoft -->
+                                <ion-button expand="block" class="login-microsoft" @click="loginWithMicrosoft">
+                                    <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973132/pngwing.com_1_aofhph.png" class="icon-provider" />
+                                    <span class="text-microsoft">Iniciar con Microsoft</span>
+                                </ion-button>
+                            </ion-col>
+                        </ion-row>
+                    </ion-grid>
+
                     <!-- Formulario -->
                     <form @submit.prevent="handleLogin" class="login-form">
                         <!-- Correo institucional -->
@@ -88,6 +108,7 @@ import {
 } from '@ionic/vue'
 import { arrowBack, eyeOutline, eyeOffOutline } from 'ionicons/icons'
 import { AuthService } from '@/services/auth'
+import oauthService from "@/services/oauthServices";
 
 export default {
     name: 'LoginView',
@@ -121,6 +142,37 @@ export default {
             rememberMe: false
         }
     },
+    mounted() {
+    oauthService.listenForAuth(async (token, err) => {
+        if (err) {
+            console.error("[OAUTH] Error en callback:", err);
+            this.errorMessage = "Error al iniciar sesión con proveedor.";
+            return;
+        }
+
+        console.log("[OAUTH] Token recibido:", token);
+
+        // Guardamos el token
+        localStorage.setItem("access_token", token.accessToken);
+
+        // ID Token (contiene email, nombre, etc.)
+        if (token.idToken) {
+            localStorage.setItem("id_token", token.idToken);
+        }
+
+        // Mostrar toast de éxito
+        const toast = await toastController.create({
+            message: "Inicio de sesión exitoso",
+            duration: 2000,
+            position: "top",
+            cssClass: "success-toast"
+        });
+        await toast.present();
+
+        // Redirigir a tu dashboard
+        this.$router.replace("/tabs/tab1");
+    });
+},
     methods: {
         validateForm() {
             // Validación del email y contraseña según el controlador
@@ -195,6 +247,24 @@ export default {
                 await toast.present()
             } finally {
                 this.loading = false
+            }
+        },
+
+        async loginWithGoogle() {
+            try {
+                console.log("[OAUTH] Iniciando login con Google...");
+                oauthService.login("google");
+            } catch (e) {
+                console.error("[OAUTH] Error Google:", e);
+            }
+        },
+
+        async loginWithMicrosoft() {
+            try {
+                console.log("[OAUTH] Iniciando login con Microsoft...");
+                oauthService.login("microsoft");
+            } catch (e) {
+                console.error("[OAUTH] Error Microsoft:", e);
             }
         },
 
@@ -304,6 +374,29 @@ export default {
     color: rgba(255, 255, 255, 0.9);
     margin: 0;
     line-height: 1.5;
+}
+
+/*botones de login de google y microsoft*/
+.login-google,.login-microsoft{
+    --background: #FFFFFF;
+    font-weight: 900;
+}
+
+.text-google{
+    background: linear-gradient(90deg, #DB4437, #F4B400,#0F9D58,#4285F4);
+    -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text;
+}
+
+.text-microsoft{
+    background: linear-gradient(90deg, #F25022, #7FBA00,#00A4EF,#FFB900);
+    -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text;
+}
+
+.login-google img,.login-microsoft img{
+    width: 1.5rem; 
+    margin-right: 4%;
 }
 
 /* Formulario */
