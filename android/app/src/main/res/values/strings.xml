@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">LaU</string>
     <string name="title_activity_main">LaU</string>
-    <string name="package_name">io.ionic.starter</string>
-    <string name="custom_url_scheme">io.ionic.starter</string>
+    <string name="package_name">io.ionic.lauapp</string>
+    <string name="custom_url_scheme">io.ionic.lauapp</string>
 </resources>
