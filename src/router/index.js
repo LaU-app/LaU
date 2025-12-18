@@ -93,7 +93,19 @@ const routes = [
         component: () => import("@/views/PerfilView.vue"),
         meta: { requiresAuth: true },
       },
+      {
+        path: "chat",
+        name: "ChatList",
+        component: () => import("@/views/ChatList.vue"),
+        meta: { requiresAuth: true },
+      },
     ],
+  },
+  {
+    path: "/chat/:id",
+    name: "ChatDetail",
+    component: () => import("@/views/ChatDetail.vue"),
+    meta: { requiresAuth: true },
   },
   {
     path: "/create-post/:tipo?",
@@ -102,9 +114,9 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: '/auth/callback',
-    name: 'AuthCallback',
-    component: () => import('@/views/AuthCallback.vue')
+    path: "/auth/callback",
+    name: "AuthCallback",
+    component: () => import("@/views/AuthCallback.vue"),
   },
 ];
 

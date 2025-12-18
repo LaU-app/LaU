@@ -99,7 +99,12 @@
           <FollowButton v-if="!isMe" :key="`follow-${user.id}`" :userId="user.id" :initialFollowStatus="isFollowing"
             :followersCount="stats.seguidores" @update="handleFollowUpdate" />
           <ion-button v-else color="primary" @click="openSettings">Editar Perfil</ion-button>
+          <ion-button v-if="!isMe" @click="goToChat(user.id)">
+            Enviar Mensaje
+          </ion-button>
         </div>
+
+
 
         <!-- Contadores -->
         <ion-grid class="stats-grid">
@@ -500,6 +505,7 @@ import { AuthService } from "@/services/auth";
 import { useDarkMode } from "@/utils/useDarkMode";
 import FollowButton from '@/components/FollowButton.vue';
 import { followersService } from '@/services/followersService';
+import { useRouter } from 'vue-router';
 
 export default {
   name: "PerfilView",
@@ -1627,6 +1633,16 @@ export default {
         position: "top",
       });
       await toast.present();
+    },
+
+    goToChat(userId) {
+      // Validar que exista ID
+      if (userId) {
+        // En Options API se usa this.$router
+        this.$router.push(`/chat/${userId}`);
+      } else {
+        console.error("No se puede ir al chat: ID de usuario no definido");
+      }
     },
   },
 };
