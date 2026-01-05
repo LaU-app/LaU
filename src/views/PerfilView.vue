@@ -1,7 +1,7 @@
 <template>
   <ion-page>
     <!-- Header del perfil -->
-    <ion-header class="ion-no-border">
+    <ion-header class="ion-no-border pt-safe-top">
       <ion-toolbar>
         <ion-buttons slot="start">
           <div class="logo-container">
@@ -23,7 +23,7 @@
                 d="M17 2a2 2 0 0 1 1.995 1.85l.005 .15v2a6.996 6.996 0 0 1 -3.393 6a6.994 6.994 0 0 1 3.388 5.728l.005 .272v2a2 2 0 0 1 -1.85 1.995l-.15 .005h-10a2 2 0 0 1 -1.995 -1.85l-.005 -.15v-2a6.996 6.996 0 0 1 3.393 -6a6.994 6.994 0 0 1 -3.388 -5.728l-.005 -.272v-2a2 2 0 0 1 1.85 -1.995l.15 -.005h10z" />
             </svg>
           </ion-button>
-          <ion-button v-if="isMe" id="open-menu-button" fill="clear" @click="toggleMenu">
+          <ion-button v-if="isMe" fill="clear" @click="goToSettings">
             <ion-icon :icon="ellipsisVertical" class="header-icon"></ion-icon>
           </ion-button>
         </ion-buttons>
@@ -500,6 +500,9 @@ import { AuthService } from "@/services/auth";
 import { useDarkMode } from "@/utils/useDarkMode";
 import FollowButton from '@/components/FollowButton.vue';
 import { followersService } from '@/services/followersService';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
 
 export default {
   name: "PerfilView",
@@ -1477,6 +1480,10 @@ export default {
       this.isMenuOpen = !this.isMenuOpen;
     },
 
+    goToSettings() {
+      this.$router.push('/settings');
+    },
+
     closeMenu() {
       this.isMenuOpen = false;
     },
@@ -1639,6 +1646,10 @@ ion-header ion-toolbar {
   --color: var(--app-text);
   --border-color: var(--app-border);
   position: relative;
+}
+
+.pt-safe-top {
+  padding-top: max(20px, env(safe-area-inset-top));
 }
 
 .logo-container {
