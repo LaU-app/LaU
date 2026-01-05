@@ -1,5 +1,5 @@
 <template>
-  <ion-header class="ion-no-border">
+  <ion-header class="ion-no-border pt-safe-top">
     <ion-toolbar>
       <div class="logo-container">
         <img src="/LaU.png" alt="LaÚ" class="logo-img" />
@@ -98,5 +98,9 @@ const goToTasks = () => {
   width: 20px;
   height: 20px;
   display: block;
+}
+
+.pt-safe-top {
+  padding-top: max(20px, env(safe-area-inset-top));
 }
 </style>
