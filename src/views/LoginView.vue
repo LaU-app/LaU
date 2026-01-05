@@ -8,7 +8,7 @@
             <!-- Contenido -->
             <div class="login-container">
                 <!-- Header -->
-                <div class="login-header">
+                <div class="login-header pt-safe-top">
                     <ion-button fill="clear" class="back-button" @click="goToWelcome">
                         <ion-icon :icon="arrowBack" slot="icon-only"></ion-icon>
                     </ion-button>
@@ -342,7 +342,7 @@ export default {
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-end;
 }
 
 /* Título */
@@ -376,7 +376,9 @@ export default {
 ion-grid {
     padding: 0;
     margin-bottom: 1rem;
+    flex: none !important;
 }
+
 
 /*botones de login de google y microsoft*/
 .login-google,
