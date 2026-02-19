@@ -52,7 +52,7 @@ export function useSyncQueue() {
     if (syncInterval.value) {
       clearInterval(syncInterval.value);
       syncInterval.value = null;
-      console.log("[SyncQueue] Auto-sincronización desactivada");
+      /* console.log("[SyncQueue] Auto-sincronización desactivada"); */
     }
   };
 
