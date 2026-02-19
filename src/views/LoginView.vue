@@ -25,28 +25,6 @@
                         </p>
                     </div>
 
-                    <ion-grid>
-                        <ion-row>
-                            <ion-col>
-                                <!-- Login con Google -->
-                                <ion-button expand="block" class="login-google" @click="loginWithGoogle">
-                                    <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973131/pngwing.com_2_mmyosg.png"
-                                        class="icon-provider" />
-                                    <span class="text-google">Iniciar con Google</span>
-                                </ion-button>
-                            </ion-col>
-
-                            <ion-col>
-                                <!-- Login con Microsoft -->
-                                <ion-button expand="block" class="login-microsoft" @click="loginWithMicrosoft">
-                                    <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973132/pngwing.com_1_aofhph.png"
-                                        class="icon-provider" />
-                                    <span class="text-microsoft">Iniciar con Microsoft</span>
-                                </ion-button>
-                            </ion-col>
-                        </ion-row>
-                    </ion-grid>
-
                     <!-- Formulario -->
                     <form @submit.prevent="handleLogin" class="login-form">
                         <!-- Correo institucional -->
@@ -110,7 +88,6 @@ import {
 } from '@ionic/vue'
 import { arrowBack, eyeOutline, eyeOffOutline } from 'ionicons/icons'
 import { AuthService } from '@/services/auth'
-import oauthService from "@/services/oauthServices";
 
 export default {
     name: 'LoginView',
@@ -144,32 +121,6 @@ export default {
             rememberMe: false
         }
     },
-    mounted() {
-        // Dentro de mounted() -> listenForAuth
-        oauthService.listenForAuth(async (response, error) => {
-            if (error) {
-                console.error("Error OAuth:", error);
-                return;
-            }
-
-            if (response) {
-                try {
-                    // AQUÍ ESTÁ LA MAGIA: Enviamos el token a TU API
-                    // response.accessToken es lo que usualmente se envía
-                    const provider = 'google'; // O detecta cuál usaste
-
-                    console.log("Enviando token al backend...");
-                    await authService.socialLogin(provider, response.accessToken);
-
-                    // Si todo sale bien, ir al Home
-                    router.push('/tabs/home');
-                } catch (apiError) {
-                    console.error("Error en el backend:", apiError);
-                    // Aquí podrías mostrar una alerta: "Error al crear cuenta"
-                }
-            }
-        });
-    },
     methods: {
         validateForm() {
             // Validación del email y contraseña según el controlador
@@ -194,12 +145,12 @@ export default {
             this.loading = true
 
             try {
-                console.log('[LOGIN] Iniciando login...', { email: this.formData.email });
+                /*console.log('[LOGIN] Iniciando login...', { email: this.formData.email });*/
 
                 // Pasar rememberMe al servicio de autenticación
                 await AuthService.login(this.formData, this.rememberMe)
 
-                console.log('[LOGIN] Login completado exitosamente');
+                /*console.log('[LOGIN] Login completado exitosamente');*/
 
                 // Mostrar mensaje de éxito
                 const toast = await toastController.create({
@@ -244,24 +195,6 @@ export default {
                 await toast.present()
             } finally {
                 this.loading = false
-            }
-        },
-
-        async loginWithGoogle() {
-            try {
-                console.log("[OAUTH] Iniciando login con Google...");
-                oauthService.login("google");
-            } catch (e) {
-                console.error("[OAUTH] Error Google:", e);
-            }
-        },
-
-        async loginWithMicrosoft() {
-            try {
-                console.log("[OAUTH] Iniciando login con Microsoft...");
-                oauthService.login("microsoft");
-            } catch (e) {
-                console.error("[OAUTH] Error Microsoft:", e);
             }
         },
 
@@ -376,32 +309,6 @@ export default {
 ion-grid {
     padding: 0;
     margin-bottom: 1rem;
-}
-
-/*botones de login de google y microsoft*/
-.login-google,
-.login-microsoft {
-    --background: #FFFFFF;
-    font-weight: 900;
-    font-size: 0.7rem;
-    margin: 0;
-}
-
-.text-google {
-    background: linear-gradient(120deg, #DB4437, #F4B400, #0F9D58, #4285F4);
-    -webkit-text-fill-color: transparent;
-    -webkit-background-clip: text;
-}
-
-.text-microsoft {
-    background: linear-gradient(120deg, #F25022, #7FBA00, #00A4EF, #FFB900);
-    -webkit-text-fill-color: transparent;
-    -webkit-background-clip: text;
-}
-
-.login-google img,
-.login-microsoft img {
-    width: 1.0rem;
 }
 
 /* Formulario */

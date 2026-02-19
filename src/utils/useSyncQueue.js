@@ -11,16 +11,13 @@ export function useSyncQueue() {
     if (isSyncing.value) return;
 
     isSyncing.value = true;
-    console.log("[SyncQueue] Iniciando sincronización...");
 
     try {
       // Sincronizar tareas
       const tasksResult = await tasksService.flushSyncQueue();
-      console.log("[SyncQueue] Tareas sincronizadas:", tasksResult);
 
       // Sincronizar sesiones de pomodoro
       const pomodoroResult = await pomodoroService.flushSyncQueue();
-      console.log("[SyncQueue] Pomodoros sincronizados:", pomodoroResult);
 
       const totalSynced = tasksResult.synced + pomodoroResult.synced;
       const totalFailed = tasksResult.failed + pomodoroResult.failed;
@@ -49,8 +46,6 @@ export function useSyncQueue() {
     syncInterval.value = setInterval(() => {
       syncAll();
     }, SYNC_INTERVAL_MS);
-
-    console.log("[SyncQueue] Auto-sincronización activada");
   };
 
   const stopAutoSync = () => {
