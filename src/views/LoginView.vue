@@ -8,7 +8,7 @@
             <!-- Contenido -->
             <div class="login-container">
                 <!-- Header -->
-                <div class="login-header">
+                <div class="login-header pt-safe-top">
                     <ion-button fill="clear" class="back-button" @click="goToWelcome">
                         <ion-icon :icon="arrowBack" slot="icon-only"></ion-icon>
                     </ion-button>
@@ -275,7 +275,7 @@ export default {
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-end;
 }
 
 /* Título */
@@ -309,6 +309,34 @@ export default {
 ion-grid {
     padding: 0;
     margin-bottom: 1rem;
+    flex: none !important;
+}
+
+
+/*botones de login de google y microsoft*/
+.login-google,
+.login-microsoft {
+    --background: #FFFFFF;
+    font-weight: 900;
+    font-size: 0.7rem;
+    margin: 0;
+}
+
+.text-google {
+    background: linear-gradient(120deg, #DB4437, #F4B400, #0F9D58, #4285F4);
+    -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text;
+}
+
+.text-microsoft {
+    background: linear-gradient(120deg, #F25022, #7FBA00, #00A4EF, #FFB900);
+    -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text;
+}
+
+.login-google img,
+.login-microsoft img {
+    width: 1.0rem;
 }
 
 /* Formulario */

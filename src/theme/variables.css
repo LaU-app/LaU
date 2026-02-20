@@ -58,3 +58,7 @@ ion-toast::part(button):hover {
 .my-rounded-alert .alert-wrapper  {
     border-radius: 20px !important;
 }
+
+.pt-safe-top {
+  padding-top: max(20px, env(safe-area-inset-top)) !important;
+}
