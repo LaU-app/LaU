@@ -39,7 +39,7 @@
           </div>
           <ion-label>
             <h2>Modo Ambiente</h2>
-            <p>Colores dinámicos basados en fotos</p>
+            <p>Colores dinámicos basados en fotos (usalo si tu celular es gama alta)</p>
           </ion-label>
           <ion-toggle slot="end" mode="ios" :checked="isAmbientMode" @ionChange="toggleAmbientMode"></ion-toggle>
         </ion-item>
