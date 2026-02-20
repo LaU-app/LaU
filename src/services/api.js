@@ -23,11 +23,11 @@ api.interceptors.request.use(
       sessionStorage.getItem("auth_token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('[API] Token agregado al request:', token.substring(0, 20) + '...');
+      /* console.log('[API] Token agregado al request:', token.substring(0, 20) + '...'); */
     } else {
-      console.warn('[API] No hay token disponible');
+      /* console.warn('[API] No hay token disponible'); */
     }
-    console.log('[API] Request:', config.method.toUpperCase(), config.url);
+    /* console.log('[API] Request:', config.method.toUpperCase(), config.url); */
     return config;
   },
   (error) => {
@@ -39,7 +39,7 @@ api.interceptors.request.use(
 // Interceptor para manejar errores de autenticación globalmente
 api.interceptors.response.use(
   (response) => {
-    console.log('[API] Response OK:', response.config.url, response.status);
+    /* console.log('[API] Response OK:', response.config.url, response.status); */
     return response;
   },
   (error) => {

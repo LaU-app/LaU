@@ -269,7 +269,7 @@ export default {
             this.loading = true
             try {
                 const response = await UniversidadService.getUniversidades()
-                console.log('Universidades cargadas:', response)
+                /* console.log('Universidades cargadas:', response) */
                 this.universidades = response.data || response
             } catch (error) {
                 console.error('Error al cargar universidades:', error)

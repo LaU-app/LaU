@@ -223,16 +223,16 @@ export const AuthService = {
    */
   async getUserPosts(userIdentifier, page = 1) {
     try {
-      console.log(
+      /* console.log(
         "[AUTH] Obteniendo posts para usuario:",
         userIdentifier,
         "página:",
         page
-      );
+      ); */
       const res = await api.get(`/users/${userIdentifier}/posts`, {
         params: { page },
       });
-      console.log("[AUTH] Respuesta de posts:", res.data);
+      /* console.log("[AUTH] Respuesta de posts:", res.data); */
       return res.data;
     } catch (error) {
       console.error("[AUTH] Error al obtener posts del usuario:", {
@@ -323,10 +323,10 @@ export const AuthService = {
       });
 
       // Debug: Mostrar qué se está enviando
-      console.log("[AUTH] Actualizando perfil con:");
+      /* console.log("[AUTH] Actualizando perfil con:");
       for (let pair of formData.entries()) {
         console.log(`  ${pair[0]}: ${pair[1]}`);
-      }
+      } */
 
       const res = await api.post("/user/edit", formData, {
         headers: {
@@ -384,7 +384,7 @@ export const AuthService = {
 
   async socialLogin(provider, token) {
     try {
-      console.log("[AUTH] Enviando token social al backend...");
+      /* console.log("[AUTH] Enviando token social al backend..."); */
 
       const res = await api.post("/auth/social-login", {
         provider: provider,
@@ -397,7 +397,7 @@ export const AuthService = {
       const sessionData = res.data?.data || res.data;
 
       if (sessionData?.token) {
-        console.log("[AUTH] Sesión creada correctamente. Guardando...");
+        /* console.log("[AUTH] Sesión creada correctamente. Guardando..."); */
 
         // 2. GUARDAR DATOS (CRÍTICO)
         // Usamos 'true' para que se guarde en localStorage (persistente)

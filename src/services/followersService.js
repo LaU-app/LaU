@@ -21,7 +21,7 @@ export const followersService = {
         for (const endpoint of endpoints) {
             try {
                 const response = await api.post(endpoint);
-                console.log(`✅ [FollowersService] Usuario seguido usando: ${endpoint}`, response.data);
+                /* console.log(`✅ [FollowersService] Usuario seguido usando: ${endpoint}`, response.data); */
                 return {
                     success: true,
                     data: response.data.data || response.data,
@@ -30,7 +30,7 @@ export const followersService = {
             } catch (error) {
                 // Error 404: endpoint no existe
                 if (error.response?.status === 404) {
-                    console.log(`❌ [FollowersService] Endpoint no encontrado: ${endpoint}`);
+                    /* console.log(`❌ [FollowersService] Endpoint no encontrado: ${endpoint}`); */
                     lastError = error;
                     continue;
                 }
@@ -74,7 +74,7 @@ export const followersService = {
         for (const endpoint of endpoints) {
             try {
                 const response = await api.post(endpoint);
-                console.log(`✅ [FollowersService] Usuario dejado de seguir usando: ${endpoint}`, response.data);
+                /* console.log(`✅ [FollowersService] Usuario dejado de seguir usando: ${endpoint}`, response.data); */
                 return {
                     success: true,
                     data: response.data.data || response.data,
@@ -83,7 +83,7 @@ export const followersService = {
             } catch (error) {
                 // Error 404: endpoint no existe
                 if (error.response?.status === 404) {
-                    console.log(`❌ [FollowersService] Endpoint no encontrado: ${endpoint}`);
+                    /* console.log(`❌ [FollowersService] Endpoint no encontrado: ${endpoint}`); */
                     lastError = error;
                     continue;
                 }
@@ -129,18 +129,18 @@ export const followersService = {
         for (const endpoint of endpoints) {
             try {
                 const response = await api.post(endpoint);
-                console.log(`✅ [FollowersService] Toggle follow exitoso usando: ${endpoint}`);
+                /* console.log(`✅ [FollowersService] Toggle follow exitoso usando: ${endpoint}`);
                 console.log('[FollowersService] Respuesta completa del backend:', response.data);
                 console.log('[FollowersService] Tipo de respuesta:', typeof response.data);
-                console.log('[FollowersService] Keys de respuesta:', Object.keys(response.data));
+                console.log('[FollowersService] Keys de respuesta:', Object.keys(response.data)); */
 
                 // Normalizar la respuesta del backend
                 // Laravel puede retornar: { data: {...} } o directamente {...}
                 const data = response.data.data || response.data;
 
-                console.log('[FollowersService] Data normalizada:', data);
+                /* console.log('[FollowersService] Data normalizada:', data);
                 console.log('[FollowersService] is_following:', data.is_following);
-                console.log('[FollowersService] isFollowing:', data.isFollowing);
+                console.log('[FollowersService] isFollowing:', data.isFollowing); */
 
                 return {
                     success: true,
@@ -150,7 +150,7 @@ export const followersService = {
             } catch (error) {
                 // Error 404: endpoint no existe
                 if (error.response?.status === 404) {
-                    console.log(`❌ [FollowersService] Endpoint no encontrado: ${endpoint}`);
+                    /* console.log(`❌ [FollowersService] Endpoint no encontrado: ${endpoint}`); */
                     lastError = error;
                     continue;
                 }
@@ -197,14 +197,14 @@ export const followersService = {
         for (const endpoint of endpoints) {
             try {
                 const response = await api.get(endpoint);
-                console.log(`✅ [FollowersService] Estado verificado usando: ${endpoint}`);
+                /* console.log(`✅ [FollowersService] Estado verificado usando: ${endpoint}`); */
                 return {
                     success: true,
                     data: response.data.data || response.data
                 };
             } catch (error) {
                 if (error.response?.status === 404) {
-                    console.log(`❌ [FollowersService] Endpoint no encontrado: ${endpoint}`);
+                    /* console.log(`❌ [FollowersService] Endpoint no encontrado: ${endpoint}`); */
                     lastError = error;
                     continue;
                 }
@@ -238,14 +238,14 @@ export const followersService = {
         for (const endpoint of endpoints) {
             try {
                 const response = await api.get(endpoint);
-                console.log(`✅ [FollowersService] Seguidores obtenidos usando: ${endpoint}`);
+                /* console.log(`✅ [FollowersService] Seguidores obtenidos usando: ${endpoint}`); */
                 return {
                     success: true,
                     data: response.data.data || response.data
                 };
             } catch (error) {
                 if (error.response?.status === 404) {
-                    console.log(`❌ [FollowersService] Endpoint no encontrado: ${endpoint}`);
+                    /* console.log(`❌ [FollowersService] Endpoint no encontrado: ${endpoint}`); */
                     lastError = error;
                     continue;
                 }
@@ -279,14 +279,14 @@ export const followersService = {
         for (const endpoint of endpoints) {
             try {
                 const response = await api.get(endpoint);
-                console.log(`✅ [FollowersService] Siguiendo obtenidos usando: ${endpoint}`);
+                /* console.log(`✅ [FollowersService] Siguiendo obtenidos usando: ${endpoint}`); */
                 return {
                     success: true,
                     data: response.data.data || response.data
                 };
             } catch (error) {
                 if (error.response?.status === 404) {
-                    console.log(`❌ [FollowersService] Endpoint no encontrado: ${endpoint}`);
+                    /* console.log(`❌ [FollowersService] Endpoint no encontrado: ${endpoint}`); */
                     lastError = error;
                     continue;
                 }
@@ -319,14 +319,14 @@ export const followersService = {
         for (const endpoint of endpoints) {
             try {
                 const response = await api.get(endpoint);
-                console.log(`✅ [FollowersService] Estadísticas obtenidas usando: ${endpoint}`);
+                /* console.log(`✅ [FollowersService] Estadísticas obtenidas usando: ${endpoint}`); */
                 return {
                     success: true,
                     data: response.data.data || response.data
                 };
             } catch (error) {
                 if (error.response?.status === 404) {
-                    console.log(`❌ [FollowersService] Endpoint no encontrado: ${endpoint}`);
+                    /* console.log(`❌ [FollowersService] Endpoint no encontrado: ${endpoint}`); */
                     lastError = error;
                     continue;
                 }
@@ -358,7 +358,7 @@ export const followersService = {
                 return [];
             }
 
-            console.log('[FollowersService] Obteniendo lista de usuarios seguidos...');
+            /* console.log('[FollowersService] Obteniendo lista de usuarios seguidos...'); */
 
             // Obtener la lista completa de usuarios que sigo
             const result = await this.getFollowing(currentUser.id);
@@ -370,7 +370,7 @@ export const followersService = {
                     ? followingData.map(user => user.id || user.following_id)
                     : [];
 
-                console.log('[FollowersService] IDs de usuarios seguidos:', followingIds);
+                /* console.log('[FollowersService] IDs de usuarios seguidos:', followingIds); */
                 return followingIds;
             }
 

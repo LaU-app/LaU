@@ -36,7 +36,7 @@ class PostsService {
         const currentUserId = currentUser?.id;
 
         // Log para debugging - ver qué está enviando el backend
-        if (posts.length > 0) {
+        /* if (posts.length > 0) {
           console.log('[PostsService] Ejemplo de post del backend:', {
             id: posts[0].id,
             user_has_liked: posts[0].user_has_liked,
@@ -44,7 +44,7 @@ class PostsService {
             likes: posts[0].likes,
             currentUserId: currentUserId
           });
-        }
+        } */
 
         // Enriquecer posts con información de autenticación
         const enrichedPosts = posts.map((post) => {
@@ -168,13 +168,13 @@ class PostsService {
       }
 
       // Log para debugging
-      console.log('[PostsService] Post individual del backend:', {
+      /* console.log('[PostsService] Post individual del backend:', {
         id: post.id,
         user_has_liked_backend: post.user_has_liked,
         user_has_liked_calculado: hasLiked,
         likes_count: post.likes_count,
         currentUserId: currentUserId
-      });
+      }); */
 
       return {
         success: true,
@@ -206,14 +206,14 @@ class PostsService {
       const data = response.data?.data || response.data;
 
       // Log detallado para debugging
-      console.log('[PostsService] Respuesta de like del backend:', {
+      /* console.log('[PostsService] Respuesta de like del backend:', {
         postId,
         rawResponse: response.data,
         user_has_liked: data.user_has_liked,
         liked: data.liked,
-        likes_count: data.likes_count,
+        likes_count: data.likes_count, 
         total_likes: data.total_likes
-      });
+      }); */
 
       return {
         success: true,
@@ -254,13 +254,13 @@ class PostsService {
     for (const endpoint of endpoints) {
       try {
         const response = await api.post(endpoint.url, endpoint.body);
-        console.log(`✅ Comentario enviado usando: ${endpoint.url}`);
+        /* console.log(`✅ Comentario enviado usando: ${endpoint.url}`); */
         return { success: true, data: response.data };
       } catch (err) {
         lastError = err;
         // Si es 404, intentar el siguiente endpoint
         if (err.response?.status === 404) {
-          console.log(`❌ Endpoint no encontrado: ${endpoint.url}`);
+          /* console.log(`❌ Endpoint no encontrado: ${endpoint.url}`); */
           continue;
         }
         // Si es otro error, retornarlo inmediatamente

@@ -47,7 +47,6 @@ export default {
       // Si falla, intentar obtener del cache local
       const cachedTasks = await tasksStorage.getItem("tasks_cache");
       if (cachedTasks) {
-        console.log("[TasksService] Retornando tareas del cache");
         return { success: true, data: cachedTasks };
       }
 
@@ -203,20 +202,13 @@ export default {
     const queue = (await syncQueueStorage.getItem("queue")) || [];
     const failedItems = [];
 
-    console.log(`[TasksService] Sincronizando ${queue.length} items en cola`);
-
     for (const item of queue) {
       try {
         if (item.action === "task_create") {
           await api.post("/tasks", item.payload);
-          console.log(
-            "[TasksService] Tarea creada sincronizada:",
-            item.payload.uuid_cliente
-          );
         } else if (item.action === "task_update") {
           const { id, ...data } = item.payload;
           await api.put(`/tasks/${id}`, data);
-          console.log("[TasksService] Tarea actualizada sincronizada:", id);
         }
       } catch (error) {
         console.error("[TasksService] Error al sincronizar item:", error);
