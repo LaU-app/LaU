@@ -1,7 +1,24 @@
 <template>
-    <ion-card class="post-card" @click="goToPostDetail">
+    <ion-card 
+        class="post-card" 
+        :class="{ 
+            'card-image-style': post.tipo === 'imagen' && isAmbientMode, 
+            'is-dark-bg': post.tipo === 'imagen' && isAmbientMode && isDarkImage, 
+            'is-light-bg': post.tipo === 'imagen' && isAmbientMode && !isDarkImage,
+            'normal-card': !isAmbientMode || post.tipo !== 'imagen'
+        }" 
+        :style="isAmbientMode ? { '--ambient-gradient': ambientGradient } : {}"
+        @click="goToPostDetail"
+    >
+       
+        <div 
+            v-if="post.tipo === 'imagen' && post.imagen_url && isAmbientMode" 
+            class="card-main-blur" 
+            :style="{ backgroundImage: `url(${post.imagen_url})` }"
+        ></div>
+       
         <!-- Post Header -->
-        <ion-card-header>
+        <ion-card-header class="relative-content">
             <div class="post-header">
                 <ion-avatar class="post-avatar">
                     <img v-if="post.user?.imagen_url" :src="post.user.imagen_url" :alt="post.user?.name || 'Usuario'"
@@ -21,7 +38,7 @@
         </ion-card-header>
 
         <!-- Post Content -->
-        <ion-card-content>
+        <ion-card-content class="relative-content">
             <!-- Título y/o Descripción o Texto (Dinámico) -->
             <ion-text v-if="post.titulo || post.descripcion || post.texto">
                 <h2 v-if="post.titulo" class="post-title">{{ post.titulo }}</h2>
@@ -31,7 +48,7 @@
 
             <!-- Imagen Post -->
             <div v-if="post.tipo === 'imagen' && post.imagen_url" class="post-media">
-                <ion-img :src="post.imagen_url" :alt="post.titulo || 'Post'" @ionError="handleImageError">
+                <ion-img :src="post.imagen_url" :alt="post.titulo || 'Post'" @ionError="handleImageError" class="post-media">
                     <div slot="image" style="position: relative; padding-top: 75%; background: var(--ion-color-light);">
                         <ion-spinner name="crescent" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></ion-spinner>
                     </div>
@@ -68,7 +85,7 @@
         </ion-card-content>
         <br>
         <!-- Post Actions -->
-        <ion-card-content class="post-footer">
+        <ion-card-content class="post-footer relative-content">
             <PostActions :post="post" @like="handleLike" @comment="handleComment" />
         </ion-card-content>
 
@@ -92,6 +109,10 @@ import MusicPlayer from './MusicPlayer.vue'
 import PostActions from './PostActions.vue'
 import { timeAgo } from '@/utils/timeUtils'
 import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue';
+import * as VibrantNamespace from 'node-vibrant';
+import { useAmbientMode } from "@/utils/useAmbientMode";
+
 
 export default {
     name: 'PostCard',
@@ -117,6 +138,7 @@ export default {
     emits: ['like', 'comment', 'share', 'imageError'],
     setup(props, { emit }) {
         const router = useRouter()
+        const { isAmbientMode } = useAmbientMode();
 
         const goToPostDetail = () => {
             router.push(`/tabs/post/${props.post.id}`)
@@ -174,6 +196,60 @@ export default {
             return colors[extension] || 'medium'
         }
 
+        const isDarkImage = ref(false);
+
+        const ambientGradient = ref('linear-gradient(135deg, rgba(0,0,0,0.1), rgba(0,0,0,0.1))');
+
+        const extractColors = async (imageUrl) => {
+            if (!imageUrl) return;
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            try {
+                const VibrantClass = VibrantNamespace.Vibrant || VibrantNamespace.default || VibrantNamespace;
+                const relativeUrl = imageUrl.replace(/^.*\/\/[^\/]+/, '');
+                const finalUrl = `${relativeUrl}?t=${Date.now()}`;
+
+                const palette = await VibrantClass.from(finalUrl).getPalette();
+
+                if (palette.Vibrant) {
+                    const v = palette.Vibrant;
+                    const dv = palette.DarkVibrant;
+                    
+                    const rgb = v.getRgb();
+                    // Luminancia técnica: $Y = 0.299R + 0.587G + 0.114B$
+                    const vBrightness = (rgb[0] * 0.299 + rgb[1] * 0.587 + rgb[2] * 0.114);
+                    
+                    // --- NUEVA LÓGICA DE DECISIÓN POR POBLACIÓN ---
+                    const vPop = v.getPopulation();
+                    const dvPop = dv ? dv.getPopulation() : 0;
+
+                    // REGLA: Si el color oscuro tiene más del doble de píxeles que el color vibrante,
+                    // asumimos que el fondo es oscuro sin importar el brillo del logo.
+                    let forceDark = false;
+                    if (dvPop > (vPop * 2)) {
+                        forceDark = true;
+                    }
+
+                    // Aplicamos: Es oscura si el brillo es bajo (< 140) O si los píxeles oscuros dominan.
+                    isDarkImage.value = (vBrightness < 140) || forceDark;
+
+                    console.log(`%c[SivarSocial] ID: ${props.post.id} | Brillo: ${vBrightness.toFixed(0)} | Pop V: ${vPop} | Pop DV: ${dvPop} | ¿Texto Blanco?: ${isDarkImage.value}`, 
+                                `color: ${isDarkImage.value ? '#3498db' : '#f39c12'}; font-weight: bold;`);
+
+                    ambientGradient.value = `linear-gradient(135deg, rgba(${rgb.join(',')}, 0.6), rgba(0,0,0,0.4))`;
+                }
+            } catch (e) {
+                console.warn("Fallo en análisis, usando texto negro por defecto.");
+                isDarkImage.value = false; 
+            }
+        };
+
+        onMounted(() => {
+            if (props.post.tipo === 'imagen' && props.post.imagen_url) {
+                extractColors(props.post.imagen_url);
+            }
+        });
+
         return {
             personCircle,
             documentAttach,
@@ -187,7 +263,11 @@ export default {
             getFileExtension,
             downloadFile,
             getFileColor,
-            timeAgo
+            timeAgo,
+            isDarkImage,
+            ambientGradient,
+            extractColors,
+            isAmbientMode
         }
     }
 }
@@ -281,5 +361,93 @@ export default {
     margin: 0.25rem 0 0 0;
     font-size: 0.8rem;
     color: var(--ion-color-medium);
+}
+
+/* Configuración base de la card */
+.post-card {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+/* La capa de fondo con Blur */
+.card-main-blur {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-size: cover;
+  background-position: center;
+  /* En modo claro: un poco vibrante */
+  filter: blur(30px) saturate(1.4) brightness(0.9);
+  transform: scale(1.2);
+  z-index: 0;
+}
+
+/* Capa de oscuridad para que el texto blanco/negro se lea bien */
+.card-image-style::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: transparent !important; /* Ajusta este valor para oscurecer el fondo */
+  z-index: 1;
+}
+
+/* Asegura que el contenido esté por encima del fondo */
+.relative-content {
+  position: relative;
+  z-index: 2;
+}
+
+/* --- DINÁMICA DE COLORES --- */
+
+/* CASO: Imagen Clara -> Texto e Iconos Oscuros */
+.is-light-bg :deep(h2),
+.is-light-bg :deep(h3),
+.is-light-bg :deep(p),
+.is-light-bg :deep(ion-text),
+.is-light-bg :deep(.post-meta),
+.is-light-bg :deep(ion-icon),
+.is-light-bg :deep(.action-button ion-icon),
+.is-light-bg :deep(.action-button ion-label) {
+    color: #1a1a1a !important;
+    --color: #1a1a1a !important;
+    text-shadow: none !important;
+}
+
+.is-light-bg :deep(.action-button ion-icon),
+.is-light-bg :deep(.action-button ion-label) {
+    color: #000000 !important;
+}
+
+.card-image-style.is-dark-bg :deep(h2),
+.card-image-style.is-dark-bg :deep(h3),
+.card-image-style.is-dark-bg :deep(p),
+.card-image-style.is-dark-bg :deep(ion-text),
+.card-image-style.is-dark-bg :deep(.post-meta),
+.card-image-style.is-dark-bg :deep(ion-icon),
+.card-image-style.is-dark-bg :deep(.action-button ion-icon),
+.card-image-style.is-dark-bg :deep(.action-button ion-label) {
+    color: #ffffff !important;
+    --color: #ffffff !important; /* Variable interna de Ionic */
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important;
+}
+
+.card-image-style.is-dark-bg :deep(.action-button ion-icon),
+.card-image-style.is-dark-bg :deep(.action-button ion-label) {
+    color: #ffffff !important;
+}
+
+/* Transparencia para contenedores internos */
+.card-image-style ion-card-header,
+.card-image-style ion-card-content,
+.card-image-style .post-footer {
+    --background: transparent;
+    background: transparent !important;
+}
+
+.post-card.card-image-style {
+    /* Usamos la variable inyectada desde el :style */
+    box-shadow: 0 15px 50px -15px var(--ambient-gradient) !important;
+    transition: all 0.6s ease-in-out;
+    border: none !important;
 }
 </style>

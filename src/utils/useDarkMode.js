@@ -38,6 +38,7 @@ export function useDarkMode() {
     if (dark) {
       try {
         await StatusBar.setStyle({ style: Style.Dark }) // Pone íconos BLANCOS
+        // await StatusBar.setBackgroundColor({ color: '#121212' })
       } catch (e) {
         console.log('StatusBar no disponible (estás en web)')
       }
@@ -85,6 +86,7 @@ export function useDarkMode() {
     } else {
       try {
         await StatusBar.setStyle({ style: Style.Light }) // Pone íconos NEGROS
+        // await StatusBar.setBackgroundColor({ color: '#F3F4F6' })
       } catch (e) {
         console.log('StatusBar no disponible')
       }

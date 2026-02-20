@@ -4,7 +4,7 @@
   </ion-app>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { IonApp, IonRouterOutlet, useBackButton, useIonRouter } from '@ionic/vue';
 import { onMounted } from 'vue';
 import { useDarkMode } from '@/utils/useDarkMode';
@@ -12,6 +12,9 @@ import { useSyncQueue } from '@/utils/useSyncQueue';
 import { AuthService } from '@/services/auth';
 import { App } from '@capacitor/app';
 import { useRoute } from 'vue-router';
+import { StatusBar } from '@capacitor/status-bar';
+
+StatusBar.setOverlaysWebView({ overlay: true });
 
 const ionRouter = useIonRouter();
 const route = useRoute();
@@ -22,7 +25,7 @@ useBackButton(10, (processNextHandler) => {
   const exitPages = ['Welcome', 'Login', 'Home']; 
   
   // Nombre actual (puede venir undefined, así que aseguramos que sea string)
-  const currentName = (route.name || '') as string;
+  const currentName = route.name || '';
   const currentPath = route.path;
 
   console.log('Botón atrás presionado. Ruta:', currentPath, 'Nombre:', currentName);
@@ -50,7 +53,6 @@ const { startAutoSync } = useSyncQueue();
 
 onMounted(() => {
   initDarkMode();
-
   // Solo iniciar sincronización si el usuario está autenticado
   if (AuthService.isAuthenticated()) {
     startAutoSync();

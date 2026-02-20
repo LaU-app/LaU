@@ -7,7 +7,11 @@ const config: CapacitorConfig = {
   plugins: {
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert"]
-    }
+    },
+    // StatusBar: {
+    //   overlaysWebView: true,
+    //   backgroundColor: '#00000000',
+    // }
   }
 };
 

@@ -1,7 +1,7 @@
 //importaciones axios para hacer peticiones HTTP
 import axios from "axios";
 
-const API_URL = "https://lauapi-production.up.railway.app/api"; // Verifcar URL base de la API
+const API_URL = "http://127.0.0.1:8000/api"; // Verifcar URL base de la API
               // http://127.0.0.1:8000/api
               // https://lauapi-production.up.railway.app/api
 

@@ -300,7 +300,7 @@ export default {
 
 .description {
     font-size: 0.875rem;
-    font-weight: 300;
+    font-weight: 500;
     color: rgba(255, 255, 255, 0.9);
     margin: 0;
     line-height: 1.5;
