@@ -1648,10 +1648,6 @@ ion-header ion-toolbar {
   position: relative;
 }
 
-.pt-safe-top {
-  padding-top: max(20px, env(safe-area-inset-top));
-}
-
 .logo-container {
   display: flex;
   align-items: center;

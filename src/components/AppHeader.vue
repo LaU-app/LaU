@@ -99,8 +99,4 @@ const goToTasks = () => {
   height: 20px;
   display: block;
 }
-
-.pt-safe-top {
-  padding-top: max(20px, env(safe-area-inset-top));
-}
 </style>

@@ -59,6 +59,14 @@ ion-toast::part(button):hover {
     border-radius: 20px !important;
 }
 
-.pt-safe-top {
-  padding-top: max(20px, env(safe-area-inset-top)) !important;
+/* .pt-safe-top {
+  padding-top: 15px !important;
+} */
+
+/* .is-xiaomi .pt-safe-top {
+  padding-top: 0px !important;
+} */
+
+ion-header {
+    padding-top: env(safe-area-inset-top) !important;
 }

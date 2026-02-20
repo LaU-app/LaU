@@ -32,6 +32,17 @@
           <ion-toggle slot="end" mode="ios" :checked="isDarkMode" 
             @ionChange="handleToggleChange"></ion-toggle>
         </ion-item>
+
+        <ion-item>
+          <div slot="start" class="icon-box bg-blue">
+            <ion-icon :icon="globeOutline"></ion-icon>
+          </div>
+          <ion-label>
+            <h2>Modo Ambiente</h2>
+            <p>Colores dinámicos basados en fotos</p>
+          </ion-label>
+          <ion-toggle slot="end" mode="ios" :checked="isAmbientMode" @ionChange="toggleAmbientMode"></ion-toggle>
+        </ion-item>
       </ion-list>
 
       <div class="section-title">NOTIFICACIONES</div>
@@ -103,9 +114,11 @@ import { useRouter } from 'vue-router';
 import { chevronBackOutline } from 'ionicons/icons'; // Importamos el icono
 import { useDarkMode } from "@/utils/useDarkMode";
 import { AuthService } from "@/services/auth";
+import { useAmbientMode } from "@/utils/useAmbientMode";
 
 const router = useRouter();
 const { isDarkMode, toggleDarkMode } = useDarkMode();
+const { isAmbientMode, toggleAmbientMode } = useAmbientMode();
 
 const goBack = () => {
   // Aquí puedes agregar lógica extra antes de salir si quieres
@@ -243,9 +256,6 @@ ion-content {
 .footer-info .version {
   font-size: 10px;
   opacity: 0.8;
-}
-.pt-safe-top {
-  padding-top: max(20px, env(safe-area-inset-top));
 }
 
 ion-list.md.list-md.list-inset.hydrated,
