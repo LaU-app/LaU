@@ -27,9 +27,6 @@
           </svg>
         </ion-tab-button>
 
-        <ion-tab-button tab="chat" href="/tabs/chat">
-          <ion-icon aria-hidden="true" :icon="chatbubbleEllipsesSharp" />
-        </ion-tab-button>
 
         <ion-tab-button @click="openNotifications">
           <div class="notification-button-wrapper">

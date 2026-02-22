@@ -99,6 +99,18 @@ const routes = [
         component: () => import("@/views/ChatList.vue"),
         meta: { requiresAuth: true },
       },
+      {
+        path: "perfil/:username",
+        name: "UserProfile",
+        component: () => import("@/views/PerfilView.vue"),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: "perfil",
+        name: "MiPerfil",
+        component: () => import("@/views/PerfilView.vue"),
+        meta: { requiresAuth: true },
+      }
     ],
   },
   {
