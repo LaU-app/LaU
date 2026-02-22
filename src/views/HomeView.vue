@@ -64,13 +64,14 @@
 </template>
 
 <script>
-import { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, alertController } from '@ionic/vue'
-import AppHeader from '@/components/AppHeader.vue'
-import CreatePostCard from '@/components/CreatePostCard.vue'
-import PostCard from '@/components/PostCard.vue'
-import postsService from '@/services/postsService'
-import { AuthService } from '@/services/auth'
-import { useDarkMode } from '@/utils/useDarkMode'
+import { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, alertController } from '@ionic/vue';
+import AppHeader from '@/components/AppHeader.vue';
+import CreatePostCard from '@/components/CreatePostCard.vue';
+import PostCard from '@/components/PostCard.vue';
+import postsService from '@/services/postsService';
+import { AuthService } from '@/services/auth';
+import { useDarkMode } from '@/utils/useDarkMode';
+
 
 export default {
     name: 'HomeView',
@@ -124,13 +125,13 @@ export default {
             this.fetchPosts()
         } else if (this.isAuthenticated && postCreated) {
             // Si viene de crear un post, refrescar el feed
-            console.log('📝 Post creado - Actualizando feed...')
+            /* console.log('📝 Post creado - Actualizando feed...') */
             this.fetchPosts(1)
             // Limpiar el state para evitar recargas múltiples
             window.history.replaceState({ ...window.history.state, postCreated: false }, '')
         } else if (postDeleted) {
             // Si viene de eliminar un post, refrescar el feed
-            console.log('🗑️ Post eliminado - Actualizando feed...')
+            /* console.log('🗑️ Post eliminado - Actualizando feed...') */
             this.fetchPosts(1)
             // Limpiar el state
             window.history.replaceState({ ...window.history.state, postDeleted: false }, '')
@@ -217,7 +218,7 @@ export default {
                 this.feedType = result.feedType || 'public'
 
                 // Log detallado para debugging de likes
-                console.log(`[HomeView] Feed cargado: ${this.feedType}`, {
+                /* console.log(`[HomeView] Feed cargado: ${this.feedType}`, {
                     posts: result.data.length,
                     total: this.totalPosts,
                     page: this.currentPage,
@@ -228,7 +229,7 @@ export default {
                         user_has_liked: p.user_has_liked,
                         likes_count: p.likes_count
                     }))
-                })
+                }) */
             } else {
                 this.error = result.error
                 this.feedType = result.feedType || 'error'

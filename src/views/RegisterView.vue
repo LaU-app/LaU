@@ -25,6 +25,65 @@
                         </p>
                     </div>
 
+                    <div id="app">
+                        <div v-if="botonesVisibles" class="contenedor-botones">
+                            <p>Selecciona una opción:</p>
+
+                            <button expand="block" class="cssbuttons-io" @click="cambiarVista('vistaA')">
+                                <span>Aspirante</span>
+                            </button>
+                            
+                            <button expand="block" class="cssbuttons-io" @click="cambiarVista('vistaB')">
+                                <span>Estudiante</span>
+                            </button>
+
+                            <button expand="block" class="cssbuttons-io" @click="cambiarVista('vistaC')">
+                                <span>Egresado</span>
+                            </button>
+                            
+                            <button expand="block" class="cssbuttons-io" @click="ocultarBotones">
+                                <span>Ocultar Botones de Navegación</span>
+                            </button>
+                        </div>
+
+                        <div v-if="vistaActiva === 'vistaA'" class="vista-a">
+                            <!-- Login con Google -->
+                            <ion-button expand="block" class="login-google" @click="loginWithGoogle">
+                                <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973131/pngwing.com_2_mmyosg.png" class="icon-provider" />
+                                <span class="text-google">Iniciar con Google</span>
+                            </ion-button>
+                            <ion-button @click="cambiarVista('inicio')">Volver al inicio</ion-button>
+                        </div>
+
+                        <div v-else-if="vistaActiva === 'vistaB'" class="vista-b">
+                            <!-- Login con Microsoft -->
+                            <ion-button expand="block" class="login-microsoft" @click="loginWithMicrosoft">
+                                <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973132/pngwing.com_1_aofhph.png" class="icon-provider" />
+                                <span class="text-microsoft">Iniciar con Microsoft</span>
+                            </ion-button>
+                            <ion-button @click="cambiarVista('inicio')">Volver al inicio</ion-button>
+                        </div>
+
+                        <div v-else-if="vistaActiva === 'vistaC'" class="vista-c">
+                            <!-- Login con Google -->
+                            <ion-button expand="block" class="login-google" @click="loginWithGoogle">
+                                <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973131/pngwing.com_2_mmyosg.png" class="icon-provider" />
+                                <span class="text-google">Iniciar con Google</span>
+                            </ion-button>
+                            <!-- Login con Microsoft -->
+                            <ion-button expand="block" class="login-microsoft" @click="loginWithMicrosoft">
+                                <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973132/pngwing.com_1_aofhph.png" class="icon-provider" />
+                                <span class="text-microsoft">Iniciar con Microsoft</span>
+                            </ion-button>
+                            <ion-button @click="cambiarVista('inicio')">Volver al inicio</ion-button>
+                        </div>
+
+                        <div v-else class="vista-inicio">
+                            <h3>👋 Inicio</h3>
+                            <p>Utiliza los botones de arriba para navegar entre las vistas A y B.</p>
+                        </div>
+                    </div>
+
                     <!-- Formulario -->
                     <form @submit.prevent="handleRegister" class="register-form">
                         <!-- Nombre completo -->
@@ -118,6 +177,7 @@ import {
 } from '@ionic/vue'
 import { arrowBack, eyeOutline, eyeOffOutline } from 'ionicons/icons'
 import { AuthService } from '@/services/auth'
+import oauthService from "@/services/oauthServices";
 
 export default {
     name: 'RegisterView',
@@ -131,6 +191,12 @@ export default {
     },
     data() {
         return {
+            // 1. Estado para controlar qué contenido mostrar ('inicio', 'vistaA', 'vistaB')
+            vistaActiva: 'inicio', 
+      
+            // 2. Estado para controlar la visibilidad de los botones de navegación
+            botonesVisibles: true,
+
             arrowBack,
             eyeOutline,
             eyeOffOutline,
@@ -187,6 +253,31 @@ export default {
             this.carreraData.nombre = carreraNombre
             this.formData.carrera_id = parseInt(carreraId)
         }
+
+        // Dentro de mounted() -> listenForAuth
+        oauthService.listenForAuth(async (response, error) => {
+            if (error) {
+                console.error("Error OAuth:", error);
+                return;
+            }
+
+            if (response) {
+                try {
+                    // AQUÍ ESTÁ LA MAGIA: Enviamos el token a TU API
+                    // response.accessToken es lo que usualmente se envía
+                    const provider = 'google'; // O detecta cuál usaste
+
+                    console.log("Enviando token al backend...");
+                    await authService.socialLogin(provider, response.accessToken);
+
+                    // Si todo sale bien, ir al Home
+                    router.push('/tabs/home');
+                } catch (apiError) {
+                    console.error("Error en el backend:", apiError);
+                    // Aquí podrías mostrar una alerta: "Error al crear cuenta"
+                }
+            }
+        });
     },
     computed: {
         emailPlaceholder() {
@@ -209,6 +300,37 @@ export default {
         }
     },
     methods: {
+
+        // Método para cambiar la vista activa
+        cambiarVista(nuevaVista) {
+        this.vistaActiva = nuevaVista;
+        },
+        
+        // Método para ocultar los botones de navegación
+        ocultarBotones() {
+        this.botonesVisibles = false;
+        },
+
+        
+
+        async loginWithGoogle() {
+            try {
+                console.log("[OAUTH] Iniciando login con Google...");
+                oauthService.login("google");
+            } catch (e) {
+                console.error("[OAUTH] Error Google:", e);
+            }
+        },
+
+        async loginWithMicrosoft() {
+            try {
+                console.log("[OAUTH] Iniciando login con Microsoft...");
+                oauthService.login("microsoft");
+            } catch (e) {
+                console.error("[OAUTH] Error Microsoft:", e);
+            }
+        },
+
         validateForm() {
             // Validación según el controlador de la API
             // Si hay universidad seleccionada, validar con su dominio
@@ -531,6 +653,86 @@ export default {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+}
+
+/*Botones de pantalla para tipo de usuario*/
+.cssbuttons-io {
+  width: 100%;
+  position: relative;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 18px;
+  letter-spacing: 0.05em;
+  border-radius: 0.8em;
+  cursor: pointer;
+  border: none;
+  background: linear-gradient(to right, #8e2de2, #4a00e0);
+  color: #000;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.cssbuttons-io span {
+  position: relative;
+  z-index: 10;
+  transition: color 0.4s;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.8em 1.2em 0.8em 1.05em;
+}
+
+.cssbuttons-io::before,
+.cssbuttons-io::after {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.cssbuttons-io::before {
+  content: "";
+  background: #FFF;
+  width: 120%;
+  left: -10%;
+  transform: skew(30deg);
+  transition: transform 0.4s cubic-bezier(0.3, 1, 0.8, 1);
+}
+
+.cssbuttons-io:hover::before {
+  transform: translate3d(100%, 0, 0);
+}
+
+.cssbuttons-io:active {
+  transform: scale(0.95);
+}
+
+
+/*botones de login de google y microsoft*/
+.login-google,
+.login-microsoft {
+    --background: #FFFFFF;
+    font-weight: 900;
+    font-size: 0.7rem;
+    margin: 0;
+}
+
+.text-google {
+    background: linear-gradient(120deg, #DB4437, #F4B400, #0F9D58, #4285F4);
+    -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text;
+}
+
+.text-microsoft {
+    background: linear-gradient(120deg, #F25022, #7FBA00, #00A4EF, #FFB900);
+    -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text;
+}
+
+.login-google img,
+.login-microsoft img {
+    width: 1.0rem;
 }
 
 /* Wrapper para input con línea */

@@ -5,7 +5,7 @@
             @toggleDarkMode="toggleDarkMode" />
 
         <ion-header v-else>
-            <ion-toolbar>
+            <ion-toolbar class="pt-safe-top">
                 <ion-buttons slot="start">
                     <ion-button @click="goBack">
                         <ion-icon slot="icon-only" :icon="closeOutline"></ion-icon>
@@ -317,7 +317,7 @@ const loadCurrentUser = async () => {
                 user.value = apiUser
             }
         } catch (apiError) {
-            console.warn('No se pudo validar el token con la API:', apiError)
+            /* console.warn('No se pudo validar el token con la API:', apiError) */
             if (apiError.response?.status === 401) {
                 AuthService.logout()
                 router.replace('/login')
@@ -779,13 +779,13 @@ const publicar = async () => {
         formData.append('visibilidad', visibilidad.value)
 
         // DEBUG: Ver qué estamos enviando
-        console.log('=== FormData a enviar desde CreatePost ===')
+        /* console.log('=== FormData a enviar desde CreatePost ===') */
         const token = AuthService.getToken()
-        console.log('Token:', token ? 'Presente ✓' : 'Ausente ✗')
-        console.log('Usuario local:', AuthService.getUser())
-        for (let pair of formData.entries()) {
+        /* console.log('Token:', token ? 'Presente ✓' : 'Ausente ✗')
+        console.log('Usuario local:', AuthService.getUser()) */
+        /* for (let pair of formData.entries()) {
             console.log(pair[0] + ':', pair[1])
-        }
+        } */
 
         // Enviar a la API usando el método específico
         const response = await api.createPost(formData)

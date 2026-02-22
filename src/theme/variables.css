@@ -54,3 +54,19 @@ ion-toast::part(button) {
 ion-toast::part(button):hover {
     opacity: 1;
 }
+
+.my-rounded-alert .alert-wrapper  {
+    border-radius: 20px !important;
+}
+
+/* .pt-safe-top {
+  padding-top: 15px !important;
+} */
+
+/* .is-xiaomi .pt-safe-top {
+  padding-top: 0px !important;
+} */
+
+ion-header {
+    padding-top: env(safe-area-inset-top) !important;
+}

@@ -290,10 +290,6 @@ export default {
     const queue = (await syncQueueStorage.getItem("queue")) || [];
     const failedItems = [];
 
-    console.log(
-      `[PomodoroService] Sincronizando ${queue.length} items en cola`
-    );
-
     for (const item of queue) {
       try {
         if (item.action === "pomodoro_start") {

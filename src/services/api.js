@@ -5,7 +5,7 @@ import axios from "axios";
 
 export const BASE_URL = "http://127.0.0.1:8000"; // Verifcar URL base de la API
               // http://127.0.0.1:8000/api
-              // https://tester.sivarsocial.com/api
+              // https://lauapi-production.up.railway.app/api
 
 export const API_URL = `${BASE_URL}/api`;
 
@@ -27,7 +27,11 @@ api.interceptors.request.use(
       sessionStorage.getItem("auth_token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      /* console.log('[API] Token agregado al request:', token.substring(0, 20) + '...'); */
+    } else {
+      /* console.warn('[API] No hay token disponible'); */
     }
+    /* console.log('[API] Request:', config.method.toUpperCase(), config.url); */
     return config;
   },
   (error) => {
@@ -37,7 +41,10 @@ api.interceptors.request.use(
 
 // Interceptor para manejar errores de autenticación globalmente
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    /* console.log('[API] Response OK:', response.config.url, response.status); */
+    return response;
+  },
   (error) => {
     if (error.response && error.response.status === 401) {
       // Opcional: Redirigir a login si expira el token

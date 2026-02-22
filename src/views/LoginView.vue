@@ -8,7 +8,7 @@
             <!-- Contenido -->
             <div class="login-container">
                 <!-- Header -->
-                <div class="login-header">
+                <div class="login-header pt-safe-top">
                     <ion-button fill="clear" class="back-button" @click="goToWelcome">
                         <ion-icon :icon="arrowBack" slot="icon-only"></ion-icon>
                     </ion-button>
@@ -24,28 +24,6 @@
                             Ingresa con tu correo institucional para conectar con tu campus.
                         </p>
                     </div>
-
-                    <ion-grid>
-                        <ion-row>
-                            <ion-col>
-                                <!-- Login con Google -->
-                                <ion-button expand="block" class="login-google" @click="loginWithGoogle">
-                                    <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973131/pngwing.com_2_mmyosg.png"
-                                        class="icon-provider" />
-                                    <span class="text-google">Iniciar con Google</span>
-                                </ion-button>
-                            </ion-col>
-
-                            <ion-col>
-                                <!-- Login con Microsoft -->
-                                <ion-button expand="block" class="login-microsoft" @click="loginWithMicrosoft">
-                                    <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973132/pngwing.com_1_aofhph.png"
-                                        class="icon-provider" />
-                                    <span class="text-microsoft">Iniciar con Microsoft</span>
-                                </ion-button>
-                            </ion-col>
-                        </ion-row>
-                    </ion-grid>
 
                     <!-- Formulario -->
                     <form @submit.prevent="handleLogin" class="login-form">
@@ -110,7 +88,6 @@ import {
 } from '@ionic/vue'
 import { arrowBack, eyeOutline, eyeOffOutline } from 'ionicons/icons'
 import { AuthService } from '@/services/auth'
-import oauthService from "@/services/oauthServices";
 
 export default {
     name: 'LoginView',
@@ -144,32 +121,6 @@ export default {
             rememberMe: false
         }
     },
-    mounted() {
-        // Dentro de mounted() -> listenForAuth
-        oauthService.listenForAuth(async (response, error) => {
-            if (error) {
-                console.error("Error OAuth:", error);
-                return;
-            }
-
-            if (response) {
-                try {
-                    // AQUÍ ESTÁ LA MAGIA: Enviamos el token a TU API
-                    // response.accessToken es lo que usualmente se envía
-                    const provider = 'google'; // O detecta cuál usaste
-
-                    console.log("Enviando token al backend...");
-                    await authService.socialLogin(provider, response.accessToken);
-
-                    // Si todo sale bien, ir al Home
-                    router.push('/tabs/home');
-                } catch (apiError) {
-                    console.error("Error en el backend:", apiError);
-                    // Aquí podrías mostrar una alerta: "Error al crear cuenta"
-                }
-            }
-        });
-    },
     methods: {
         validateForm() {
             // Validación del email y contraseña según el controlador
@@ -194,12 +145,12 @@ export default {
             this.loading = true
 
             try {
-                console.log('[LOGIN] Iniciando login...', { email: this.formData.email });
+                /*console.log('[LOGIN] Iniciando login...', { email: this.formData.email });*/
 
                 // Pasar rememberMe al servicio de autenticación
                 await AuthService.login(this.formData, this.rememberMe)
 
-                console.log('[LOGIN] Login completado exitosamente');
+                /*console.log('[LOGIN] Login completado exitosamente');*/
 
                 // Mostrar mensaje de éxito
                 const toast = await toastController.create({
@@ -244,24 +195,6 @@ export default {
                 await toast.present()
             } finally {
                 this.loading = false
-            }
-        },
-
-        async loginWithGoogle() {
-            try {
-                console.log("[OAUTH] Iniciando login con Google...");
-                oauthService.login("google");
-            } catch (e) {
-                console.error("[OAUTH] Error Google:", e);
-            }
-        },
-
-        async loginWithMicrosoft() {
-            try {
-                console.log("[OAUTH] Iniciando login con Microsoft...");
-                oauthService.login("microsoft");
-            } catch (e) {
-                console.error("[OAUTH] Error Microsoft:", e);
             }
         },
 
@@ -342,7 +275,7 @@ export default {
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-end;
 }
 
 /* Título */
@@ -367,7 +300,7 @@ export default {
 
 .description {
     font-size: 0.875rem;
-    font-weight: 300;
+    font-weight: 500;
     color: rgba(255, 255, 255, 0.9);
     margin: 0;
     line-height: 1.5;
@@ -376,7 +309,9 @@ export default {
 ion-grid {
     padding: 0;
     margin-bottom: 1rem;
+    flex: none !important;
 }
+
 
 /*botones de login de google y microsoft*/
 .login-google,

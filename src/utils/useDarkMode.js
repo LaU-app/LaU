@@ -3,6 +3,7 @@
  * Sincroniza el estado en toda la aplicación
  */
 import { ref, watch, onMounted } from 'vue'
+import { StatusBar, Style } from '@capacitor/status-bar'
 
 const isDarkMode = ref(false)
 const isInitialized = ref(false)
@@ -31,10 +32,17 @@ export function useDarkMode() {
     })
   }
 
-  const applyDarkMode = (dark) => {
+  const applyDarkMode = async (dark) => {
     const root = document.documentElement
 
     if (dark) {
+      try {
+        await StatusBar.setStyle({ style: Style.Dark }) // Pone íconos BLANCOS
+        // await StatusBar.setBackgroundColor({ color: '#121212' })
+      } catch (e) {
+        console.log('StatusBar no disponible (estás en web)')
+      }
+
       root.classList.add('ion-palette-dark')
       // Aplicar colores oscuros
       root.style.setProperty('--ion-background-color', '#121212')
@@ -76,6 +84,13 @@ export function useDarkMode() {
       root.style.setProperty('--ion-text-color-secondary', '#9CA3AF')
       root.style.setProperty('--ion-background-hover', '#2A2A2A')
     } else {
+      try {
+        await StatusBar.setStyle({ style: Style.Light }) // Pone íconos NEGROS
+        // await StatusBar.setBackgroundColor({ color: '#F3F4F6' })
+      } catch (e) {
+        console.log('StatusBar no disponible')
+      }
+
       root.classList.remove('ion-palette-dark')
       // Aplicar colores claros
       root.style.setProperty('--ion-background-color', '#F3F4F6')

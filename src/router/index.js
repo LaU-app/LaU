@@ -120,6 +120,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/settings",
+    name: "settings",
+    component: () => import("@/views/AjusteView.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/create-post/:tipo?",
     name: "CreatePost",
     component: () => import("@/views/CreatePost.vue"),
