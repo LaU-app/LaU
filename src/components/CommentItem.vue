@@ -11,16 +11,11 @@
                     <h4 class="comment-user">{{ comment.user?.name || 'Usuario' }}</h4>
                     <p class="comment-text">{{ comment.comentario }}</p>
                 </div>
-                
+
                 <div class="comment-actions">
                     <p class="comment-meta">{{ timeAgo(comment.created_at) }}</p>
-                    
-                    <ion-button 
-                        fill="clear" 
-                        size="small" 
-                        class="reply-button"
-                        @click="emitReply"
-                    >
+
+                    <ion-button fill="clear" size="small" class="reply-button" @click="emitReply">
                         Responder
                     </ion-button>
                 </div>
@@ -28,12 +23,8 @@
         </div>
 
         <div v-if="comment.children && comment.children.length > 0" class="comment-replies">
-            <CommentItem 
-                v-for="reply in comment.children"
-                :key="reply.id"
-                :comment="reply"
-                @reply="$emit('reply', $event)" 
-            />
+            <CommentItem v-for="reply in comment.children" :key="reply.id" :comment="reply"
+                @reply="$emit('reply', $event)" />
         </div>
     </div>
 </template>
@@ -88,6 +79,18 @@ const emitReply = () => {
     margin-top: 0.25rem;
 }
 
+.comment-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.comment-avatar ion-icon {
+    width: 100%;
+    height: 100%;
+}
+
 .comment-content {
     flex: 1;
     min-width: 0;
@@ -104,6 +107,9 @@ const emitReply = () => {
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--ion-color-dark);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .comment-text {
@@ -143,7 +149,8 @@ const emitReply = () => {
 
 /* Estilos para las respuestas anidadas */
 .comment-replies {
-    margin-left: 3rem; /* Sangría para las respuestas */
+    margin-left: 3rem;
+    /* Sangría para las respuestas */
     border-left: 2px solid var(--ion-color-light-shade);
     padding-left: 0.5rem;
 }
