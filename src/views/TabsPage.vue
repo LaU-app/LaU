@@ -27,6 +27,7 @@
           </svg>
         </ion-tab-button>
 
+
         <ion-tab-button @click="openNotifications">
           <div class="notification-button-wrapper">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"
@@ -66,8 +67,7 @@ import {
   IonBadge,
   IonAvatar,
 } from "@ionic/vue";
-import { peopleSharp, personCircle } from "ionicons/icons";
-import { ref, onMounted, onUnmounted } from "vue";
+import { peopleSharp, personCircle, chatbubbleEllipsesSharp } from "ionicons/icons"; import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { AuthService } from "@/services/auth";
 import { notificationsService } from "@/services/notificationsService";

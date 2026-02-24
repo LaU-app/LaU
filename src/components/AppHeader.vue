@@ -23,6 +23,10 @@
               d="M17 2a2 2 0 0 1 1.995 1.85l.005 .15v2a6.996 6.996 0 0 1 -3.393 6a6.994 6.994 0 0 1 3.388 5.728l.005 .272v2a2 2 0 0 1 -1.85 1.995l-.15 .005h-10a2 2 0 0 1 -1.995 -1.85l-.005 -.15v-2a6.996 6.996 0 0 1 3.393 -6a6.994 6.994 0 0 1 -3.388 -5.728l-.005 -.272v-2a2 2 0 0 1 1.85 -1.995l.15 -.005h10z" />
           </svg>
         </ion-button>
+
+       <ion-button v-if="isAuthenticated" @click="goToChat" aria-label="Ir a Mensajes" fill="clear" class="tasks-header-btn">
+          <ion-icon :icon="chatbubbleEllipsesSharp" class="header-icon"></ion-icon>
+          </ion-button>
       </ion-buttons>
     </ion-toolbar>
   </ion-header>
@@ -37,7 +41,7 @@ import {
   IonIcon,
 
 } from "@ionic/vue";
-import { moon, sunny, logIn } from "ionicons/icons";
+import { moon, sunny, logIn, chatbubbleEllipsesSharp} from "ionicons/icons"; import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 
 defineProps({
@@ -65,6 +69,10 @@ const goToLogin = () => {
 
 const goToTasks = () => {
   router.push('/tasks');
+};
+
+const goToChat = () => {
+  router.push('/tabs/chat'); // <-- Cambia '/chat' por la ruta exacta que usas en tu rama
 };
 </script>
 
@@ -98,9 +106,5 @@ const goToTasks = () => {
   width: 20px;
   height: 20px;
   display: block;
-}
-
-.pt-safe-top {
-  padding-top: max(20px, env(safe-area-inset-top));
 }
 </style>

@@ -1,7 +1,7 @@
 <template>
   <ion-page>
     <ion-header>
-      <ion-toolbar>
+      <ion-toolbar class="pt-safe-top">
         <ion-buttons slot="start">
           <ion-button @click="goBack">
             <ion-icon slot="icon-only" :icon="closeOutline"></ion-icon>

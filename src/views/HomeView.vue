@@ -64,13 +64,14 @@
 </template>
 
 <script>
-import { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, alertController } from '@ionic/vue'
-import AppHeader from '@/components/AppHeader.vue'
-import CreatePostCard from '@/components/CreatePostCard.vue'
-import PostCard from '@/components/PostCard.vue'
-import postsService from '@/services/postsService'
-import { AuthService } from '@/services/auth'
-import { useDarkMode } from '@/utils/useDarkMode'
+import { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, alertController } from '@ionic/vue';
+import AppHeader from '@/components/AppHeader.vue';
+import CreatePostCard from '@/components/CreatePostCard.vue';
+import PostCard from '@/components/PostCard.vue';
+import postsService from '@/services/postsService';
+import { AuthService } from '@/services/auth';
+import { useDarkMode } from '@/utils/useDarkMode';
+
 
 export default {
     name: 'HomeView',

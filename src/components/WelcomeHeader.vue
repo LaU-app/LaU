@@ -1,7 +1,7 @@
 <template>
     <ion-header class="ion-no-border welcome-header">
         <ion-toolbar>
-            <div class="welcome-header-content">
+            <div class="welcome-header-content pt-safe-top" :style="{ paddingTop: `${statusBarHeight}px` }">
                 <ion-button v-if="showLoginButton" @click="goToLogin" fill="clear" class="login-toggle-btn">
                     <ion-icon :icon="logIn" class="login-icon"></ion-icon>
                 </ion-button>

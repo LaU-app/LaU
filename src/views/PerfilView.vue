@@ -99,7 +99,12 @@
           <FollowButton v-if="!isMe" :key="`follow-${user.id}`" :userId="user.id" :initialFollowStatus="isFollowing"
             :followersCount="stats.seguidores" @update="handleFollowUpdate" />
           <ion-button v-else color="primary" @click="openSettings">Editar Perfil</ion-button>
+          <ion-button v-if="!isMe" @click="goToChat(user.id)">
+            Enviar Mensaje
+          </ion-button>
         </div>
+
+
 
         <!-- Contadores -->
         <ion-grid class="stats-grid">
@@ -1635,6 +1640,16 @@ export default {
       });
       await toast.present();
     },
+
+    goToChat(userId) {
+      // Validar que exista ID
+      if (userId) {
+        // En Options API se usa this.$router
+        this.$router.push(`/chat/${userId}`);
+      } else {
+        console.error("No se puede ir al chat: ID de usuario no definido");
+      }
+    },
   },
 };
 </script>
@@ -1646,10 +1661,6 @@ ion-header ion-toolbar {
   --color: var(--app-text);
   --border-color: var(--app-border);
   position: relative;
-}
-
-.pt-safe-top {
-  padding-top: max(20px, env(safe-area-inset-top));
 }
 
 .logo-container {

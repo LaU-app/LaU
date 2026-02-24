@@ -11,6 +11,16 @@ export default defineConfig({
     vue(),
     legacy()
   ],
+  server: {
+    proxy: {
+      // Cada vez que Vite vea "/uploads", lo mandará a Laragon
+      '/uploads': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -19,5 +29,13 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom'
+  },
+  optimizeDeps: {
+    include: ['node-vibrant']
+  },
+  build: {
+    commonjsOptions: {
+      include: [/node-vibrant/, /node_modules/]
+    }
   }
 })
