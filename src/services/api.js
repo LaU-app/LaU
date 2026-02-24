@@ -1,13 +1,9 @@
 //importaciones axios para hacer peticiones HTTP
 import axios from "axios";
 
-
-
-export const BASE_URL = "http://127.0.0.1:8000"; // Verifcar URL base de la API
+const API_URL = "https://api.sivarsocial.com"; // Verifcar URL base de la API
               // http://127.0.0.1:8000/api
               // https://lauapi-production.up.railway.app/api
-
-export const API_URL = `${BASE_URL}/api`;
 
 //Creamos una instancia de axios para configuracion basica
 const api = axios.create({
