@@ -1,9 +1,11 @@
 //importaciones axios para hacer peticiones HTTP
 import axios from "axios";
 
-const API_URL = "https://api.sivarsocial.com"; // Verifcar URL base de la API
-              // http://127.0.0.1:8000/api
-              // https://lauapi-production.up.railway.app/api
+export const BASE_URL = "https://api.sivarsocial.com"; // Verificar URL base de la API
+// http://127.0.0.1:8000/api
+// https://api.sivarsocial.com/api
+
+export const API_URL = `${BASE_URL}/api`;
 
 //Creamos una instancia de axios para configuracion basica
 const api = axios.create({
@@ -32,7 +34,7 @@ api.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Interceptor para manejar errores de autenticación globalmente
@@ -47,7 +49,7 @@ api.interceptors.response.use(
       // window.location.href = '/login';
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // Exportar la instancia de axios directamente para uso en otros servicios
