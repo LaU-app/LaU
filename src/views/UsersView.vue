@@ -63,52 +63,54 @@
                 </ion-row>
             </ion-grid>
             <ion-list v-if="!loading && filteredUsers.length > 0">
-                <ion-item v-for="(u, index) in filteredUsers" :key="index" v-memo="[u.id, followingIds.includes(u.id)]">
-                    <ion-avatar slot="start">
-                        <img v-if="u.imagen_url" :src="u.imagen_url" alt="avatar" loading="lazy"
-                            @error="handleImageError" />
-                        <ion-icon v-else :icon="personCircle" class="avatar-icon"></ion-icon>
-                    </ion-avatar>
-                    <ion-label>
-                        <h3 @click="goToProfile(u)" style="cursor: pointer;">
-                            <strong>
-                                {{ u.name }}
-                            </strong>
-                        </h3>
-                        <!-- Mostrar universidad solo si existe -->
-                        <p v-if="u.universidad" class="user-university">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" class="info-svg-icon">
-                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                <path d="M22 9l-10 -4l-10 4l10 4l10 -4v6" />
-                                <path d="M6 10.6v5.4a6 3 0 0 0 12 0v-5.4" />
-                            </svg>
-                            <span>{{ u.universidad.nombre }}</span>
-                        </p>
-                        <!-- Mostrar carrera solo si existe -->
-                        <p v-if="u.carrera" class="user-career">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" class="info-svg-icon">
-                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                <path d="M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0" />
-                                <path d="M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0" />
-                                <path d="M3 6l0 13" />
-                                <path d="M12 6l0 13" />
-                                <path d="M21 6l0 13" />
-                            </svg>
-                            <span>{{ u.carrera.nombre }}</span>
-                        </p>
-                        <!-- Mensaje si no tiene universidad ni carrera -->
-                        <p v-if="!u.universidad && !u.carrera" class="no-university-message">
-                            Sin información universitaria
-                        </p>
-                    </ion-label>
-                    <FollowButton v-if="u.id !== currentUserId" slot="end" :userId="u.id"
-                        :initialFollowStatus="u.is_following || false" :followersCount="u.followers_count || 0"
-                        @update="handleFollowUpdate(u, $event)" />
-                </ion-item>
+                <div v-for="(u, index) in filteredUsers" :key="index" v-memo="[u.id, followingIds.includes(u.id)]">
+                    <ion-item v-if="u.id !== currentUserId">
+                        <ion-avatar slot="start">
+                            <img v-if="u.imagen_url" :src="u.imagen_url" alt="avatar" loading="lazy"
+                                @error="handleImageError" />
+                            <ion-icon v-else :icon="personCircle" class="avatar-icon"></ion-icon>
+                        </ion-avatar>
+                        <ion-label>
+                            <h3 @click="goToProfile(u)" style="cursor: pointer;">
+                                <strong>
+                                    {{ u.name }}
+                                </strong>
+                            </h3>
+                            <!-- Mostrar universidad solo si existe -->
+                            <p v-if="u.universidad" class="user-university">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" class="info-svg-icon">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path d="M22 9l-10 -4l-10 4l10 4l10 -4v6" />
+                                    <path d="M6 10.6v5.4a6 3 0 0 0 12 0v-5.4" />
+                                </svg>
+                                <span>{{ u.universidad.nombre }}</span>
+                            </p>
+                            <!-- Mostrar carrera solo si existe -->
+                            <p v-if="u.carrera" class="user-career">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" class="info-svg-icon">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path d="M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0" />
+                                    <path d="M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0" />
+                                    <path d="M3 6l0 13" />
+                                    <path d="M12 6l0 13" />
+                                    <path d="M21 6l0 13" />
+                                </svg>
+                                <span>{{ u.carrera.nombre }}</span>
+                            </p>
+                            <!-- Mensaje si no tiene universidad ni carrera -->
+                            <p v-if="!u.universidad && !u.carrera" class="no-university-message">
+                                Sin información universitaria
+                            </p>
+                        </ion-label>
+                        <FollowButton slot="end" :userId="u.id"
+                            :initialFollowStatus="u.is_following || false" :followersCount="u.followers_count || 0"
+                            @update="handleFollowUpdate(u, $event)" />
+                    </ion-item>
+                </div>
             </ion-list>
 
             <div v-if="!loading && filteredUsers.length === 0" class="no-results">

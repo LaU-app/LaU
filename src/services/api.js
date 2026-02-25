@@ -1,9 +1,11 @@
 //importaciones axios para hacer peticiones HTTP
 import axios from "axios";
 
-const API_URL = "http://127.0.0.1:8000/api"; // Verifcar URL base de la API
-              // http://127.0.0.1:8000/api
-              // https://api.sivarsocial.com/api
+export const BASE_URL = "https://api.sivarsocial.com"; // Verificar URL base de la API
+// http://127.0.0.1:8000/api
+// https://api.sivarsocial.com/api
+
+export const API_URL = `${BASE_URL}/api`;
 
 //Creamos una instancia de axios para configuracion basica
 const api = axios.create({
@@ -31,9 +33,8 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('[API] Error en request interceptor:', error);
     return Promise.reject(error);
-  }
+  },
 );
 
 // Interceptor para manejar errores de autenticación globalmente
@@ -43,29 +44,12 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Log detallado del error
-    console.error('[API] Error en response:', {
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status,
-      message: error.message,
-      data: error.response?.data
-    });
-
-    // Solo eliminamos el token si es un error 401 (no autorizado)
-    if (error.response?.status === 401) {
-      console.warn('[API] Error 401: Token inválido o expirado');
-      // No eliminamos aquí, dejamos que el componente lo maneje
+    if (error.response && error.response.status === 401) {
+      // Opcional: Redirigir a login si expira el token
+      // window.location.href = '/login';
     }
-
-    // Error de red (sin respuesta del servidor)
-    if (!error.response) {
-      console.error('[API] Error de red - Sin respuesta del servidor');
-      error.message = 'No se pudo conectar al servidor. Verifica tu conexión a internet.';
-    }
-
     return Promise.reject(error);
-  }
+  },
 );
 
 // Exportar la instancia de axios directamente para uso en otros servicios
