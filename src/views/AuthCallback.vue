@@ -63,24 +63,31 @@ export default {
 
                     try {
                         console.log("Token OK. Enviando a Backend...");
-                        // Nota: Si quieres detectar el proveedor real, guárdalo antes en el login
-                        // Por ahora asumimos google o usamos una lógica por defecto
                         const provider = localStorage.getItem('auth_provider') || 'google';
 
-                        await AuthService.socialLogin(provider, tokenData.accessToken);
+                        const authData = await AuthService.socialLogin(provider, tokenData.accessToken);
 
-                        const toast = await toastController.create({
-                            message: '¡Bienvenido!',
-                            duration: 2000,
-                            position: 'top',
-                            cssClass: 'success-toast'
-                        });
-                        toast.present();
-
-                        // 4. TRUCO FINAL: Si router.replace falla visualmente,
-                        // forzamos la recarga limpia hacia el home.
-                        // router.replace('/tabs/home'); <--- A veces falla en callbacks complejos
-                        window.location.href = '/tabs/tab1';
+                        // NUEVA LÓGICA: Evaluamos la respuesta del backend
+                        if (authData.requires_registration) {
+                            // Guardamos los datos de Google/Microsoft temporalmente
+                            localStorage.setItem('social_temp_token', tokenData.accessToken);
+                            localStorage.setItem('social_temp_provider', provider);
+                            localStorage.setItem('social_temp_name', authData.name);
+                            localStorage.setItem('social_temp_email', authData.email);
+                            
+                            // Forzamos la redirección al registro
+                            window.location.href = '/register';
+                        } else {
+                            // Login exitoso, ya tiene cuenta
+                            const toast = await toastController.create({
+                                message: '¡Bienvenido de vuelta!',
+                                duration: 2000,
+                                position: 'top',
+                                cssClass: 'success-toast'
+                            });
+                            toast.present();
+                            window.location.href = '/tabs/tab1';
+                        }
 
                     } catch (apiError) {
                         debugError.value = "Error de API: " + (apiError.response?.data?.message || apiError.message);

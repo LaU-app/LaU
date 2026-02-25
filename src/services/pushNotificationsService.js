@@ -10,19 +10,19 @@ class PushNotificationsService {
 
   /**
    * Inicializa el servicio de notificaciones push
+   * @param {boolean} requestPermission - Si es true, forzará el prompt nativo si es necesario.
    */
-  async initialize() {
+  async initialize(requestPermission = false) {
     if (this.isInitialized) {
       console.log("Push notifications already initialized");
       return;
     }
 
     try {
-      // Agregar listeners
       await this.addListeners();
 
-      // Registrar notificaciones
-      await this.registerNotifications();
+      // Pasamos la variable al método de registro
+      await this.registerNotifications(requestPermission);
 
       this.isInitialized = true;
       console.log("Push notifications initialized successfully");
@@ -109,11 +109,17 @@ class PushNotificationsService {
   /**
    * Verifica y solicita permisos, luego registra las notificaciones
    */
-  async registerNotifications() {
+  async registerNotifications(requestPermission) {
     let permStatus = await PushNotifications.checkPermissions();
 
+    // SOLO pedimos el permiso nativo si el estado es 'prompt' Y nos dieron autorización (desde el banner)
     if (permStatus.receive === "prompt") {
-      permStatus = await PushNotifications.requestPermissions();
+      if (requestPermission) {
+        permStatus = await PushNotifications.requestPermissions();
+      } else {
+        // Si no tenemos permiso para preguntar, abortamos silenciosamente
+        throw new Error("Silently aborting: User hasn't granted permission via UI banner yet.");
+      }
     }
 
     if (permStatus.receive !== "granted") {

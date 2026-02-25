@@ -60,6 +60,56 @@
                 </ion-infinite-scroll>
             </div>
         </ion-content>
+
+        <CustomBanner 
+            :isOpen="showLoginPrompt"
+            title="¡Únete a LaU! 🎓"
+            message="Inicia sesión para seguir viendo el feed y aprovechar al máximo todas las funciones de LaÚ: conecta con estudiantes, comparte material y descubre eventos."
+            confirmText="Iniciar Sesión"
+            cancelText="Más tarde"
+            iconColor="purple"
+            @confirm="goToLogin"
+            @cancel="closeLoginPrompt"
+        >
+            <template #icon>
+                <img src="/LaU.png" alt="Logo LaÚ" class="w-10 h-10 object-contain drop-shadow-sm" />
+            </template>
+        </CustomBanner>
+
+        <CustomBanner 
+            :isOpen="showNotificationsPrompt"
+            title="Activar notificaciones 🔔"
+            message="Recibe una notificación de inmediato cuando las personas te envíen mensajes, interactúen con tus publicaciones y más."
+            confirmText="Activar ahora"
+            :showCancelBtn="false" 
+            iconColor="purple"
+            iconSizeClass="w-[14rem] h-[10rem] md:w-[16rem] md:h-[13rem]" 
+            @confirm="activateNotifications"
+            @cancel="closeNotificationsPrompt"
+        >
+            <template #icon>
+                <div class="flex items-center justify-center w-full h-full">
+                    <img 
+                        src="https://res.cloudinary.com/dtmemrt1j/image/upload/v1771856181/Claro_wjfr9i.png" 
+                        alt="Notificaciones SivarSocial Claro" 
+                        class="block dark:hidden w-full h-full object-contain drop-shadow-md"
+                    />
+                    
+                    <img 
+                        src="https://res.cloudinary.com/dtmemrt1j/image/upload/v1771856178/oscuro_ulh7j6.png" 
+                        alt="Notificaciones SivarSocial Oscuro" 
+                        class="hidden dark:block w-full h-full object-contain drop-shadow-md"
+                    />
+                </div>
+            </template>
+        </CustomBanner>
+
+        <CustomBanner 
+            :isOpen="showServerBanner"
+            :banner="serverBannerData"
+            @confirm="handleServerBannerAction"
+            @cancel="handleServerBannerDismiss"
+        />
     </ion-page>
 </template>
 
@@ -71,11 +121,14 @@ import PostCard from '@/components/PostCard.vue';
 import postsService from '@/services/postsService';
 import { AuthService } from '@/services/auth';
 import { useDarkMode } from '@/utils/useDarkMode';
-
+import CustomBanner from '@/components/CustomBanner.vue';
+import bannerService from '@/services/bannerService';
+import { ref, onMounted } from 'vue';
+import { pushNotificationsService } from '@/services/pushNotificationsService';
 
 export default {
     name: 'HomeView',
-    components: { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, AppHeader, CreatePostCard, PostCard },
+    components: { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, AppHeader, CreatePostCard, PostCard, CustomBanner },
     data() {
         return {
             posts: [],
@@ -89,13 +142,59 @@ export default {
             totalPosts: 0,
             alertTimer: null,
             isAuthenticated: false,
-            isRefreshing: false
+            isRefreshing: false,
+            showLoginPrompt: false,
+            showServerBanner: false,
+            serverBannerData: null,
+            noMoreBanners: false
         }
     },
     setup() {
         // Usar composable de modo oscuro
         const { isDarkMode, toggleDarkMode } = useDarkMode()
-        return { isDarkMode, toggleDarkMode }
+        const showNotificationsPrompt = ref(false);
+
+        onMounted(() => {
+        // 2. EL CANDADO: Si NO está autenticado, detenemos todo aquí mismo.
+        if (!AuthService.isAuthenticated()) {
+            console.log("Usuario invitado. No se mostrará el banner de notificaciones.");
+            return; 
+        }
+
+        // Si pasa el candado, significa que SÍ hay sesión.
+        // 3. Revisamos si ya le preguntamos antes
+        const hasAsked = localStorage.getItem('has_asked_notifications');
+        
+        if (!hasAsked) {
+            setTimeout(() => {
+            showNotificationsPrompt.value = true;
+            }, 3000); 
+        }
+        });
+
+        const activateNotifications = async () => {
+            showNotificationsPrompt.value = false;
+            localStorage.setItem('has_asked_notifications', 'true');
+
+            if (pushNotificationsService.isAvailable()) {
+            try {
+                // AQUÍ LE PASAMOS TRUE PARA QUE LANCE LA ALERTA DE ANDROID
+                await pushNotificationsService.initialize(true); 
+                console.log("Notificaciones activadas exitosamente");
+                localStorage.setItem('notifications_granted', 'true');
+            } catch (error) {
+                console.error("Error al activar:", error);
+            }
+            }
+        };
+
+        const closeNotificationsPrompt = () => {
+        showNotificationsPrompt.value = false;
+        localStorage.setItem('has_asked_notifications', 'true');
+        };
+
+        return { isDarkMode, toggleDarkMode, showNotificationsPrompt, activateNotifications,
+            closeNotificationsPrompt }
     },
     async created() {
         // Verificar autenticación y actualizar estado
@@ -103,7 +202,8 @@ export default {
 
         // Cargar usuario solo si está autenticado
         if (this.isAuthenticated) {
-            await this.loadCurrentUser()
+            await this.loadCurrentUser();
+            await this.checkServerBanner();
         } else {
             // Usuario no autenticado, usar valores por defecto
             this.user = { imagen_url: null, name: 'Invitado', username: 'invitado' }
@@ -141,8 +241,9 @@ export default {
         if (!this.isAuthenticated && !this.alertTimer) {
             this.alertTimer = setTimeout(() => {
                 this.showLoginAlert()
-            }, 15000) // 15 segundos
+            }, 8000) // 8 segundos
         }
+
     },
     ionViewWillLeave() {
         // Cancelar el timer cuando el usuario salga de la vista (por ejemplo, al ir a login)
@@ -324,32 +425,99 @@ export default {
             this.fetchPosts(1)
         },
         async showLoginAlert() {
-            // Solo mostrar si el usuario NO está autenticado Y está en la ruta del feed
-            const currentRoute = this.$route.path
+            const currentRoute = this.$route.path;
             if (!this.isAuthenticated && currentRoute === '/tabs/tab1') {
-                const alert = await alertController.create({
-                    header: '¡Únete a LaÚ! 🎓',
-                    message: 'Inicia sesión para seguir viendo el feed y aprovechar al máximo todas las funciones de LaÚ: conecta con estudiantes, comparte material y descubre eventos.',
-                    buttons: [
-                        {
-                            text: 'Más tarde',
-                            role: 'cancel',
-                            cssClass: 'alert-button-cancel'
-                        },
-                        {
-                            text: 'Iniciar Sesión',
-                            cssClass: 'alert-button-confirm',
-                            handler: () => {
-                                this.$router.push('/login')
-                            }
-                        }
-                    ],
-                    cssClass: 'custom-alert'
-                })
-
-                await alert.present()
+                // En lugar de llamar a alertController, simplemente mostramos nuestro banner
+                this.showLoginPrompt = true;
             }
+        },
+        goToLogin() {
+            this.showLoginPrompt = false;
+            this.$router.push('/login');
+        },
+        
+        closeLoginPrompt() {
+            this.showLoginPrompt = false;
+        },
+
+        // 1. Buscar el banner
+        async checkServerBanner() {
+            // 2. Si la bandera dice que ya no hay banners, cancelamos la petición para no molestar al servidor
+            if (this.noMoreBanners) {
+                return;
+            }
+
+            const result = await bannerService.getActiveBanner();
+            const bannerReal = result?.data ? result.data : result;
+
+            if (bannerReal && bannerReal.id) {
+                this.serverBannerData = bannerReal;
+                
+                setTimeout(() => {
+                    this.showServerBanner = true;
+                }, 500);
+            } else {
+                // 3. Laravel respondió null. Eso significa que el usuario ya vio TODO.
+                // Activamos la bandera para que no vuelva a preguntar en toda la sesión.
+                this.noMoreBanners = true; 
+                console.log("Todos los banners han sido vistos. No se preguntará más en esta sesión.");
+            }
+        },
+
+        // 2. Acción: Cuando le da al botón principal (Probar, Actualizar, etc.)
+        async handleServerBannerAction(banner) {
+            this.showServerBanner = false;
+            
+            // Registramos en Laravel que ya lo vio
+            await bannerService.markAsViewed(banner.id);
+            
+            // Redirigimos a la URL de acción
+            if (banner.action_url) {
+                if (banner.action_url.startsWith('http')) {
+                    // Abrir en el navegador (Ideal para enlaces externos)
+                    window.open(banner.action_url, '_blank');
+                } else {
+                    // Navegación interna en Vue
+                    this.$router.push(banner.action_url);
+                }
+            }
+        },
+
+        // 3. Acción: Cuando le da a "Enterado" o lo arrastra hacia abajo
+        async handleServerBannerDismiss(banner) {
+            this.showServerBanner = false;
+            
+            // Registramos en Laravel que ya lo vio para que no vuelva a salir
+            await bannerService.markAsViewed(banner.id);
         }
+
+        // async showLoginAlert() {
+        //     // Solo mostrar si el usuario NO está autenticado Y está en la ruta del feed
+        //     const currentRoute = this.$route.path
+        //     if (!this.isAuthenticated && currentRoute === '/tabs/tab1') {
+        //         const alert = await alertController.create({
+        //             header: '¡Únete a LaÚ! 🎓',
+        //             message: 'Inicia sesión para seguir viendo el feed y aprovechar al máximo todas las funciones de LaÚ: conecta con estudiantes, comparte material y descubre eventos.',
+        //             buttons: [
+        //                 {
+        //                     text: 'Más tarde',
+        //                     role: 'cancel',
+        //                     cssClass: 'alert-button-cancel'
+        //                 },
+        //                 {
+        //                     text: 'Iniciar Sesión',
+        //                     cssClass: 'alert-button-confirm',
+        //                     handler: () => {
+        //                         this.$router.push('/login')
+        //                     }
+        //                 }
+        //             ],
+        //             cssClass: 'custom-alert'
+        //         })
+
+        //         await alert.present()
+        //     }
+        // }
     }
 }
 </script>

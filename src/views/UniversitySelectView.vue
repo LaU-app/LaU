@@ -8,7 +8,7 @@
             <!-- Contenido -->
             <div class="university-container">
                 <!-- Header -->
-                <div class="university-header">
+                <div class="university-header" style="padding-top: env(safe-area-inset-top) !important;">
                     <ion-button fill="clear" class="back-button" @click="goBack">
                         <ion-icon :icon="arrowBack" slot="icon-only"></ion-icon>
                     </ion-button>
@@ -518,6 +518,7 @@ export default {
     flex-direction: column;
     min-height: 100vh;
     padding: 1.5rem;
+    padding-top: 8px;
 }
 
 /* Header */
