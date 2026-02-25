@@ -987,6 +987,10 @@ ion-content {
     color: var(--ion-text-color);
 }
 
+.caja-subida svg {
+    display: inline;
+}
+
 .caja-subida .texto-pequeno {
     font-size: 0.75rem;
     color: var(--ion-color-medium);
@@ -1095,6 +1099,7 @@ ion-item p {
     color: var(--ion-color-medium);
     margin: 0;
     padding: 0 16px;
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
 }
 
 /* Estilos para ion-item sin fondo */

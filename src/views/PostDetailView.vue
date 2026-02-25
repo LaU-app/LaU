@@ -74,7 +74,7 @@
                                     <p>{{ getFileExtension(post.archivo) }}</p>
                                 </div>
                             </div>
-                            <ion-button fill="outline" size="small" @click.stop="downloadFile(post.archivo_url)">
+                            <ion-button fill="outline" size="small" @click.stop="downloadFile(post.archivo_url, post.archivo)">
                                 <ion-icon :icon="downloadOutline"></ion-icon>
                             </ion-button>
                         </div>
@@ -183,6 +183,11 @@ import { timeAgo } from '@/utils/timeUtils'
 import api from '@/services/api'
 import postsService from '@/services/postsService'
 import { AuthService } from '@/services/auth'
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { FileOpener } from '@capacitor-community/file-opener';
+import { CapacitorHttp } from '@capacitor/core';
+import { Capacitor } from '@capacitor/core';
+import { openNativeFile } from '@/services/FileService';
 
 const route = useRoute()
 const router = useRouter()
@@ -270,10 +275,11 @@ const getFileExtension = (filePath) => {
     return `Archivo ${extension}`
 }
 
-const downloadFile = (fileUrl) => {
-    if (!fileUrl) return
-    window.open(fileUrl, '_blank')
-}
+const downloadFile = (urlArchivo, nombreArchivo) => {
+        // Si nombreArchivo viene con la ruta entera, puedes limpiarlo aquí antes
+        // const nombreLimpio = getFileName(nombreArchivo);
+        openNativeFile(urlArchivo, nombreArchivo);
+};
 
 const getFileIcon = (filePath) => {
     if (!filePath) return ''
@@ -645,7 +651,7 @@ const deletePost = async () => {
 
 /* Comments Card Styles */
 .comments-card {
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }

@@ -44,6 +44,7 @@ export function useDarkMode() {
       }
 
       root.classList.add('ion-palette-dark')
+      root.classList.add('dark')
       // Aplicar colores oscuros
       root.style.setProperty('--ion-background-color', '#121212')
       root.style.setProperty('--ion-background-color-rgb', '18,18,18')
@@ -92,6 +93,7 @@ export function useDarkMode() {
       }
 
       root.classList.remove('ion-palette-dark')
+      root.classList.remove('dark')
       // Aplicar colores claros
       root.style.setProperty('--ion-background-color', '#F3F4F6')
       root.style.setProperty('--ion-background-color-rgb', '243,244,246')

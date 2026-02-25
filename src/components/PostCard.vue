@@ -72,7 +72,7 @@
                         <p>{{ getFileExtension(post.archivo) }}</p>
                     </div>
                 </div>
-                <ion-button fill="clear" size="small" @click.stop="downloadFile(post.archivo_url)">
+                <ion-button fill="clear" size="small" @click.stop="downloadFile(post.archivo_url, post.archivo)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -112,6 +112,11 @@ import { useRouter } from 'vue-router'
 import { ref, onMounted } from 'vue';
 import * as VibrantNamespace from 'node-vibrant';
 import { useAmbientMode } from "@/utils/useAmbientMode";
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { FileOpener } from '@capacitor-community/file-opener';
+import { CapacitorHttp } from '@capacitor/core';
+import { Capacitor } from '@capacitor/core';
+import { openNativeFile } from '@/services/FileService';
 
 
 export default {
@@ -175,10 +180,61 @@ export default {
             return `Archivo ${extension}`
         }
 
-        const downloadFile = (fileUrl) => {
-            if (!fileUrl) return
-            window.open(fileUrl, '_blank')
-        }
+        // const downloadFile = async (urlCompleta, nombreArchivoPath) => {
+        //     // 1. Extraemos un nombre limpio usando la función que ya tienes en tu template
+        //     const nombreBase = getFileName(nombreArchivoPath); 
+            
+        //     // Limpiamos caracteres raros para el disco duro del celular (cambia espacios y # por _)
+        //     const nombreSeguroCelular = nombreBase.replace(/[^a-zA-Z0-9.-]/g, '_');
+
+        //     // 2. ARREGLAMOS LA URL PARA EL SERVIDOR (El truco del #)
+        //     // Partimos la URL, codificamos SOLO el nombre del archivo, y la volvemos a unir
+        //     const partesUrl = urlCompleta.split('/');
+        //     const nombreArchivoEnUrl = partesUrl.pop();
+        //     const urlSegura = partesUrl.join('/') + '/' + encodeURIComponent(nombreArchivoEnUrl);
+
+        //     console.log("Intentando descargar desde:", urlSegura);
+
+        //     // 3. DESCARGA SEGÚN LA PLATAFORMA
+        //     if (Capacitor.getPlatform() === 'web') {
+        //         // Si estás programando en tu laptop, simplemente lo abre en otra pestaña
+        //         window.open(urlSegura, '_blank');
+        //         return;
+        //     }
+
+        //     // 4. DESCARGA NATIVA PARA EL APK DE SIVARSOCIAL
+        //     try {
+        //         const opciones = {
+        //             url: urlSegura,
+        //             // Nombres correctos para el plugin moderno
+        //             directory: Directory.Documents, 
+        //             path: nombreSeguroCelular 
+        //         };
+
+        //         // Usamos el hilo nativo HTTP para que la app no se trabe con archivos pesados
+        //         const respuesta = await Filesystem.downloadFile(opciones);
+                
+        //         console.log('¡Éxito! Guardado en:', respuesta.path);
+                
+        //         // Aquí podrías usar un Toast de Ionic en lugar de un alert para mejor UX
+        //         alert(`Archivo guardado exitosamente en tus Documentos como ${nombreSeguroCelular}`);
+
+        //     } catch (error) {
+        //         console.error('Error al descargar en el celular:', error);
+                
+        //         // CAMBIO 2: Imprimimos el error real en la pantalla del celular
+        //         // Si es un objeto, JSON.stringify lo convierte en texto legible
+        //         const mensajeError = typeof error === 'object' ? JSON.stringify(error) : error;
+                
+        //         alert(`Error técnico: ${mensajeError}`);
+        //     }
+        // };
+
+        const downloadFile = (urlArchivo, nombreArchivo) => {
+             // Si nombreArchivo viene con la ruta entera, puedes limpiarlo aquí antes
+             // const nombreLimpio = getFileName(nombreArchivo);
+             openNativeFile(urlArchivo, nombreArchivo);
+        };
 
         const getFileColor = (filePath) => {
             if (!filePath) return 'medium'
@@ -202,45 +258,61 @@ export default {
 
         const extractColors = async (imageUrl) => {
             if (!imageUrl) return;
-            await new Promise(resolve => setTimeout(resolve, 300));
 
             try {
                 const VibrantClass = VibrantNamespace.Vibrant || VibrantNamespace.default || VibrantNamespace;
-                const relativeUrl = imageUrl.replace(/^.*\/\/[^\/]+/, '');
-                const finalUrl = `${relativeUrl}?t=${Date.now()}`;
+                
+                // 1. Limpiamos la URL (lo que ya hacías y te funcionaba)
+                const relativePath = imageUrl.replace(/^.*\/\/[^\/]+/, '').replace(/^\//, '');
 
-                const palette = await VibrantClass.from(finalUrl).getPalette();
+                // 2. Definimos la URL final
+                // En local usará el proxy (/uploads) y en el APK usará el dominio completo
+                const isLocal = window.location.host.includes('localhost:8100');
+                const finalUrl = isLocal ? `/${relativePath}` : `https://api.sivarsocial.com/${relativePath}`;
+                
+                const urlWithCache = `${finalUrl}?t=${Date.now()}`;
+
+                // 3. CARGA DE IMAGEN (El método más compatible)
+                const img = new Image();
+                
+                // Solo pedimos crossOrigin si vamos al dominio real
+                if (!isLocal) {
+                    img.crossOrigin = "anonymous";
+                }
+
+                const imagePromise = new Promise((resolve, reject) => {
+                    img.onload = () => resolve(img);
+                    img.onerror = () => reject(new Error("Error de red en el servidor"));
+                    img.src = urlWithCache;
+                });
+
+                const loadedImg = await imagePromise;
+                const palette = await VibrantClass.from(loadedImg).getPalette();
 
                 if (palette.Vibrant) {
-                    const v = palette.Vibrant;
-                    const dv = palette.DarkVibrant;
-                    
-                    const rgb = v.getRgb();
-                    // Luminancia técnica: $Y = 0.299R + 0.587G + 0.114B$
-                    const vBrightness = (rgb[0] * 0.299 + rgb[1] * 0.587 + rgb[2] * 0.114);
-                    
-                    // --- NUEVA LÓGICA DE DECISIÓN POR POBLACIÓN ---
-                    const vPop = v.getPopulation();
-                    const dvPop = dv ? dv.getPopulation() : 0;
+                    const rgb = palette.Vibrant.getRgb();
+                    const brightness = (rgb[0] * 0.299 + rgb[1] * 0.587 + rgb[2] * 0.114);
+                    const vPop = palette.Vibrant.getPopulation();
+                    const dvPop = palette.DarkVibrant ? palette.DarkVibrant.getPopulation() : 0;
 
-                    // REGLA: Si el color oscuro tiene más del doble de píxeles que el color vibrante,
-                    // asumimos que el fondo es oscuro sin importar el brillo del logo.
-                    let forceDark = false;
-                    if (dvPop > (vPop * 2)) {
-                        forceDark = true;
-                    }
-
-                    // Aplicamos: Es oscura si el brillo es bajo (< 140) O si los píxeles oscuros dominan.
-                    isDarkImage.value = (vBrightness < 140) || forceDark;
-
-                    console.log(`%c[SivarSocial] ID: ${props.post.id} | Brillo: ${vBrightness.toFixed(0)} | Pop V: ${vPop} | Pop DV: ${dvPop} | ¿Texto Blanco?: ${isDarkImage.value}`, 
-                                `color: ${isDarkImage.value ? '#3498db' : '#f39c12'}; font-weight: bold;`);
-
+                    isDarkImage.value = (brightness < 150) || (dvPop > vPop * 2);
                     ambientGradient.value = `linear-gradient(135deg, rgba(${rgb.join(',')}, 0.6), rgba(0,0,0,0.4))`;
+
+                    // LOG NIVEL INGENIERO PARA SIVARSOCIAL
+                    // console.log(
+                    //     `%c[SivarSocial] ${Capacitor.getPlatform().toUpperCase()} %c
+                    //     🎨 Modo UI: ${isDarkImage.value ? 'OSCURO (Texto Blanco)' : 'CLARO (Texto Negro)'}
+                    //     ✨ Brillo detectado: ${brightness.toFixed(2)} / 255
+                    //     🔗 URL: ${finalUrl}`,
+                    //     `color: ${isDarkImage.value ? '#3498db' : '#f39c12'}; font-weight: bold; font-size: 12px;`,
+                    //     "color: inherit; font-family: monospace;"
+                    // );
+                    
+                    // console.log("✅ Color actualizado usando el dominio");
                 }
             } catch (e) {
-                console.warn("Fallo en análisis, usando texto negro por defecto.");
-                isDarkImage.value = false; 
+                console.error("❌ Sigue fallando el servidor:", e.message);
+                isDarkImage.value = false;
             }
         };
 
@@ -377,7 +449,7 @@ export default {
   background-size: cover;
   background-position: center;
   /* En modo claro: un poco vibrante */
-  filter: blur(30px) saturate(1.4) brightness(0.9);
+  filter: blur(30px) saturate(1.4) brightness(0.8);
   transform: scale(1.2);
   z-index: 0;
 }
@@ -410,7 +482,7 @@ export default {
 .is-light-bg :deep(.action-button ion-label) {
     color: #1a1a1a !important;
     --color: #1a1a1a !important;
-    text-shadow: none !important;
+    text-shadow: none;
 }
 
 .is-light-bg :deep(.action-button ion-icon),

@@ -1,5 +1,5 @@
 <template>
-  <ion-header class="ion-no-border pt-safe-top">
+  <ion-header class="ion-no-border">
     <ion-toolbar>
       <div class="logo-container">
         <img src="/LaU.png" alt="LaÚ" class="logo-img" />
@@ -10,10 +10,10 @@
           <ion-icon :icon="logIn" class="header-icon"></ion-icon>
         </ion-button>
 
-        <ion-button @click="$emit('toggleDarkMode')" :aria-label="isDarkMode ? 'Modo claro' : 'Modo oscuro'"
+        <!-- <ion-button @click="$emit('toggleDarkMode')" :aria-label="isDarkMode ? 'Modo claro' : 'Modo oscuro'"
           fill="clear">
           <ion-icon :icon="isDarkMode ? sunny : moon" class="header-icon"></ion-icon>
-        </ion-button>
+        </ion-button> -->
         <ion-button v-if="isAuthenticated" @click="goToTasks" aria-label="Ir a Tareas" fill="clear"
           class="tasks-header-btn">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"

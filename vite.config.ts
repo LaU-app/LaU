@@ -15,7 +15,7 @@ export default defineConfig({
     proxy: {
       // Cada vez que Vite vea "/uploads", lo mandará a Laragon
       '/uploads': {
-        target: 'http://127.0.0.1:8000',
+        target: 'https://api.sivarsocial.com/',
         changeOrigin: true,
         secure: false,
       }

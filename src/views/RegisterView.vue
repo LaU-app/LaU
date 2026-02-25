@@ -8,157 +8,111 @@
             <!-- Contenido -->
             <div class="register-container">
                 <!-- Header -->
-                <div class="register-header">
+                <div class="register-header" style="padding-top: env(safe-area-inset-top) !important;">
                     <ion-button fill="clear" class="back-button" @click="goToWelcome">
                         <ion-icon :icon="arrowBack" slot="icon-only"></ion-icon>
                     </ion-button>
                 </div>
 
+                <!-- Progress bar -->
+                <div class="progress-container">
+                    <div class="progress-step" :class="{ active: currentStepr >= 1 }"></div>
+                    <div class="progress-step" :class="{ active: currentStepr >= 2 }"></div>
+                    <div class="progress-step" :class="{ active: currentStepr >= 3 }"></div>
+                </div>
+
                 <!-- Contenido principal -->
                 <div class="register-content">
-                    <!-- Logo y título -->
                     <div class="title-section">
                         <img src="/LaU1.png" alt="LaÚ" class="app-logo" />
                         <h2 class="subtitle">{{ pageTitle }}</h2>
-                        <p class="description">
-                            {{ pageDescription }}
-                        </p>
+                        <p class="description">{{ pageDescription }}</p>
                     </div>
 
-                    <div id="app">
-                        <div v-if="botonesVisibles" class="contenedor-botones">
-                            <p>Selecciona una opción:</p>
+                    <div v-if="currentStepr === 1" class="step-container">
+                        <p class="white-text">¿Cuál es tu perfil actual?</p>
+                        <button class="cssbuttons-io" @click="selectRole('aspirante')">
+                            <span>Aspirante</span>
+                        </button>
+                        <button class="cssbuttons-io" @click="selectRole('estudiante')">
+                            <span>Estudiante</span>
+                        </button>
+                        <button class="cssbuttons-io" @click="selectRole('egresado')">
+                            <span>Egresado</span>
+                        </button>
+                    </div>
 
-                            <button expand="block" class="cssbuttons-io" @click="cambiarVista('vistaA')">
-                                <span>Aspirante</span>
-                            </button>
-                            
-                            <button expand="block" class="cssbuttons-io" @click="cambiarVista('vistaB')">
-                                <span>Estudiante</span>
-                            </button>
+                    <div v-if="currentStepr === 2" class="step-container">
+                        <form @submit.prevent="isSocialAuth ? handleSocialUpdate() : currentStepr = 3" class="register-form">
+                            <div class="input-wrapper" :class="{ 'focused': nameFocused }">
+                                <ion-input v-model="formData.name" placeholder="Tu nombre" class="register-input" @ionFocus="nameFocused = true" @ionBlur="nameFocused = false"></ion-input>
+                                <div class="input-line"></div>
+                            </div>
 
-                            <button expand="block" class="cssbuttons-io" @click="cambiarVista('vistaC')">
-                                <span>Egresado</span>
-                            </button>
-                            
-                            <button expand="block" class="cssbuttons-io" @click="ocultarBotones">
-                                <span>Ocultar Botones de Navegación</span>
-                            </button>
-                        </div>
+                            <div class="input-wrapper" :class="{ 'focused': usernameFocused }">
+                                <ion-input v-model="formData.username" placeholder="Nombre de usuario" class="register-input" maxlength="15" @ionFocus="usernameFocused = true" @ionBlur="usernameFocused = false"></ion-input>
+                                <div class="input-line"></div>
+                            </div>
 
-                        <div v-if="vistaActiva === 'vistaA'" class="vista-a">
-                            <!-- Login con Google -->
-                            <ion-button expand="block" class="login-google" @click="loginWithGoogle">
-                                <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973131/pngwing.com_2_mmyosg.png" class="icon-provider" />
-                                <span class="text-google">Iniciar con Google</span>
+                            <div class="input-wrapper" :class="{ 'focused': emailFocused }">
+                                <ion-input 
+                                    v-model="formData.email" 
+                                    type="email" 
+                                    :placeholder="emailPlaceholder" 
+                                    class="register-input" 
+                                    :disabled="isSocialAuth" 
+                                    @ionFocus="emailFocused = true" 
+                                    @ionBlur="emailFocused = false">
+                                </ion-input>
+                                <div class="input-line"></div>
+                            </div>
+
+                            <ion-button v-if="!isSocialAuth" expand="block" class="register-button" @click="currentStepr = 3">Siguiente</ion-button>
+                            <ion-button v-else expand="block" class="register-button" @click="handleSocialUpdate" :disabled="loading">
+                                <ion-spinner v-if="loading" name="crescent"></ion-spinner>
+                                <span v-else>Confirmar Datos</span>
                             </ion-button>
-                            <ion-button @click="cambiarVista('inicio')">Volver al inicio</ion-button>
-                        </div>
+                        </form>
 
-                        <div v-else-if="vistaActiva === 'vistaB'" class="vista-b">
-                            <!-- Login con Microsoft -->
-                            <ion-button expand="block" class="login-microsoft" @click="loginWithMicrosoft">
-                                <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973132/pngwing.com_1_aofhph.png" class="icon-provider" />
-                                <span class="text-microsoft">Iniciar con Microsoft</span>
-                            </ion-button>
-                            <ion-button @click="cambiarVista('inicio')">Volver al inicio</ion-button>
-                        </div>
+                        <div v-if="!isSocialAuth">
+                            <div class="social-divider"><span>O continúa con</span></div>
+                            <div class="social-container">
+                                <ion-button v-if="userRole === 'aspirante' || userRole === 'egresado'" expand="block" class="login-google" @click="loginWithGoogle">
+                                    <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973131/pngwing.com_2_mmyosg.png" class="icon-provider" />
+                                    <span class="text-google">Google</span>
+                                </ion-button>
 
-                        <div v-else-if="vistaActiva === 'vistaC'" class="vista-c">
-                            <!-- Login con Google -->
-                            <ion-button expand="block" class="login-google" @click="loginWithGoogle">
-                                <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973131/pngwing.com_2_mmyosg.png" class="icon-provider" />
-                                <span class="text-google">Iniciar con Google</span>
-                            </ion-button>
-                            <!-- Login con Microsoft -->
-                            <ion-button expand="block" class="login-microsoft" @click="loginWithMicrosoft">
-                                <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973132/pngwing.com_1_aofhph.png" class="icon-provider" />
-                                <span class="text-microsoft">Iniciar con Microsoft</span>
-                            </ion-button>
-                            <ion-button @click="cambiarVista('inicio')">Volver al inicio</ion-button>
-                        </div>
-
-                        <div v-else class="vista-inicio">
-                            <h3>👋 Inicio</h3>
-                            <p>Utiliza los botones de arriba para navegar entre las vistas A y B.</p>
+                                <ion-button v-if="userRole === 'estudiante' || userRole === 'egresado'" expand="block" class="login-microsoft" @click="loginWithMicrosoft">
+                                    <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973132/pngwing.com_1_aofhph.png" class="icon-provider" />
+                                    <span class="text-microsoft">Microsoft</span>
+                                </ion-button>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Formulario -->
-                    <form @submit.prevent="handleRegister" class="register-form">
-                        <!-- Nombre completo -->
-                        <div class="input-wrapper" :class="{ 'focused': nameFocused, 'invalid': errors.name }">
-                            <ion-input v-model="formData.name" type="text" placeholder="Tú nombre"
-                                class="register-input" :class="{ 'ion-invalid': errors.name }"
-                                @ionFocus="nameFocused = true" @ionBlur="nameFocused = false"></ion-input>
-                            <div class="input-line"></div>
+                    <div v-if="currentStepr === 3" class="step-container">
+                        <div class="register-form">
+                            <div class="input-wrapper" :class="{ 'focused': passwordFocused }">
+                                <ion-input v-model="formData.password" :type="showPassword ? 'text' : 'password'" placeholder="Contraseña" class="register-input" @ionFocus="passwordFocused = true" @ionBlur="passwordFocused = false">
+                                    <ion-icon :icon="showPassword ? eyeOffOutline : eyeOutline" slot="end" @click="togglePassword" class="password-toggle"></ion-icon>
+                                </ion-input>
+                                <div class="input-line"></div>
+                            </div>
+
+                            <div class="input-wrapper" :class="{ 'focused': passwordConfirmFocused }">
+                                <ion-input v-model="formData.password_confirmation" :type="showPasswordConfirm ? 'text' : 'password'" placeholder="Confirmar contraseña" class="register-input" @ionFocus="passwordConfirmFocused = true" @ionBlur="passwordConfirmFocused = false">
+                                    <ion-icon :icon="showPasswordConfirm ? eyeOffOutline : eyeOutline" slot="end" @click="togglePasswordConfirm" class="password-toggle"></ion-icon>
+                                </ion-input>
+                                <div class="input-line"></div>
+                            </div>
+
+                            <ion-button expand="block" class="register-button" @click="handleRegister" :disabled="loading">
+                                <ion-spinner v-if="loading" name="crescent"></ion-spinner>
+                                <span v-else>Finalizar Registro</span>
+                            </ion-button>
+                            <ion-button fill="clear" color="light" @click="goToWelcome">Volver atrás</ion-button>
                         </div>
-
-                        <!-- Nombre de usuario -->
-                        <div class="input-wrapper" :class="{ 'focused': usernameFocused, 'invalid': errors.username }">
-                            <ion-input v-model="formData.username" type="text"
-                                placeholder="Nombre de usuario (máx. 15 caracteres)" class="register-input"
-                                :class="{ 'ion-invalid': errors.username }" @ionFocus="usernameFocused = true"
-                                @ionBlur="usernameFocused = false" maxlength="15"></ion-input>
-                            <div class="input-line"></div>
-                        </div>
-
-                        <!-- Correo institucional -->
-                        <div class="input-wrapper" :class="{ 'focused': emailFocused, 'invalid': errors.email }">
-                            <ion-input v-model="formData.email" type="email" :placeholder="emailPlaceholder"
-                                class="register-input" :class="{ 'ion-invalid': errors.email }"
-                                @ionFocus="emailFocused = true" @ionBlur="emailFocused = false"></ion-input>
-                            <div class="input-line"></div>
-                        </div>
-
-                        <!-- Contraseña -->
-                        <div class="input-wrapper" :class="{ 'focused': passwordFocused, 'invalid': errors.password }">
-                            <ion-input v-model="formData.password" :type="showPassword ? 'text' : 'password'"
-                                placeholder="Contraseña" class="register-input"
-                                :class="{ 'ion-invalid': errors.password }" @ionFocus="passwordFocused = true"
-                                @ionBlur="passwordFocused = false">
-                                <ion-icon :icon="showPassword ? eyeOffOutline : eyeOutline" slot="end"
-                                    @click="togglePassword" class="password-toggle"></ion-icon>
-                            </ion-input>
-                            <div class="input-line"></div>
-                        </div>
-
-                        <!-- Confirmar contraseña -->
-                        <div class="input-wrapper"
-                            :class="{ 'focused': passwordConfirmFocused, 'invalid': errors.password_confirmation }">
-                            <ion-input v-model="formData.password_confirmation"
-                                :type="showPasswordConfirm ? 'text' : 'password'" placeholder="Confirmar contraseña"
-                                class="register-input" :class="{ 'ion-invalid': errors.password_confirmation }"
-                                @ionFocus="passwordConfirmFocused = true" @ionBlur="passwordConfirmFocused = false">
-                                <ion-icon :icon="showPasswordConfirm ? eyeOffOutline : eyeOutline" slot="end"
-                                    @click="togglePasswordConfirm" class="password-toggle"></ion-icon>
-                            </ion-input>
-                            <div class="input-line"></div>
-                        </div>
-
-                        <!-- Mensaje de error general -->
-                        <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
-
-                        <!-- Botón de registro -->
-                        <ion-button expand="block" type="submit" class="register-button" :disabled="loading">
-                            <ion-spinner v-if="loading" name="crescent"></ion-spinner>
-                            <span v-else>Registrarse</span>
-                        </ion-button>
-
-                        <!-- Términos y condiciones -->
-                        <p class="terms-text">
-                            Al registrarte, aceptas nuestros
-                            <a href="#" class="terms-link">Términos y Condiciones</a> de uso y confirmas que has leído
-                            nuestra
-                            <a href="#" class="terms-link">Política de Privacidad</a>.
-                        </p>
-
-                        <!-- Link a login -->
-                        <p class="login-link-text">
-                            ¿Ya tienes una cuenta?
-                            <a @click.prevent="goToLogin" class="login-link">Inicia Sesión</a>
-                        </p>
-                    </form>
+                    </div>
                 </div>
             </div>
         </ion-content>
@@ -197,10 +151,19 @@ export default {
             // 2. Estado para controlar la visibilidad de los botones de navegación
             botonesVisibles: true,
 
+            currentStepr: 1,
+            userRole: null,
+            isSocialRegistration: false, // Nueva: indica si viene de Google/Microsoft
+            socialToken: null,           // Nueva: guarda el token temporalmente
+            socialProvider: null,        // Nueva: 'google' o 'microsoft'
+
+            isSocialAuth: false,
+
             arrowBack,
             eyeOutline,
             eyeOffOutline,
             formData: {
+                id: null,
                 name: '',
                 username: '',
                 email: '',
@@ -238,6 +201,25 @@ export default {
         }
     },
     mounted() {
+
+        if (localStorage.getItem('social_temp_token')) {
+            this.formData.name = localStorage.getItem('social_temp_name');
+            this.formData.email = localStorage.getItem('social_temp_email');
+            
+            // Guardamos las credenciales de la red social en variables del componente
+            this.socialToken = localStorage.getItem('social_temp_token');
+            this.socialProvider = localStorage.getItem('social_temp_provider');
+            
+            this.isSocialAuth = true;
+            this.currentStepr = 2; // Directo a confirmar datos
+            
+            // Limpiamos todo el localStorage temporal por seguridad
+            localStorage.removeItem('social_temp_token');
+            localStorage.removeItem('social_temp_provider');
+            localStorage.removeItem('social_temp_name');
+            localStorage.removeItem('social_temp_email');
+            localStorage.removeItem('flujo_registro_social');
+        }
         // Leer parámetros de la URL
         const { universidadId, universidadNombre, universidadDominio, carreraId, carreraNombre } = this.$route.query
 
@@ -263,18 +245,45 @@ export default {
 
             if (response) {
                 try {
-                    // AQUÍ ESTÁ LA MAGIA: Enviamos el token a TU API
-                    // response.accessToken es lo que usualmente se envía
-                    const provider = 'google'; // O detecta cuál usaste
+                    this.loading = true;
+                    const provider = localStorage.getItem('auth_provider') || 'google';
 
                     console.log("Enviando token al backend...");
-                    await authService.socialLogin(provider, response.accessToken);
+                    
+                    // Llamamos a tu servicio social, el cual ya guarda el token
+                    const authData = await AuthService.socialLogin(provider, response.accessToken);
 
-                    // Si todo sale bien, ir al Home
-                    router.push('/tabs/home');
+                    // 1. LLENAR LOS DATOS DEL FORMULARIO
+                    this.formData.id = authData.user.id;
+                    this.formData.name = authData.user.name;
+                    this.formData.username = authData.user.username;
+                    this.formData.email = authData.user.email;
+                    
+                    // 2. CAMBIAR EL ESTADO A MODO SOCIAL
+                    this.isSocialAuth = true;
+
+                    // 3. MOSTRAR MENSAJE AL USUARIO (opcional)
+                    const toast = await toastController.create({
+                        message: 'Cuenta vinculada. Verifica tu usuario para finalizar.',
+                        duration: 3000,
+                        position: 'top',
+                        color: 'success'
+                    });
+                    await toast.present();
+
+                    // Nota: Nos quedamos en el currentStepr === 2, NO redirigimos.
+                    
                 } catch (apiError) {
                     console.error("Error en el backend:", apiError);
-                    // Aquí podrías mostrar una alerta: "Error al crear cuenta"
+                    const toast = await toastController.create({
+                        message: 'Error al vincular cuenta social.',
+                        duration: 3000,
+                        position: 'top',
+                        cssClass: 'danger-toast'
+                    });
+                    await toast.present();
+                } finally {
+                    this.loading = false;
                 }
             }
         });
@@ -290,13 +299,15 @@ export default {
             if (this.universidadData.nombre) {
                 return 'COMPLETA TU REGISTRO'
             }
-            return 'CONECTA EN TU CAMPUS'
+            return this.currentStepr === 1 ? 'CONECTA EN TU CAMPUS' : 'COMPLETA TU REGISTRO'
         },
         pageDescription() {
             if (this.universidadData.nombre) {
                 return 'Completa tus datos para unirte a la comunidad universitaria.'
             }
-            return 'Encuentra a tus compañeros de carrera, comparte apuntes y playlists, y descubre qué pasa en tu universidad.'
+            return this.currentStepr === 1
+                ? 'Encuentra a tus compañeros de carrera, comparte apuntes y playlists, y descubre qué pasa en tu universidad.'
+                : 'Completa tus datos para unirte a la red universitaria.'
         }
     },
     methods: {
@@ -311,11 +322,21 @@ export default {
         this.botonesVisibles = false;
         },
 
+        selectRole(role) {
+            this.userRole = role;
+            this.currentStepr = 2;
+            console.log("Rol seleccionado:", role);
+        },
+
         
 
         async loginWithGoogle() {
             try {
                 console.log("[OAUTH] Iniciando login con Google...");
+                // DEJAMOS LA MIGA DE PAN AQUÍ
+                localStorage.setItem('flujo_registro_social', 'true');
+                localStorage.setItem('rol_registro_social', this.userRole || 'aspirante');
+                
                 oauthService.login("google");
             } catch (e) {
                 console.error("[OAUTH] Error Google:", e);
@@ -325,6 +346,10 @@ export default {
         async loginWithMicrosoft() {
             try {
                 console.log("[OAUTH] Iniciando login con Microsoft...");
+                // DEJAMOS LA MIGA DE PAN AQUÍ
+                localStorage.setItem('flujo_registro_social', 'true');
+                localStorage.setItem('rol_registro_social', this.userRole || 'aspirante');
+                
                 oauthService.login("microsoft");
             } catch (e) {
                 console.error("[OAUTH] Error Microsoft:", e);
@@ -531,6 +556,50 @@ export default {
             }
         },
 
+        async handleSocialUpdate() {
+            this.errorMessage = '';
+            this.errors.name = false;
+            this.errors.username = false;
+
+            if (!this.formData.name || this.formData.name.trim().length === 0) {
+                this.errors.name = true;
+                return;
+            }
+            if (!this.formData.username || this.formData.username.trim().length === 0) {
+                this.errors.username = true;
+                return;
+            }
+
+            this.loading = true;
+            try {
+                // ¡LA MAGIA OCURRE AQUÍ!
+                // Llamamos al socialLogin enviando el token de Google OTRA VEZ, 
+                // pero ahora le pasamos los datos del formulario. El backend lo creará de verdad.
+                await AuthService.socialLogin(this.socialProvider, this.socialToken, {
+                    name: this.formData.name,
+                    username: this.formData.username,
+                    universidad_id: this.formData.universidad_id, // Debería venir de tu paso 1
+                    carrera_id: this.formData.carrera_id
+                });
+
+                const toast = await toastController.create({
+                    message: '¡Cuenta creada con éxito!',
+                    duration: 2000,
+                    position: 'top',
+                    cssClass: 'success-toast'
+                });
+                await toast.present();
+
+                this.$router.replace('/tabs/tab1');
+
+            } catch (error) {
+                console.error('Error creando cuenta:', error);
+                // Mostrar toast de error si el username ya está en uso, etc.
+            } finally {
+                this.loading = false;
+            }
+        },
+
         togglePassword() {
             this.showPassword = !this.showPassword
         },
@@ -540,11 +609,22 @@ export default {
         },
 
         goToWelcome() {
-            // Si vino de university-select, volver ahí
-            if (this.universidadData.id) {
-                this.$router.push('/university-select')
-            } else {
-                this.$router.push('/welcome')
+            // Caso 1: Si estamos en el Paso 2 o 3, solo retrocedemos un nivel
+            if (this.currentStepr > 1) {
+                this.currentStepr--;
+                
+                // Opcional: Si regresas al paso 1, podrías querer resetear el rol
+                if (this.currentStepr === 1) {
+                    this.userRole = null;
+                }
+            } 
+            // Caso 2: Si ya estamos en el Paso 1, ejecutamos la salida de la vista
+            else {
+                if (this.universidadData.id) {
+                    this.$router.push('/university-select');
+                } else {
+                    this.$router.push('/welcome');
+                }
             }
         },
 
@@ -591,7 +671,7 @@ export default {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    padding: 1.5rem 1.5rem 2rem 1.5rem;
+    padding: 8px 1.5rem 2rem 1.5rem;
 }
 
 /* Header */
@@ -708,6 +788,25 @@ export default {
   transform: scale(0.95);
 }
 
+/* Progress bar */
+.progress-container {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.progress-step {
+    flex: 1;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    transition: background 0.3s ease;
+}
+
+.progress-step.active {
+    background: #8A2BE2;
+}
+
 
 /*botones de login de google y microsoft*/
 .login-google,
@@ -716,18 +815,26 @@ export default {
     font-weight: 900;
     font-size: 0.7rem;
     margin: 0;
+    --border-radius: 20px;
+}
+
+.vista-inicio,
+.contenedor-botones p {
+    color: #FFFFFF !important;
 }
 
 .text-google {
     background: linear-gradient(120deg, #DB4437, #F4B400, #0F9D58, #4285F4);
     -webkit-text-fill-color: transparent;
     -webkit-background-clip: text;
+    padding-left: 5px;
 }
 
 .text-microsoft {
     background: linear-gradient(120deg, #F25022, #7FBA00, #00A4EF, #FFB900);
     -webkit-text-fill-color: transparent;
     -webkit-background-clip: text;
+    padding-left: 5px;
 }
 
 .login-google img,
@@ -973,6 +1080,57 @@ ion-input.register-input .input-bottom {
     .subtitle {
         font-size: 2.25rem;
     }
+}
+
+
+/* divisor de login opciones de login social */
+.white-text {
+    color: white;
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.step-container {
+    animation: fadeIn 0.4s ease-in-out;
+}
+
+.social-divider {
+    text-align: center;
+    margin: 1.5rem 0;
+    position: relative;
+    color: rgba(255,255,255,0.5);
+    font-size: 0.8rem;
+}
+
+.social-divider::before {
+    content: "";
+    position: absolute;
+    top: 50%; left: 0; width: 35%; height: 1px;
+    background: rgba(255,255,255,0.2);
+}
+
+.social-divider::after {
+    content: "";
+    position: absolute;
+    top: 50%; right: 0; width: 35%; height: 1px;
+    background: rgba(255,255,255,0.2);
+}
+
+.social-container {
+    display: flex;
+    gap: 10px;
+    flex-direction: column;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.register-input.ion-disabled {
+    opacity: 0.6;
+    pointer-events: none;
+    --color: #a3a3a3; /* Un gris claro para indicar que no se puede editar */
 }
 </style>
 

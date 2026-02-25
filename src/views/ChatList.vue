@@ -12,9 +12,10 @@
                 <div class="favorites-label">Favoritos</div>
                 <div class="favorites-scroll">
                     <div v-for="fav in favorites" :key="fav.id" class="favorite-item" @click="openChat(fav)">
-                        <div class="fav-avatar-container">
-                            <img :src="fav.imagen_url || '/assets/img/default-user.png'" />
-                        </div>
+                        <ion-avatar class="fav-avatar-container">
+                            <img v-if="fav.imagen_url" :src="fav.imagen_url" />
+                            <ion-icon v-else :icon="personCircle" class="fav-avatar-icon"></ion-icon>
+                        </ion-avatar>
                         <span class="fav-name">{{ fav.name.split(' ')[0] }}</span>
                     </div>
                 </div>
@@ -28,10 +29,11 @@
                 <div class="list-label" v-if="favorites.length > 0">Mensajes</div>
 
                 <div v-for="contact in contacts" :key="contact.id" class="chat-item" @click="openChat(contact)">
-                    <div class="chat-item-avatar">
-                        <img :src="contact.imagen_url || '/assets/img/default-user.png'" />
+                    <ion-avatar class="chat-item-avatar">
+                        <img v-if="contact.imagen_url" :src="contact.imagen_url" />
+                        <ion-icon v-else :icon="personCircle" class="chat-avatar-icon"></ion-icon>
                         <span v-if="contact.is_online" class="online-dot"></span>
-                    </div>
+                    </ion-avatar>
 
                     <div class="chat-item-content">
                         <div class="chat-item-header">
@@ -59,10 +61,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted, onActivated, onDeactivated } from 'vue';
 import { useRouter } from 'vue-router';
 import chatService from '@/services/chatService';
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonSearchbar } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonSearchbar, IonAvatar, IonIcon } from '@ionic/vue';
+import { personCircle } from 'ionicons/icons';
 import { useDarkMode } from '@/utils/useDarkMode';
 
 const { isDarkMode } = useDarkMode();
@@ -70,15 +73,30 @@ const { isDarkMode } = useDarkMode();
 const contacts = ref([]);
 const favorites = ref([]);
 const router = useRouter();
+let pollingInterval = null;
 
 const loadData = async () => {
     try {
         // Cargar Contactos
         const resContacts = await chatService.getContacts();
-        contacts.value = resContacts.data;
 
-        // Cargar Favoritos (Nuevo Endpoint)
+        // Ordenar por último mensaje (más reciente primero)
+        contacts.value = resContacts.data.sort((a, b) => {
+            const dateA = a.last_message_date ? new Date(a.last_message_date) : new Date(0);
+            const dateB = b.last_message_date ? new Date(b.last_message_date) : new Date(0);
+            return dateB - dateA;
+        });
+
+        // Cargar Favoritos
         const resFavs = await chatService.getFavorites();
+
+        // Limpiar datos de favoritos (asegurar que imagen_url vacía sea null)
+        resFavs.data.forEach(fav => {
+            if (!fav.imagen_url || fav.imagen_url.trim() === '') {
+                fav.imagen_url = null;
+            }
+        });
+
         favorites.value = resFavs.data;
     } catch (error) {
         console.error("Error cargando chat list", error);
@@ -89,8 +107,38 @@ const openChat = (user) => {
     router.push(`/chat/${user.id}`);
 };
 
+// Polling para actualizar lista cada 5 segundos
+const startPolling = () => {
+    pollingInterval = setInterval(() => {
+        loadData();
+    }, 5000);
+};
+
+const stopPolling = () => {
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+    }
+};
+
 onMounted(() => {
     loadData();
+    startPolling();
+});
+
+onUnmounted(() => {
+    stopPolling();
+});
+
+// Refrescar al volver a la vista (reactivo)
+onActivated(() => {
+    loadData();
+    startPolling();
+});
+
+// Parar polling al salir de la vista
+onDeactivated(() => {
+    stopPolling();
 });
 </script>
 
@@ -156,6 +204,9 @@ ion-title {
     /* Azul Chatify */
     padding: 2px;
     margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .fav-avatar-container img {
@@ -163,6 +214,14 @@ ion-title {
     height: 100%;
     border-radius: 50%;
     object-fit: cover;
+}
+
+.fav-avatar-icon {
+    width: 51px !important;
+    height: 51px !important;
+    font-size: 51px !important;
+    color: var(--ion-color-medium);
+    display: block !important;
 }
 
 .fav-name {
@@ -211,6 +270,8 @@ ion-title {
 .chat-item-avatar {
     position: relative;
     margin-right: 15px;
+    width: 50px;
+    height: 50px;
 }
 
 .chat-item-avatar img {
@@ -218,6 +279,13 @@ ion-title {
     height: 50px;
     border-radius: 50%;
     object-fit: cover;
+}
+
+.chat-avatar-icon {
+    width: 50px !important;
+    height: 50px !important;
+    font-size: 50px !important;
+    color: var(--ion-color-medium);
 }
 
 .online-dot {

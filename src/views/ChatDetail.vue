@@ -10,7 +10,8 @@
                 <ion-title @click="toggleInfoPanel(true)" class="chat-header-title">
                     <div class="header-content">
                         <ion-avatar class="header-avatar">
-                            <img :src="chatUserAvatar || '/assets/img/default-user.png'" />
+                            <img v-if="chatUserAvatar" :src="chatUserAvatar" />
+                            <ion-icon v-else :icon="personCircle" class="header-avatar-icon"></ion-icon>
                         </ion-avatar>
                         <div class="header-text">
                             <span class="user-name">{{ chatUserName }}</span>
@@ -118,9 +119,10 @@
             :breakpoints="[0, 0.85]">
             <ion-content class="info-panel">
                 <div class="info-header-centered">
-                    <div class="big-avatar"
-                        :style="{ backgroundImage: 'url(' + (chatUserAvatar || '/assets/img/default-user.png') + ')' }">
-                    </div>
+                    <ion-avatar v-if="chatUserAvatar" class="big-avatar"
+                        :style="{ backgroundImage: 'url(' + chatUserAvatar + ')' }">
+                    </ion-avatar>
+                    <ion-icon v-else :icon="personCircle" class="big-avatar-icon"></ion-icon>
                     <h2>{{ chatUserName }}</h2>
                     <div class="action-buttons">
                         <div class="action-btn" @click="toggleFavorite">
@@ -175,6 +177,7 @@ import { AuthService } from '@/services/auth';
 import { BASE_URL } from '@/services/api';
 import api from '@/services/api';
 import { IonPage, IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonContent, IonFooter, IonButton, IonModal, IonAvatar, IonIcon, IonSpinner } from '@ionic/vue';
+import { personCircle } from 'ionicons/icons';
 import { useDarkMode } from '@/utils/useDarkMode';
 
 const { isDarkMode } = useDarkMode();
@@ -246,9 +249,9 @@ const filePreview = ref(null);
 const isLoading = ref(true);
 const userId = route.params.id;
 const myId = ref(null);
-const chatUserName = ref('');
+const chatUserName = ref(null);
 const chatUserUsername = ref('');
-const chatUserAvatar = ref('');
+const chatUserAvatar = ref(null);
 const showInfo = ref(false);
 const isFavorite = ref(false);
 const sharedPhotos = ref([]);
@@ -262,13 +265,36 @@ const loadData = async () => {
     try {
         const res = await chatService.getMessages(userId);
         messages.value = res.data;
+
+        // Intentar obtener datos del usuario desde contactos
         const contacts = await chatService.getContacts();
-        const user = contacts.data.find(c => String(c.id) === String(userId));
-        if (user) {
-            chatUserName.value = user.name;
-            chatUserUsername.value = user.username;
-            chatUserAvatar.value = user.imagen_url;
+        let user = contacts.data.find(c => String(c.id) === String(userId));
+
+        // Si no está en contactos, obtener datos directamente del usuario
+        if (!user) {
+            try {
+                const userRes = await api.get(`/users/${userId}`);
+                user = userRes.data;
+                // Asegurar que tenga imagen_url
+                if (user && !user.imagen_url && user.imagen) {
+                    user.imagen_url = `${BASE_URL}/perfiles/${user.imagen}`;
+                }
+            } catch (err) {
+                console.error('Error cargando datos del usuario:', err);
+            }
         }
+
+        if (user) {
+            chatUserName.value = user.name || 'Usuario';
+            chatUserUsername.value = user.username || '';
+            chatUserAvatar.value = user.imagen_url;
+        } else {
+            // Fallback si no se pudo obtener el usuario
+            chatUserName.value = 'Usuario';
+            chatUserUsername.value = '';
+            chatUserAvatar.value = null;
+        }
+
         await chatService.makeSeen(userId);
         const favRes = await chatService.checkFavorite(userId);
         isFavorite.value = favRes.data.is_favorite;
@@ -369,6 +395,13 @@ onUnmounted(() => unsubscribe());
     height: 100%;
     border-radius: 50%;
     object-fit: cover;
+}
+
+.header-avatar-icon {
+    width: 35px !important;
+    height: 35px !important;
+    font-size: 35px !important;
+    color: var(--ion-color-medium);
 }
 
 .header-text {
@@ -536,6 +569,15 @@ onUnmounted(() => unsubscribe());
     background-position: center;
     margin: 0 auto 15px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.big-avatar-icon {
+    width: 90px !important;
+    height: 90px !important;
+    font-size: 90px !important;
+    color: var(--ion-color-medium);
+    margin: 0 auto 15px;
+    display: block;
 }
 
 .action-buttons {

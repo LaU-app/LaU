@@ -1,5 +1,5 @@
 {
-  "name": "App-SivarSocial",
+  "name": "LaU App",
   "integrations": {
     "capacitor": {}
   },
@@ -7,7 +7,7 @@
   "proxies": [
     {
       "path": "/uploads",
-      "proxyUrl": "http://127.0.0.1:8000/uploads"
+      "proxyUrl": "https://api.sivarsocial.com/uploads"
     }
   ]
 }

@@ -382,42 +382,37 @@ export const AuthService = {
     }
   },
 
-  async socialLogin(provider, token) {
+  // En tu archivo auth.js
+  async socialLogin(provider, token, extraData = {}) {
     try {
-      /* console.log("[AUTH] Enviando token social al backend..."); */
-
-      const res = await api.post("/auth/social-login", {
+      const payload = {
         provider: provider,
         token: token,
-      });
+        ...extraData // Inyectamos username, universidad_id, etc., si existen
+      };
 
-      // 1. ADAPTAR LA RESPUESTA
-      // Tu API devuelve: { success: true, data: { token: '...', user: {...} } }
-      // Necesitamos entrar a res.data.data
+      const res = await api.post("/auth/social-login", payload);
       const sessionData = res.data?.data || res.data;
 
+      // Si el backend dice que requiere registro, solo devolvemos los datos para llenar el form
+      if (res.data.requires_registration) {
+        return { requires_registration: true, ...sessionData };
+      }
+
       if (sessionData?.token) {
-        /* console.log("[AUTH] Sesión creada correctamente. Guardando..."); */
-
-        // 2. GUARDAR DATOS (CRÍTICO)
-        // Usamos 'true' para que se guarde en localStorage (persistente)
         this.setToken(sessionData.token, true);
-
         if (sessionData.user) {
           this.setUser(sessionData.user, true);
         }
-
         return sessionData;
       } else {
-        throw new Error(
-          "La respuesta del servidor no contenía un token válido."
-        );
+        throw new Error("La respuesta del servidor no contenía un token válido.");
       }
     } catch (error) {
       console.error("[AUTH] Error en socialLogin:", error);
       throw error;
     }
-  },
+  }
 };
 
 export default AuthService;
