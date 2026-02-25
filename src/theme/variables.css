@@ -1,6 +1,10 @@
 /* For information on how to create your own theme, please see:
 http://ionicframework.com/docs/theming/ */
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* ========================================
    ESTILOS GLOBALES PARA ION-TOAST
    ======================================== */
@@ -59,6 +63,10 @@ ion-toast::part(button):hover {
     border-radius: 20px !important;
 }
 
+ion-tabs.layout-with-tabs ion-content {
+  --padding-bottom: calc(70px + env(safe-area-inset-bottom));
+}
+
 /* .pt-safe-top {
   padding-top: 15px !important;
 } */
@@ -67,6 +75,6 @@ ion-toast::part(button):hover {
   padding-top: 0px !important;
 } */
 
-ion-header {
+/* ion-header ion-toolbar:first-of-type {
     padding-top: env(safe-area-inset-top) !important;
-}
+} */

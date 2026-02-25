@@ -12,9 +12,9 @@
           <span class="username-purple">@{{ user.username }}</span>
         </ion-title>
         <ion-buttons slot="end">
-          <ion-button fill="clear" @click="toggleDarkMode">
+          <!-- <ion-button fill="clear" @click="toggleDarkMode">
             <ion-icon :icon="isDarkMode ? sunny : moon" class="header-icon"></ion-icon>
-          </ion-button>
+          </ion-button> -->
           <ion-button fill="clear" @click="goToTasks" aria-label="Ir a Tareas" class="tasks-header-btn">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"
               class="header-hourglass">
@@ -420,18 +420,7 @@
           </ion-list>
         </ion-content>
       </ion-modal>
-
-      <!-- Menu Popover -->
-      <ion-popover :is-open="isMenuOpen" @didDismiss="closeMenu" trigger="open-menu-button">
-        <ion-content>
-          <ion-list>
-            <ion-item button @click="handleLogout">
-              <ion-icon slot="start" :icon="logOutOutline"></ion-icon>
-              <ion-label>Cerrar sesión</ion-label>
-            </ion-item>
-          </ion-list>
-        </ion-content>
-      </ion-popover>
+      
     </ion-content>
   </ion-page>
 </template>
@@ -1679,6 +1668,8 @@ ion-header ion-button:hover .header-icon {
   font-size: 14px;
   font-weight: 600;
   padding: 0;
+  top: 50%;
+  bottom: 50%;
 }
 
 .header-hourglass {
@@ -1869,7 +1860,7 @@ ion-segment-button {
 
 /* Tabs Content */
 .tabs-content {
-  padding: 8px 0;
+  padding: 8px 0 0 0;
   min-height: 200px;
 }
 

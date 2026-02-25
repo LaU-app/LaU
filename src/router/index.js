@@ -155,7 +155,20 @@ router.beforeEach(async (to, from, next) => {
   }
   // Si la ruta es para invitados (login/register) y ya está autenticado
   else if (to.meta.requiresGuest && isAuthenticated) {
-    next("/tabs/tab1");
+    
+    // --- EXCEPCIÓN PARA REGISTRO SOCIAL ---
+    // Revisamos si tiene la miga de pan que dejamos antes de ir a Google/Microsoft
+    const vieneDeRegistro = localStorage.getItem('flujo_registro_social') === 'true';
+    
+    // Verificamos si la ruta de destino es el registro
+    // (Usa to.path === '/register' o to.name === 'Register' dependiendo de cómo lo llamaste en tu router)
+    if (to.path === '/register' && vieneDeRegistro) {
+      next(); // ¡Le abrimos la puerta para que termine de llenar sus datos!
+    } else {
+      next("/tabs/tab1"); // Comportamiento normal: lo mandamos al Home
+    }
+    // --------------------------------------
+
   }
   // Caso normal (incluye /welcome y /tabs/tab1 sin autenticación)
   else {

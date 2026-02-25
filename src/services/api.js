@@ -3,7 +3,7 @@ import axios from "axios";
 
 const API_URL = "http://127.0.0.1:8000/api"; // Verifcar URL base de la API
               // http://127.0.0.1:8000/api
-              // https://lauapi-production.up.railway.app/api
+              // https://api.sivarsocial.com/api
 
 //Creamos una instancia de axios para configuracion basica
 const api = axios.create({

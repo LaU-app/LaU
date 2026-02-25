@@ -90,7 +90,7 @@
         </ion-button>
         
         <div class="footer-info">
-          <p class="version">Versión 1.0.2 (Build 202310)</p>
+          <p class="version">v{{ appVersion }} (Build {{ appBuild }})</p>
         </div>
       </div>
 
@@ -114,7 +114,23 @@ import { useRouter } from 'vue-router';
 import { chevronBackOutline } from 'ionicons/icons'; // Importamos el icono
 import { useDarkMode } from "@/utils/useDarkMode";
 import { AuthService } from "@/services/auth";
+import { ref, onMounted } from 'vue'; // Importamos onMounted
+import { App } from '@capacitor/app';
 import { useAmbientMode } from "@/utils/useAmbientMode";
+
+const appVersion = ref('0.0.0'); // Puedes poner la versión actual de tu build
+const appBuild = ref('0000000');
+
+onMounted(async () => {
+  // Solo intentará obtener info si Capacitor está disponible (entorno nativo)
+  try {
+    const info = await App.getInfo();
+    appVersion.value = info.version;
+    appBuild.value = info.build;
+  } catch (error) {
+    console.log("Modo navegador: Usando versión estática");
+  }
+});
 
 const router = useRouter();
 const { isDarkMode, toggleDarkMode } = useDarkMode();

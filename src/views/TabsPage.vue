@@ -1,9 +1,11 @@
 <template>
   <ion-page>
-    <ion-tabs>
+    <ion-tabs :class="{ 'layout-with-tabs': isAuthenticated }">
       <ion-router-outlet></ion-router-outlet>
+      <div v-if="isAuthenticated" class="tabs-gradient-mask"></div>
       <!-- Tabs solo para usuarios autenticados -->
-      <ion-tab-bar v-if="isAuthenticated" slot="bottom">
+      <ion-tab-bar v-if="isAuthenticated" slot="bottom" class="floating-tabs">
+
         <ion-tab-button tab="tab1" href="/tabs/tab1">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"
             class="custom-icon">
@@ -49,6 +51,7 @@
             <ion-icon v-else :icon="personCircle" class="header-icon"></ion-icon>
           </ion-avatar>
         </ion-tab-button>
+
       </ion-tab-bar>
     </ion-tabs>
   </ion-page>
@@ -83,6 +86,12 @@ const user = ref(AuthService.getUser());
 // Estado del contador de notificaciones
 const unreadCount = ref(0);
 let pollInterval = null;
+
+const activeTab = ref('tab1');
+
+const setCurrentTab = (event) => {
+  activeTab.value = event.tab; // Guarda el nombre del tab actual (tab1, create-post, perfil)
+};
 
 // Actualizar cuando el componente se monta
 onMounted(() => {
@@ -151,12 +160,76 @@ const openNotifications = () => {
 </script>
 
 <style scoped>
+/* Menu flotante */
+/* Contenedor principal de los Tabs */
+ion-tab-bar.floating-tabs {
+  --border: none;
+  
+  position: absolute;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  padding-bottom: 0px !important;
+  left: 15px;
+  right: 15px;
+  
+  height: 65px;
+  width: auto; /* Permite que respete los márgenes left/right */
+  
+  border-radius: 30px; /* Bordes redondeados */
+  border: 1px solid #b2b2b221; /* Borde sutil */
+  
+  /* Sombra para dar profundidad */
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+  
+  /* Evita que el contenido se salga de los bordes redondeados */
+  overflow: hidden; 
+  transition: all 0.3s ease-in-out;
+}
+
+/* Ajuste para los botones dentro del tab flotante */
+ion-tab-button {
+  --background: transparent;
+  --color: var(--app-text-secondary);
+}
+
+/* Efecto visual al presionar (Active state) */
+ion-tab-button.tab-selected {
+  transform: scale(1.1);
+  transition: transform 0.2s ease;
+}
+
+.tabs-gradient-mask {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(10px + 40px + 30px + env(safe-area-inset-bottom)); /* Altura del espacio + tab + margen + safe area */
+  
+  /* El degradado usa la variable de fondo que definiste en tu composable */
+  background: linear-gradient(
+    to top,
+    var(--ion-background-color) 0%,
+    rgba(var(--ion-background-color-rgb), 0.3) 50%,
+    transparent 100%
+  );
+  
+  /* Muy importante: que no bloquee los clics en el contenido de atrás */
+  pointer-events: none; 
+  
+  /* Debe estar por encima del contenido pero por debajo de los botones (999) */
+  z-index: 900; 
+  transition: background 0.5s ease;
+}
+
+
+
 /* Estilos para los iconos SVG personalizados */
 .custom-icon {
   width: 26px;
   height: 26px;
   color: currentColor;
   display: block;
+  transition: color 0.3s ease;
 }
 
 /* Icono de Crear más grande que los demas */
