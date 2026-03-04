@@ -15,7 +15,7 @@
                 </div>
 
                 <!-- Progress bar -->
-                <div class="progress-container">
+                <div class="progress-container" v-if="!comingFromRegister">
                     <div class="progress-step" :class="{ active: currentStep >= 1 }"></div>
                     <div class="progress-step" :class="{ active: currentStep >= 2 }"></div>
                 </div>
@@ -209,6 +209,7 @@ export default {
             loading: false,
             loadingCarreras: false,
             errorMessage: '',
+            comingFromRegister: false, // Nueva: indica si viene desde RegisterView
             // Formulario de registro
             formData: {
                 name: '',
@@ -262,6 +263,12 @@ export default {
         }
     },
     async mounted() {
+        // Verificar si viene desde RegisterView (nuevo flujo: rol -> universidad -> datos)
+        const tempRole = localStorage.getItem('temp_register_role');
+        if (tempRole) {
+            this.comingFromRegister = true;
+            console.log('[UniversitySelect] Viene desde RegisterView con rol:', tempRole);
+        }
         await this.loadUniversidades()
     },
     methods: {
@@ -345,11 +352,25 @@ export default {
                     this.errorMessage = 'Por favor, selecciona tu carrera'
                     return
                 }
-                // Guardar IDs en formData
-                this.formData.universidad_id = this.selectedUniversidad.id
-                this.formData.carrera_id = this.selectedCarrera.id
-                // Pasar al paso 2
-                this.currentStep = 2
+
+                // Si viene desde RegisterView, redirigir de vuelta con los datos
+                if (this.comingFromRegister) {
+                    this.$router.push({
+                        path: '/register',
+                        query: {
+                            universidadId: this.selectedUniversidad.id,
+                            universidadNombre: this.selectedUniversidad.nombre,
+                            universidadDominio: this.selectedUniversidad.dominio,
+                            carreraId: this.selectedCarrera.id,
+                            carreraNombre: this.selectedCarrera.nombre
+                        }
+                    });
+                } else {
+                    // Flujo normal: guardar IDs y pasar al paso 2 (formulario completo)
+                    this.formData.universidad_id = this.selectedUniversidad.id
+                    this.formData.carrera_id = this.selectedCarrera.id
+                    this.currentStep = 2
+                }
             } else if (this.currentStep === 2) {
                 // Validar formulario
                 if (!this.formData.name || this.formData.name.trim().length === 0) {
@@ -398,54 +419,61 @@ export default {
                 }
 
                 // Realizar registro
-                this.loading = true
-                try {
-                    await AuthService.register(this.formData)
+                await this.handleRegister();
+            }
+        },
 
-                    const toast = await toastController.create({
-                        message: '¡Registro exitoso! Bienvenido a LaÚ',
-                        duration: 2000,
-                        position: 'top',
-                        color: 'success'
-                    })
-                    await toast.present()
+        async handleRegister() {
+            this.loading = true;
+            try {
+                await AuthService.register(this.formData);
 
-                    this.$router.replace('/tabs/tab1')
-                } catch (error) {
-                    console.error('Error en registro:', error)
+                // Limpiar datos temporales si existen
+                localStorage.removeItem('temp_register_data');
 
-                    this.errors.name = true
-                    this.errors.username = true
-                    this.errors.email = true
-                    this.errors.password = true
-                    this.errors.password_confirmation = true
+                const toast = await toastController.create({
+                    message: '¡Registro exitoso! Bienvenido a LaÚ',
+                    duration: 2000,
+                    position: 'top',
+                    color: 'success'
+                });
+                await toast.present();
 
-                    if (error.response?.data?.message) {
-                        this.errorMessage = error.response.data.message
-                    } else if (error.response?.data?.errors) {
-                        const errors = error.response.data.errors
-                        if (errors.email) {
-                            this.errorMessage = Array.isArray(errors.email) ? errors.email[0] : errors.email
-                        } else if (errors.username) {
-                            this.errorMessage = Array.isArray(errors.username) ? errors.username[0] : errors.username
-                        } else {
-                            const firstError = Object.values(errors)[0]
-                            this.errorMessage = Array.isArray(firstError) ? firstError[0] : firstError
-                        }
+                this.$router.replace('/tabs/tab1');
+            } catch (error) {
+                console.error('Error en registro:', error);
+
+                this.errors.name = true;
+                this.errors.username = true;
+                this.errors.email = true;
+                this.errors.password = true;
+                this.errors.password_confirmation = true;
+
+                if (error.response?.data?.message) {
+                    this.errorMessage = error.response.data.message;
+                } else if (error.response?.data?.errors) {
+                    const errors = error.response.data.errors;
+                    if (errors.email) {
+                        this.errorMessage = Array.isArray(errors.email) ? errors.email[0] : errors.email;
+                    } else if (errors.username) {
+                        this.errorMessage = Array.isArray(errors.username) ? errors.username[0] : errors.username;
                     } else {
-                        this.errorMessage = 'Error al registrarse. Por favor, intenta de nuevo.'
+                        const firstError = Object.values(errors)[0];
+                        this.errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
                     }
-
-                    const toast = await toastController.create({
-                        message: this.errorMessage,
-                        duration: 3000,
-                        position: 'top',
-                        color: 'danger'
-                    })
-                    await toast.present()
-                } finally {
-                    this.loading = false
+                } else {
+                    this.errorMessage = 'Error al registrarse. Por favor, intenta de nuevo.';
                 }
+
+                const toast = await toastController.create({
+                    message: this.errorMessage,
+                    duration: 3000,
+                    position: 'top',
+                    color: 'danger'
+                });
+                await toast.present();
+            } finally {
+                this.loading = false;
             }
         },
 
@@ -463,10 +491,15 @@ export default {
 
         goBack() {
             if (this.currentStep === 1) {
-                this.$router.push('/welcome')
+                // Si viene desde RegisterView, volver ahí
+                if (this.comingFromRegister) {
+                    this.$router.push('/register');
+                } else {
+                    this.$router.push('/welcome');
+                }
             } else {
-                this.currentStep = 1
-                this.errorMessage = ''
+                this.currentStep = 1;
+                this.errorMessage = '';
                 // Limpiar errores
                 this.errors = {
                     name: false,
@@ -474,7 +507,7 @@ export default {
                     email: false,
                     password: false,
                     password_confirmation: false
-                }
+                };
             }
         }
     }

@@ -2,7 +2,7 @@
     <div class="comment-container">
         <div class="comment-item">
             <ion-avatar class="comment-avatar">
-                <img v-if="comment.user?.imagen_url" :src="comment.user.imagen_url"
+                <img v-if="comment.user?.imagen_url" :src="getFullImageUrl(comment.user.imagen_url)"
                     :alt="comment.user?.name || 'Usuario'" @error="handleImageError" />
                 <ion-icon v-else :icon="personCircle"></ion-icon>
             </ion-avatar>
@@ -32,8 +32,8 @@
 <script setup>
 import { IonAvatar, IonIcon, IonButton } from '@ionic/vue'
 import { personCircle } from 'ionicons/icons'
-import { timeAgo } from '@/utils/timeUtils'
-
+import { timeAgo } from '@/utils/timeUtils';
+import { getFullImageUrl } from '@/utils/imageUtils';
 // Importación recursiva para poder usar el componente dentro de sí mismo
 import CommentItem from './CommentItem.vue';
 

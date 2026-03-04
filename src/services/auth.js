@@ -27,20 +27,20 @@ export const AuthService = {
       // Inicializar notificaciones push después del login exitoso
       if (pushNotificationsService.isAvailable()) {
         pushNotificationsService.initialize().catch((err) => {
-          console.error(
-            "Failed to initialize push notifications after login:",
-            err
-          );
+          // console.error(
+          //   "Failed to initialize push notifications after login:",
+          //   err,
+          // );
         });
       }
 
       return data;
     } catch (error) {
-      console.error("[AUTH] Error en login:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
+      // console.error("[AUTH] Error en login:", {
+      //   message: error.message,
+      //   response: error.response?.data,
+      //   status: error.response?.status,
+      // });
       throw error;
     }
   },
@@ -96,7 +96,7 @@ export const AuthService = {
 
       return responseData;
     } catch (error) {
-      console.error("Error en register:", error);
+      // console.error("Error en register:", error);
       throw error;
     }
   },
@@ -112,7 +112,7 @@ export const AuthService = {
       await api.post("/auth/logout");
     } catch (e) {
       // Ignora errores de logout para limpiar local de todas formas
-      console.warn("Error al hacer logout en API:", e);
+      // console.warn("Error al hacer logout en API:", e);
     }
 
     // Limpia los datos de ambos storages
@@ -164,7 +164,7 @@ export const AuthService = {
       const res = await api.get(`/users/${userIdentifier}/stats`);
       return res.data;
     } catch (error) {
-      console.error("[AUTH] Error al obtener estadísticas:", error.message);
+      // console.error("[AUTH] Error al obtener estadísticas:", error.message);
       throw error;
     }
   },
@@ -178,7 +178,7 @@ export const AuthService = {
       const res = await api.get(`/auth/followers/${userIdentifier}`);
       return res.data;
     } catch (error) {
-      console.error("[AUTH] Error al obtener seguidores:", error.message);
+      // console.error("[AUTH] Error al obtener seguidores:", error.message);
       // Retornar estructura vacía en lugar de lanzar error
       return { followers: [] };
     }
@@ -193,7 +193,7 @@ export const AuthService = {
       const res = await api.get(`/auth/following/${userIdentifier}`);
       return res.data;
     } catch (error) {
-      console.error("[AUTH] Error al obtener seguidos:", error.message);
+      // console.error("[AUTH] Error al obtener seguidos:", error.message);
       // Retornar estructura vacía en lugar de lanzar error
       return { following: [] };
     }
@@ -210,10 +210,10 @@ export const AuthService = {
       });
       return res.data;
     } catch (error) {
-      console.error(
-        "[AUTH] Error al obtener posts del usuario:",
-        error.message
-      );
+      // console.error(
+      //   "[AUTH] Error al obtener posts del usuario:",
+      //   error.message,
+      // );
       throw error;
     }
   },
@@ -235,11 +235,11 @@ export const AuthService = {
       /* console.log("[AUTH] Respuesta de posts:", res.data); */
       return res.data;
     } catch (error) {
-      console.error("[AUTH] Error al obtener posts del usuario:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
+      // console.error("[AUTH] Error al obtener posts del usuario:", {
+      //   message: error.message,
+      //   response: error.response?.data,
+      //   status: error.response?.status,
+      // });
       throw error;
     }
   },
@@ -264,7 +264,7 @@ export const AuthService = {
 
       return userData;
     } catch (error) {
-      console.error("Error al obtener perfil:", error);
+      // console.error("Error al obtener perfil:", error);
       // NO hacemos logout automáticamente aquí, dejamos que el componente decida
       // Solo si es 401, el componente limpiará la sesión
       throw error;
@@ -277,7 +277,7 @@ export const AuthService = {
       const res = await api.get(`/user/${usuario_username}`);
       return res.data;
     } catch (error) {
-      console.error("Error al obtener perfil:", error);
+      // console.error("Error al obtener perfil:", error);
       // NO hacemos logout automáticamente aquí, dejamos que el componente decida
       // Solo si es 401, el componente limpiará la sesión
       throw error;
@@ -343,12 +343,12 @@ export const AuthService = {
 
       return res.data;
     } catch (error) {
-      console.error("Error al actualizar perfil:", error);
-      console.error("Detalles del error:", {
-        status: error.response?.status,
-        data: error.response?.data,
-        errors: error.response?.data?.errors,
-      });
+      // console.error("Error al actualizar perfil:", error);
+      // console.error("Detalles del error:", {
+      //   status: error.response?.status,
+      //   data: error.response?.data,
+      //   errors: error.response?.data?.errors,
+      // });
       throw error;
     }
   },
@@ -377,7 +377,7 @@ export const AuthService = {
 
       return res.data;
     } catch (error) {
-      console.error("Error al actualizar imagen de perfil:", error);
+      // console.error("Error al actualizar imagen de perfil:", error);
       throw error;
     }
   },
@@ -388,7 +388,7 @@ export const AuthService = {
       const payload = {
         provider: provider,
         token: token,
-        ...extraData // Inyectamos username, universidad_id, etc., si existen
+        ...extraData, // Inyectamos username, universidad_id, etc., si existen
       };
 
       const res = await api.post("/auth/social-login", payload);
@@ -406,13 +406,15 @@ export const AuthService = {
         }
         return sessionData;
       } else {
-        throw new Error("La respuesta del servidor no contenía un token válido.");
+        throw new Error(
+          "La respuesta del servidor no contenía un token válido.",
+        );
       }
     } catch (error) {
-      console.error("[AUTH] Error en socialLogin:", error);
+      // console.error("[AUTH] Error en socialLogin:", error);
       throw error;
     }
-  }
+  },
 };
 
 export default AuthService;

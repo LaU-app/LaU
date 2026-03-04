@@ -1,12 +1,12 @@
 <template>
     <ion-page>
-        <ion-content :fullscreen="true" class="register-page">
+        <ion-content :fullscreen="true" class="register-page" :class="{ 'white-background': currentStepr === 1 }">
             <!-- Imagen de fondo -->
-            <div class="background-image"></div>
-            <div class="background-overlay"></div>
+            <div class="background-image" v-if="currentStepr !== 1"></div>
+            <div class="background-overlay" v-if="currentStepr !== 1"></div>
 
             <!-- Contenido -->
-            <div class="register-container">
+            <div class="register-container" :class="{ 'white-container': currentStepr === 1 }">
                 <!-- Header -->
                 <div class="register-header" style="padding-top: env(safe-area-inset-top) !important;">
                     <ion-button fill="clear" class="back-button" @click="goToWelcome">
@@ -16,21 +16,21 @@
 
                 <!-- Progress bar -->
                 <div class="progress-container">
-                    <div class="progress-step" :class="{ active: currentStepr >= 1 }"></div>
-                    <div class="progress-step" :class="{ active: currentStepr >= 2 }"></div>
-                    <div class="progress-step" :class="{ active: currentStepr >= 3 }"></div>
+                    <div class="progress-step" v-for="step in totalSteps" :key="step"
+                        :class="{ active: currentStepr >= step }"></div>
                 </div>
 
                 <!-- Contenido principal -->
-                <div class="register-content">
-                    <div class="title-section">
-                        <img src="/LaU1.png" alt="LaÚ" class="app-logo" />
-                        <h2 class="subtitle">{{ pageTitle }}</h2>
-                        <p class="description">{{ pageDescription }}</p>
+                <div class="register-content" :class="{ 'centered-content': currentStepr === 1 }">
+                    <div class="title-section" :class="{ 'centered-title': currentStepr === 1 }">
+                        <img :src="currentStepr === 1 ? '/LaU.png' : '/LaU1.png'" alt="LaÚ" class="app-logo"
+                            :class="{ 'logo-large': currentStepr === 1 }" />
+                        <h2 v-if="currentStepr !== 1" class="subtitle">{{ pageTitle }}</h2>
+                        <p v-if="currentStepr !== 1" class="description">{{ pageDescription }}</p>
                     </div>
 
-                    <div v-if="currentStepr === 1" class="step-container">
-                        <p class="white-text">¿Cuál es tu perfil actual?</p>
+                    <div v-if="currentStepr === 1" class="step-container step-one">
+                        <p class="profile-question">¿Cuál es tu perfil actual?</p>
                         <button class="cssbuttons-io" @click="selectRole('aspirante')">
                             <span>Aspirante</span>
                         </button>
@@ -43,32 +43,36 @@
                     </div>
 
                     <div v-if="currentStepr === 2" class="step-container">
-                        <form @submit.prevent="isSocialAuth ? handleSocialUpdate() : currentStepr = 3" class="register-form">
+                        <form @submit.prevent="isSocialAuth ? handleSocialUpdate() : currentStepr = 3"
+                            class="register-form">
                             <div class="input-wrapper" :class="{ 'focused': nameFocused }">
-                                <ion-input v-model="formData.name" placeholder="Tu nombre" class="register-input" @ionFocus="nameFocused = true" @ionBlur="nameFocused = false"></ion-input>
+                                <ion-input v-model="formData.name" placeholder="Tu nombre" class="register-input"
+                                    @ionFocus="nameFocused = true" @ionBlur="nameFocused = false"></ion-input>
                                 <div class="input-line"></div>
                             </div>
 
                             <div class="input-wrapper" :class="{ 'focused': usernameFocused }">
-                                <ion-input v-model="formData.username" placeholder="Nombre de usuario" class="register-input" maxlength="15" @ionFocus="usernameFocused = true" @ionBlur="usernameFocused = false"></ion-input>
+                                <ion-input v-model="formData.username" :placeholder="usernamePlaceholder"
+                                    class="register-input" maxlength="15" @ionFocus="usernameFocused = true"
+                                    @ionBlur="usernameFocused = false"></ion-input>
                                 <div class="input-line"></div>
                             </div>
 
                             <div class="input-wrapper" :class="{ 'focused': emailFocused }">
-                                <ion-input 
-                                    v-model="formData.email" 
-                                    type="email" 
-                                    :placeholder="emailPlaceholder" 
-                                    class="register-input" 
-                                    :disabled="isSocialAuth" 
-                                    @ionFocus="emailFocused = true" 
+                                <ion-input v-model="formData.email" type="email" :placeholder="emailPlaceholder"
+                                    class="register-input" :disabled="isSocialAuth" @ionFocus="emailFocused = true"
                                     @ionBlur="emailFocused = false">
                                 </ion-input>
                                 <div class="input-line"></div>
                             </div>
 
-                            <ion-button v-if="!isSocialAuth" expand="block" class="register-button" @click="currentStepr = 3">Siguiente</ion-button>
-                            <ion-button v-else expand="block" class="register-button" @click="handleSocialUpdate" :disabled="loading">
+                            <ion-button v-if="!isSocialAuth" expand="block" class="register-button"
+                                @click="handlePersonalDataStep" :disabled="loading">
+                                <ion-spinner v-if="loading" name="crescent"></ion-spinner>
+                                <span v-else>Siguiente</span>
+                            </ion-button>
+                            <ion-button v-else expand="block" class="register-button" @click="handleSocialUpdate"
+                                :disabled="loading">
                                 <ion-spinner v-if="loading" name="crescent"></ion-spinner>
                                 <span v-else>Confirmar Datos</span>
                             </ion-button>
@@ -77,13 +81,17 @@
                         <div v-if="!isSocialAuth">
                             <div class="social-divider"><span>O continúa con</span></div>
                             <div class="social-container">
-                                <ion-button v-if="userRole === 'aspirante' || userRole === 'egresado'" expand="block" class="login-google" @click="loginWithGoogle">
-                                    <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973131/pngwing.com_2_mmyosg.png" class="icon-provider" />
+                                <ion-button v-if="userRole === 'aspirante' || userRole === 'egresado'" expand="block"
+                                    class="login-google" @click="loginWithGoogle">
+                                    <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973131/pngwing.com_2_mmyosg.png"
+                                        class="icon-provider" />
                                     <span class="text-google">Google</span>
                                 </ion-button>
 
-                                <ion-button v-if="userRole === 'estudiante' || userRole === 'egresado'" expand="block" class="login-microsoft" @click="loginWithMicrosoft">
-                                    <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973132/pngwing.com_1_aofhph.png" class="icon-provider" />
+                                <ion-button v-if="userRole === 'estudiante' || userRole === 'egresado'" expand="block"
+                                    class="login-microsoft" @click="loginWithMicrosoft">
+                                    <img src="https://res.cloudinary.com/dksv7n9bg/image/upload/v1764973132/pngwing.com_1_aofhph.png"
+                                        class="icon-provider" />
                                     <span class="text-microsoft">Microsoft</span>
                                 </ion-button>
                             </div>
@@ -93,26 +101,101 @@
                     <div v-if="currentStepr === 3" class="step-container">
                         <div class="register-form">
                             <div class="input-wrapper" :class="{ 'focused': passwordFocused }">
-                                <ion-input v-model="formData.password" :type="showPassword ? 'text' : 'password'" placeholder="Contraseña" class="register-input" @ionFocus="passwordFocused = true" @ionBlur="passwordFocused = false">
-                                    <ion-icon :icon="showPassword ? eyeOffOutline : eyeOutline" slot="end" @click="togglePassword" class="password-toggle"></ion-icon>
+                                <ion-input v-model="formData.password" :type="showPassword ? 'text' : 'password'"
+                                    placeholder="Contraseña" class="register-input" @ionFocus="passwordFocused = true"
+                                    @ionBlur="passwordFocused = false">
+                                    <ion-icon :icon="showPassword ? eyeOffOutline : eyeOutline" slot="end"
+                                        @click="togglePassword" class="password-toggle"></ion-icon>
                                 </ion-input>
                                 <div class="input-line"></div>
                             </div>
 
                             <div class="input-wrapper" :class="{ 'focused': passwordConfirmFocused }">
-                                <ion-input v-model="formData.password_confirmation" :type="showPasswordConfirm ? 'text' : 'password'" placeholder="Confirmar contraseña" class="register-input" @ionFocus="passwordConfirmFocused = true" @ionBlur="passwordConfirmFocused = false">
-                                    <ion-icon :icon="showPasswordConfirm ? eyeOffOutline : eyeOutline" slot="end" @click="togglePasswordConfirm" class="password-toggle"></ion-icon>
+                                <ion-input v-model="formData.password_confirmation"
+                                    :type="showPasswordConfirm ? 'text' : 'password'" placeholder="Confirmar contraseña"
+                                    class="register-input" @ionFocus="passwordConfirmFocused = true"
+                                    @ionBlur="passwordConfirmFocused = false">
+                                    <ion-icon :icon="showPasswordConfirm ? eyeOffOutline : eyeOutline" slot="end"
+                                        @click="togglePasswordConfirm" class="password-toggle"></ion-icon>
                                 </ion-input>
                                 <div class="input-line"></div>
                             </div>
 
-                            <ion-button expand="block" class="register-button" @click="handleRegister" :disabled="loading">
+                            <ion-button expand="block" class="register-button" @click="handlePasswordStep"
+                                :disabled="loading">
                                 <ion-spinner v-if="loading" name="crescent"></ion-spinner>
-                                <span v-else>Finalizar Registro</span>
+                                <span v-else>Siguiente</span>
                             </ion-button>
                             <ion-button fill="clear" color="light" @click="goToWelcome">Volver atrás</ion-button>
                         </div>
                     </div>
+
+                    <!-- Paso 4: Selección de Universidad/Carrera -->
+                    <div v-if="currentStepr === 4" class="step-container">
+                        <!-- Para Aspirante: Solo Carrera -->
+                        <div v-if="userRole === 'aspirante'">
+                            <p class="section-title">¿Qué carrera deseas estudiar?</p>
+                            <div class="select-wrapper">
+                                <ion-list class="select-list">
+                                    <ion-item lines="none" class="select-item">
+                                        <ion-select v-model="selectedCarrera" placeholder="Selecciona tu carrera"
+                                            interface="action-sheet"
+                                            :disabled="loadingCarreras">
+                                            <ion-select-option v-for="carrera in todasLasCarreras" :key="carrera.id"
+                                                :value="carrera">
+                                                {{ carrera.nombre }}
+                                            </ion-select-option>
+                                        </ion-select>
+                                    </ion-item>
+                                </ion-list>
+                            </div>
+                        </div>
+
+                        <!-- Para Estudiante/Egresado: Primero Universidad, luego Carrera -->
+                        <div v-else>
+                            <p class="section-title">¿En qué universidad {{ userRole === 'estudiante' ? 'estudias' :
+                                'estudiaste' }}?</p>
+                            <div class="select-wrapper">
+                                <ion-list class="select-list">
+                                    <ion-item lines="none" class="select-item">
+                                        <ion-select v-model="selectedUniversidad"
+                                            placeholder="Selecciona tu universidad" interface="action-sheet"
+                                            @ionChange="onUniversidadChange" :disabled="loadingUniversidades">
+                                            <ion-select-option v-for="uni in universidades" :key="uni.id"
+                                                :value="uni">
+                                                {{ uni.nombre }}
+                                            </ion-select-option>
+                                        </ion-select>
+                                    </ion-item>
+                                </ion-list>
+                            </div>
+
+                            <div v-if="selectedUniversidad">
+                                <p class="section-title">¿Qué carrera?</p>
+                                <div class="select-wrapper">
+                                    <ion-list class="select-list">
+                                        <ion-item lines="none" class="select-item">
+                                            <ion-select v-model="selectedCarrera" placeholder="Selecciona tu carrera"
+                                                interface="action-sheet" :disabled="loadingCarreras">
+                                                <ion-select-option v-for="carrera in carreras" :key="carrera.id"
+                                                    :value="carrera">
+                                                    {{ carrera.nombre }}
+                                                </ion-select-option>
+                                            </ion-select>
+                                        </ion-item>
+                                    </ion-list>
+                                </div>
+                            </div>
+                        </div>
+
+                        <ion-button expand="block" class="register-button" @click="handleUniversityCarreraStep"
+                            :disabled="!canFinishRegistration || loading">
+                            <ion-spinner v-if="loading" name="crescent"></ion-spinner>
+                            <span v-else>Finalizar Registro</span>
+                        </ion-button>
+                        <ion-button fill="clear" color="light" @click="currentStepr = 3">Volver atrás</ion-button>
+                    </div>
+
                 </div>
             </div>
         </ion-content>
@@ -127,11 +210,17 @@ import {
     IonInput,
     IonIcon,
     IonSpinner,
+    IonSelect,
+    IonSelectOption,
+    IonList,
+    IonItem,
     toastController
 } from '@ionic/vue'
 import { arrowBack, eyeOutline, eyeOffOutline } from 'ionicons/icons'
 import { AuthService } from '@/services/auth'
-import oauthService from "@/services/oauthServices";
+import { UniversidadService } from '@/services/universidad'
+import oauthService from "@/services/oauthServices"
+import api from '@/services/api';
 
 export default {
     name: 'RegisterView',
@@ -141,13 +230,17 @@ export default {
         IonButton,
         IonInput,
         IonIcon,
-        IonSpinner
+        IonSpinner,
+        IonSelect,
+        IonSelectOption,
+        IonList,
+        IonItem
     },
     data() {
         return {
             // 1. Estado para controlar qué contenido mostrar ('inicio', 'vistaA', 'vistaB')
-            vistaActiva: 'inicio', 
-      
+            vistaActiva: 'inicio',
+
             // 2. Estado para controlar la visibilidad de los botones de navegación
             botonesVisibles: true,
 
@@ -197,43 +290,35 @@ export default {
             carreraData: {
                 id: null,
                 nombre: null
-            }
+            },
+            // Listas para paso 4
+            universidades: [],
+            carreras: [],
+            todasLasCarreras: [], // Para aspirantes: todas las carreras disponibles
+            selectedUniversidad: null,
+            selectedCarrera: null,
+            loadingUniversidades: false,
+            loadingCarreras: false
         }
     },
     mounted() {
-
         if (localStorage.getItem('social_temp_token')) {
             this.formData.name = localStorage.getItem('social_temp_name');
             this.formData.email = localStorage.getItem('social_temp_email');
-            
+
             // Guardamos las credenciales de la red social en variables del componente
             this.socialToken = localStorage.getItem('social_temp_token');
             this.socialProvider = localStorage.getItem('social_temp_provider');
-            
+
             this.isSocialAuth = true;
             this.currentStepr = 2; // Directo a confirmar datos
-            
+
             // Limpiamos todo el localStorage temporal por seguridad
             localStorage.removeItem('social_temp_token');
             localStorage.removeItem('social_temp_provider');
             localStorage.removeItem('social_temp_name');
             localStorage.removeItem('social_temp_email');
             localStorage.removeItem('flujo_registro_social');
-        }
-        // Leer parámetros de la URL
-        const { universidadId, universidadNombre, universidadDominio, carreraId, carreraNombre } = this.$route.query
-
-        if (universidadId && universidadNombre && universidadDominio) {
-            this.universidadData.id = parseInt(universidadId)
-            this.universidadData.nombre = universidadNombre
-            this.universidadData.dominio = universidadDominio
-            this.formData.universidad_id = parseInt(universidadId)
-        }
-
-        if (carreraId && carreraNombre) {
-            this.carreraData.id = parseInt(carreraId)
-            this.carreraData.nombre = carreraNombre
-            this.formData.carrera_id = parseInt(carreraId)
         }
 
         // Dentro de mounted() -> listenForAuth
@@ -248,8 +333,6 @@ export default {
                     this.loading = true;
                     const provider = localStorage.getItem('auth_provider') || 'google';
 
-                    console.log("Enviando token al backend...");
-                    
                     // Llamamos a tu servicio social, el cual ya guarda el token
                     const authData = await AuthService.socialLogin(provider, response.accessToken);
 
@@ -258,7 +341,7 @@ export default {
                     this.formData.name = authData.user.name;
                     this.formData.username = authData.user.username;
                     this.formData.email = authData.user.email;
-                    
+
                     // 2. CAMBIAR EL ESTADO A MODO SOCIAL
                     this.isSocialAuth = true;
 
@@ -272,7 +355,7 @@ export default {
                     await toast.present();
 
                     // Nota: Nos quedamos en el currentStepr === 2, NO redirigimos.
-                    
+
                 } catch (apiError) {
                     console.error("Error en el backend:", apiError);
                     const toast = await toastController.create({
@@ -289,11 +372,21 @@ export default {
         });
     },
     computed: {
+        totalSteps() {
+            // Todos ahora tienen 4 pasos: rol, datos, contraseña, universidad/carrera
+            return 4;
+        },
         emailPlaceholder() {
+            if (this.userRole === 'aspirante') {
+                return 'Correo electrónico'
+            }
             if (this.universidadData.dominio) {
                 return `Correo institucional (${this.universidadData.dominio})`
             }
             return 'Correo institucional'
+        },
+        usernamePlaceholder() {
+            return '@nombre de usuario'
         },
         pageTitle() {
             if (this.universidadData.nombre) {
@@ -308,35 +401,356 @@ export default {
             return this.currentStepr === 1
                 ? 'Encuentra a tus compañeros de carrera, comparte apuntes y playlists, y descubre qué pasa en tu universidad.'
                 : 'Completa tus datos para unirte a la red universitaria.'
+        },
+        canFinishRegistration() {
+            // Aspirantes: solo necesitan carrera
+            if (this.userRole === 'aspirante') {
+                return this.selectedCarrera !== null;
+            }
+            // Estudiantes/Egresados: necesitan universidad Y carrera
+            return this.selectedUniversidad !== null && this.selectedCarrera !== null;
         }
     },
     methods: {
-
-        // Método para cambiar la vista activa
         cambiarVista(nuevaVista) {
-        this.vistaActiva = nuevaVista;
+            this.vistaActiva = nuevaVista;
         },
-        
+
         // Método para ocultar los botones de navegación
         ocultarBotones() {
-        this.botonesVisibles = false;
+            this.botonesVisibles = false;
         },
 
         selectRole(role) {
             this.userRole = role;
+
+            // Todos continúan al paso 2 (datos personales)
             this.currentStepr = 2;
-            console.log("Rol seleccionado:", role);
         },
 
-        
+        async handlePersonalDataStep() {
+            try {
+                this.loading = true;
+                this.errorMessage = '';
+
+                // 1. Validar que los campos no estén vacíos
+                if (!this.formData.name || this.formData.name.trim().length === 0) {
+                    const toast = await toastController.create({
+                        message: 'El nombre es obligatorio',
+                        duration: 2500,
+                        position: 'top',
+                        cssClass: 'danger-toast'
+                    });
+                    await toast.present();
+                    return;
+                }
+
+                if (!this.formData.username || this.formData.username.trim().length === 0) {
+                    const toast = await toastController.create({
+                        message: 'El nombre de usuario es obligatorio',
+                        duration: 2500,
+                        position: 'top',
+                        cssClass: 'danger-toast'
+                    });
+                    await toast.present();
+                    return;
+                }
+
+                // Validar formato de username (sin espacios, caracteres especiales)
+                const usernameRegex = /^[a-zA-Z0-9_]+$/;
+                if (!usernameRegex.test(this.formData.username)) {
+                    const toast = await toastController.create({
+                        message: 'El username solo puede contener letras, números y guiones bajos',
+                        duration: 2500,
+                        position: 'top',
+                        cssClass: 'danger-toast'
+                    });
+                    await toast.present();
+                    return;
+                }
+
+                if (!this.formData.email || this.formData.email.trim().length === 0) {
+                    const toast = await toastController.create({
+                        message: 'El correo electrónico es obligatorio',
+                        duration: 2500,
+                        position: 'top',
+                        cssClass: 'danger-toast'
+                    });
+                    await toast.present();
+                    return;
+                }
+
+                // 2. Validar formato de email
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(this.formData.email)) {
+                    const toast = await toastController.create({
+                        message: 'El formato del correo electrónico no es válido',
+                        duration: 2500,
+                        position: 'top',
+                        cssClass: 'danger-toast'
+                    });
+                    await toast.present();
+                    return;
+                }
+
+                // 3. Validar restricciones por rol
+                if (this.userRole === 'aspirante' && this.formData.email.toLowerCase().endsWith('.edu.sv')) {
+                    const toast = await toastController.create({
+                        message: 'Los aspirantes no pueden usar correos institucionales (.edu.sv)',
+                        duration: 3000,
+                        position: 'top',
+                        cssClass: 'danger-toast'
+                    });
+                    await toast.present();
+                    return;
+                }
+
+                // 4. Verificar disponibilidad de username en el backend
+                try {
+                    const usernameResponse = await api.checkUsernameAvailability(this.formData.username);
+                    if (!usernameResponse.data.available) {
+                        const toast = await toastController.create({
+                            message: `El nombre de usuario "${this.formData.username}" ya está en uso`,
+                            duration: 3000,
+                            position: 'top',
+                            cssClass: 'danger-toast'
+                        });
+                        await toast.present();
+                        return;
+                    }
+                } catch (error) {
+                    // Si el endpoint no existe (404) o hay error de red, permitir continuar
+                    // El backend validará al hacer el registro final
+                    console.warn('No se pudo verificar disponibilidad del username:', error.message);
+                }
+
+                // 5. Verificar disponibilidad de email en el backend
+                try {
+                    const emailResponse = await api.checkEmailAvailability(this.formData.email);
+                    if (!emailResponse.data.available) {
+                        const toast = await toastController.create({
+                            message: `El correo "${this.formData.email}" ya está registrado`,
+                            duration: 3000,
+                            position: 'top',
+                            cssClass: 'danger-toast'
+                        });
+                        await toast.present();
+                        return;
+                    }
+                } catch (error) {
+                    // Si el endpoint no existe (404) o hay error de red, permitir continuar
+                    // El backend validará al hacer el registro final
+                    console.warn('No se pudo verificar disponibilidad del email:', error.message);
+                }
+
+                // Si todo está bien, avanzar al paso 3 (contraseña)
+                this.currentStepr = 3;
+
+            } catch (error) {
+                const toast = await toastController.create({
+                    message: 'Error al validar los datos',
+                    duration: 2500,
+                    position: 'top',
+                    cssClass: 'danger-toast'
+                });
+                await toast.present();
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async handlePasswordStep() {
+            try {
+                this.loading = true;
+                this.errorMessage = '';
+
+                // Validar contraseñas
+                if (!this.formData.password || this.formData.password.length < 8) {
+                    const toast = await toastController.create({
+                        message: 'La contraseña debe tener al menos 8 caracteres',
+                        duration: 2500,
+                        position: 'top',
+                        cssClass: 'danger-toast'
+                    });
+                    await toast.present();
+                    return;
+                }
+
+                if (this.formData.password !== this.formData.password_confirmation) {
+                    const toast = await toastController.create({
+                        message: 'Las contraseñas no coinciden',
+                        duration: 2500,
+                        position: 'top',
+                        cssClass: 'danger-toast'
+                    });
+                    await toast.present();
+                    return;
+                }
+
+                // Si todo está bien, ir al paso 4 (selección de universidad/carrera)
+                this.currentStepr = 4;
+
+                // Cargar datos según el rol
+                if (this.userRole === 'aspirante') {
+                    this.loadAllCarreras();
+                } else {
+                    this.loadUniversidades();
+                }
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async loadUniversidades() {
+            try {
+                this.loadingUniversidades = true;
+                const response = await UniversidadService.getUniversidades();
+                this.universidades = response.data || response;
+            } catch (error) {
+                console.error('[RegisterView] Error al cargar universidades:', error);
+                const toast = await toastController.create({
+                    message: 'Error al cargar universidades',
+                    duration: 2000,
+                    position: 'top',
+                    cssClass: 'danger-toast'
+                });
+                await toast.present();
+            } finally {
+                this.loadingUniversidades = false;
+            }
+        },
+
+        async loadAllCarreras() {
+            try {
+                this.loadingCarreras = true;
+                const response = await UniversidadService.getAllCarreras();
+                this.todasLasCarreras = response.data || response;
+            } catch (error) {
+                console.error('[RegisterView] Error al cargar carreras:', error);
+                const toast = await toastController.create({
+                    message: 'Error al cargar carreras',
+                    duration: 2000,
+                    position: 'top',
+                    cssClass: 'danger-toast'
+                });
+                await toast.present();
+            } finally {
+                this.loadingCarreras = false;
+            }
+        },
+
+        async onUniversidadChange() {
+            if (!this.selectedUniversidad) return;
+
+            this.selectedCarrera = null;
+            this.carreras = [];
+
+            try {
+                this.loadingCarreras = true;
+                const response = await UniversidadService.getCarreras(this.selectedUniversidad.id);
+                this.carreras = response.data || response;
+            } catch (error) {
+                console.error('[RegisterView] Error al cargar carreras:', error);
+                const toast = await toastController.create({
+                    message: 'Error al cargar carreras de la universidad',
+                    duration: 2000,
+                    position: 'top',
+                    cssClass: 'danger-toast'
+                });
+                await toast.present();
+            } finally {
+                this.loadingCarreras = false;
+            }
+        },
+
+        async onCarreraChangeForAspirante() {
+            if (!this.selectedCarrera) return;
+
+            this.selectedUniversidad = null;
+
+            try {
+                this.loadingUniversidades = true;
+                // Cargar todas las universidades y filtrar las que tienen esta carrera
+                const response = await UniversidadService.getUniversidades();
+                const todasUniversidades = response.data || response;
+
+                // Filtrar universidades que tienen la carrera seleccionada
+                // Esto requiere que el backend devuelva las carreras de cada universidad o hacer peticiones individuales
+                // Por ahora, mostramos todas las universidades (el backend debería optimizar esto)
+                this.universidades = todasUniversidades;
+            } catch (error) {
+                console.error('[RegisterView] Error al cargar universidades:', error);
+                const toast = await toastController.create({
+                    message: 'Error al cargar universidades',
+                    duration: 2000,
+                    position: 'top',
+                    cssClass: 'danger-toast'
+                });
+                await toast.present();
+            } finally {
+                this.loadingUniversidades = false;
+            }
+        },
+
+        async handleUniversityCarreraStep() {
+            this.loading = true;
+            
+            try {
+                // Validar según el rol
+                if (this.userRole === 'aspirante') {
+                    // Aspirantes solo necesitan carrera
+                    if (!this.selectedCarrera) {
+                        const toast = await toastController.create({
+                            message: 'Debes seleccionar una carrera',
+                            duration: 2500,
+                            position: 'top',
+                            cssClass: 'danger-toast'
+                        });
+                        await toast.present();
+                        return;
+                    }
+                } else {
+                    // Estudiantes/Egresados necesitan universidad Y carrera
+                    if (!this.selectedUniversidad || !this.selectedCarrera) {
+                        const toast = await toastController.create({
+                            message: 'Debes seleccionar universidad y carrera',
+                            duration: 2500,
+                            position: 'top',
+                            cssClass: 'danger-toast'
+                        });
+                        await toast.present();
+                        return;
+                    }
+                }
+
+                // Guardar carrera (todos los roles)
+                this.formData.carrera_id = this.selectedCarrera.id;
+                this.carreraData.id = this.selectedCarrera.id;
+                this.carreraData.nombre = this.selectedCarrera.nombre;
+
+                // Guardar universidad solo para estudiantes/egresados
+                if (this.userRole !== 'aspirante' && this.selectedUniversidad) {
+                    this.formData.universidad_id = this.selectedUniversidad.id;
+                    this.universidadData.id = this.selectedUniversidad.id;
+                    this.universidadData.nombre = this.selectedUniversidad.nombre;
+                    this.universidadData.dominio = this.selectedUniversidad.dominio;
+                }
+
+                // Proceder con el registro
+                await this.handleRegister();
+            } finally {
+                this.loading = false;
+            }
+        },
+
+
 
         async loginWithGoogle() {
             try {
-                console.log("[OAUTH] Iniciando login con Google...");
                 // DEJAMOS LA MIGA DE PAN AQUÍ
                 localStorage.setItem('flujo_registro_social', 'true');
                 localStorage.setItem('rol_registro_social', this.userRole || 'aspirante');
-                
+
                 oauthService.login("google");
             } catch (e) {
                 console.error("[OAUTH] Error Google:", e);
@@ -345,11 +759,10 @@ export default {
 
         async loginWithMicrosoft() {
             try {
-                console.log("[OAUTH] Iniciando login con Microsoft...");
                 // DEJAMOS LA MIGA DE PAN AQUÍ
                 localStorage.setItem('flujo_registro_social', 'true');
                 localStorage.setItem('rol_registro_social', this.userRole || 'aspirante');
-                
+
                 oauthService.login("microsoft");
             } catch (e) {
                 console.error("[OAUTH] Error Microsoft:", e);
@@ -428,7 +841,9 @@ export default {
             }
 
             if (!this.formData.email || this.formData.email.trim().length === 0) {
-                this.errorMessage = 'Por favor, ingresa tu correo institucional'
+                this.errorMessage = this.userRole === 'aspirante'
+                    ? 'Por favor, ingresa tu correo electrónico'
+                    : 'Por favor, ingresa tu correo institucional'
                 this.errors.email = true
                 const toast = await toastController.create({
                     message: this.errorMessage,
@@ -501,7 +916,27 @@ export default {
             this.loading = true
 
             try {
-                await AuthService.register(this.formData)
+                // Construir objeto de registro limpio (sin campos null innecesarios)
+                const registroData = {
+                    name: this.formData.name,
+                    username: this.formData.username,
+                    email: this.formData.email,
+                    password: this.formData.password,
+                    password_confirmation: this.formData.password_confirmation,
+                    role: this.userRole // 'aspirante', 'estudiante', o 'egresado'
+                };
+
+                // Agregar carrera (todos los roles)
+                if (this.formData.carrera_id) {
+                    registroData.carrera_id = this.formData.carrera_id;
+                }
+                
+                // Agregar universidad solo para estudiantes/egresados
+                if (this.userRole !== 'aspirante' && this.formData.universidad_id) {
+                    registroData.universidad_id = this.formData.universidad_id;
+                }
+
+                await AuthService.register(registroData)
 
                 // Mostrar mensaje de éxito
                 const toast = await toastController.create({
@@ -517,36 +952,64 @@ export default {
             } catch (error) {
                 console.error('Error en registro:', error)
 
-                // Marcar campos con error
-                this.errors.name = true
-                this.errors.username = true
-                this.errors.email = true
-                this.errors.password = true
-                this.errors.password_confirmation = true
+                let errorMessage = '';
+                let errorField = null;
 
-                // Mostrar mensaje de error específico de la API
-                if (error.response?.data?.message) {
-                    this.errorMessage = error.response.data.message
-                } else if (error.response?.data?.errors) {
-                    // Si hay errores de validación del backend
-                    const errors = error.response.data.errors
+                // Extraer el mensaje de error del backend
+                if (error.response?.data?.errors) {
+                    const errors = error.response.data.errors;
 
-                    // Manejar errores específicos del backend
-                    if (errors.email) {
-                        this.errorMessage = Array.isArray(errors.email) ? errors.email[0] : errors.email
-                    } else if (errors.username) {
-                        this.errorMessage = Array.isArray(errors.username) ? errors.username[0] : errors.username
+                    // Manejar errores específicos y traducir
+                    if (errors.username) {
+                        const rawError = Array.isArray(errors.username) ? errors.username[0] : errors.username;
+                        if (rawError.includes('already been taken') || rawError.includes('ya está en uso')) {
+                            errorMessage = `El nombre de usuario "${this.formData.username}" ya está en uso`;
+                        } else {
+                            errorMessage = 'El nombre de usuario no es válido';
+                        }
+                        errorField = 'username';
+                        this.errors.username = true;
+                        this.currentStepr = 2; // Regresar al paso de datos personales
+                    } else if (errors.email) {
+                        const rawError = Array.isArray(errors.email) ? errors.email[0] : errors.email;
+                        if (rawError.includes('already been taken') || rawError.includes('ya está registrado')) {
+                            errorMessage = `El correo "${this.formData.email}" ya está registrado`;
+                        } else if (rawError.includes('institucional') || rawError.includes('edu.sv')) {
+                            errorMessage = rawError;
+                        } else {
+                            errorMessage = 'El correo electrónico no es válido';
+                        }
+                        errorField = 'email';
+                        this.errors.email = true;
+                        this.currentStepr = 2; // Regresar al paso de datos personales
+                    } else if (errors.password) {
+                        errorMessage = 'La contraseña no cumple con los requisitos';
+                        this.errors.password = true;
+                        this.currentStepr = 3; // Regresar al paso de contraseña
+                    } else if (errors.carrera_id || errors.universidad_id) {
+                        errorMessage = 'Debes seleccionar una universidad y carrera válidas';
+                        this.currentStepr = 4; // Regresar al paso de universidad/carrera
                     } else {
-                        const firstError = Object.values(errors)[0]
-                        this.errorMessage = Array.isArray(firstError) ? firstError[0] : firstError
+                        const firstError = Object.values(errors)[0];
+                        errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+                    }
+                } else if (error.response?.data?.message) {
+                    // Traducir mensajes generales del backend
+                    const msg = error.response.data.message;
+                    if (msg.includes('already been taken')) {
+                        errorMessage = 'Este usuario ya está registrado';
+                    } else if (msg.includes('validation')) {
+                        errorMessage = 'Error de validación. Verifica los datos ingresados';
+                    } else {
+                        errorMessage = msg;
                     }
                 } else {
-                    this.errorMessage = 'Error al registrarse. Por favor, intenta de nuevo.'
+                    errorMessage = 'Error al registrarse. Por favor, intenta de nuevo.';
                 }
 
                 const toast = await toastController.create({
-                    message: this.errorMessage,
-                    duration: 3000,
+                    message: errorMessage,
+                    duration: 3500,
                     position: 'top',
                     cssClass: 'danger-toast'
                 })
@@ -612,12 +1075,12 @@ export default {
             // Caso 1: Si estamos en el Paso 2 o 3, solo retrocedemos un nivel
             if (this.currentStepr > 1) {
                 this.currentStepr--;
-                
+
                 // Opcional: Si regresas al paso 1, podrías querer resetear el rol
                 if (this.currentStepr === 1) {
                     this.userRole = null;
                 }
-            } 
+            }
             // Caso 2: Si ya estamos en el Paso 1, ejecutamos la salida de la vista
             else {
                 if (this.universidadData.id) {
@@ -639,6 +1102,10 @@ export default {
 /* Fondo */
 .register-page {
     --background: transparent;
+}
+
+.register-page.white-background {
+    --background: #FFFFFF;
 }
 
 .background-image {
@@ -674,6 +1141,10 @@ export default {
     padding: 8px 1.5rem 2rem 1.5rem;
 }
 
+.register-container.white-container {
+    background: #FFFFFF;
+}
+
 /* Header */
 .register-header {
     display: flex;
@@ -692,6 +1163,11 @@ export default {
     margin: 0;
 }
 
+.white-container .back-button {
+    --background: rgba(138, 43, 226, 0.1);
+    --color: #8A2BE2;
+}
+
 /* Contenido */
 .register-content {
     flex: 1;
@@ -700,14 +1176,30 @@ export default {
     justify-content: flex-end;
 }
 
+.register-content.centered-content {
+    justify-content: center;
+    align-items: center;
+}
+
 /* Título */
 .title-section {
     margin-bottom: 2rem;
 }
 
+.title-section.centered-title {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
 .app-logo {
     width: 150px;
     height: auto;
+}
+
+.app-logo.logo-large {
+    width: 200px;
+    margin: 0 auto;
+    display: block;
 }
 
 .subtitle {
@@ -737,55 +1229,73 @@ export default {
 
 /*Botones de pantalla para tipo de usuario*/
 .cssbuttons-io {
-  width: 100%;
-  position: relative;
-  font-family: inherit;
-  font-weight: 500;
-  font-size: 18px;
-  letter-spacing: 0.05em;
-  border-radius: 0.8em;
-  cursor: pointer;
-  border: none;
-  background: linear-gradient(to right, #8e2de2, #4a00e0);
-  color: #000;
-  overflow: hidden;
-  margin-bottom: 0.5rem;
+    width: 100%;
+    position: relative;
+    font-family: inherit;
+    font-weight: 500;
+    font-size: 18px;
+    letter-spacing: 0.05em;
+    border-radius: 0.8em;
+    cursor: pointer;
+    border: none;
+    background: linear-gradient(to right, #8e2de2, #4a00e0);
+    color: #FFFFFF;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.step-one .cssbuttons-io {
+    background: linear-gradient(to right, #8e2de2, #4a00e0) !important;
+    border: none;
+}
+
+.step-one .cssbuttons-io span {
+    color: #FFFFFF !important;
+    z-index: 10;
+}
+
+.step-one .cssbuttons-io::before {
+    background: rgba(138, 43, 226, 0.8);
+}
+
+.step-one .cssbuttons-io:hover::before {
+    transform: translate3d(100%, 0, 0);
 }
 
 .cssbuttons-io span {
-  position: relative;
-  z-index: 10;
-  transition: color 0.4s;
-  display: inline-flex;
-  align-items: center;
-  padding: 0.8em 1.2em 0.8em 1.05em;
+    position: relative;
+    z-index: 10;
+    transition: color 0.4s;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.8em 1.2em 0.8em 1.05em;
 }
 
 .cssbuttons-io::before,
 .cssbuttons-io::after {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
 }
 
 .cssbuttons-io::before {
-  content: "";
-  background: #FFF;
-  width: 120%;
-  left: -10%;
-  transform: skew(30deg);
-  transition: transform 0.4s cubic-bezier(0.3, 1, 0.8, 1);
+    content: "";
+    background: #FFF;
+    width: 120%;
+    left: -10%;
+    transform: skew(30deg);
+    transition: transform 0.4s cubic-bezier(0.3, 1, 0.8, 1);
 }
 
 .cssbuttons-io:hover::before {
-  transform: translate3d(100%, 0, 0);
+    transform: translate3d(100%, 0, 0);
 }
 
 .cssbuttons-io:active {
-  transform: scale(0.95);
+    transform: scale(0.95);
 }
 
 /* Progress bar */
@@ -801,6 +1311,10 @@ export default {
     background: rgba(255, 255, 255, 0.2);
     border-radius: 2px;
     transition: background 0.3s ease;
+}
+
+.white-container .progress-step {
+    background: rgba(138, 43, 226, 0.2);
 }
 
 .progress-step.active {
@@ -1090,6 +1604,14 @@ ion-input.register-input .input-bottom {
     margin-bottom: 1.5rem;
 }
 
+.profile-question {
+    color: #8A2BE2;
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 2rem;
+}
+
 .step-container {
     animation: fadeIn 0.4s ease-in-out;
 }
@@ -1098,22 +1620,28 @@ ion-input.register-input .input-bottom {
     text-align: center;
     margin: 1.5rem 0;
     position: relative;
-    color: rgba(255,255,255,0.5);
+    color: rgba(255, 255, 255, 0.5);
     font-size: 0.8rem;
 }
 
 .social-divider::before {
     content: "";
     position: absolute;
-    top: 50%; left: 0; width: 35%; height: 1px;
-    background: rgba(255,255,255,0.2);
+    top: 50%;
+    left: 0;
+    width: 35%;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .social-divider::after {
     content: "";
     position: absolute;
-    top: 50%; right: 0; width: 35%; height: 1px;
-    background: rgba(255,255,255,0.2);
+    top: 50%;
+    right: 0;
+    width: 35%;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .social-container {
@@ -1123,14 +1651,62 @@ ion-input.register-input .input-bottom {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .register-input.ion-disabled {
     opacity: 0.6;
     pointer-events: none;
-    --color: #a3a3a3; /* Un gris claro para indicar que no se puede editar */
+    --color: #a3a3a3;
+    /* Un gris claro para indicar que no se puede editar */
+}
+
+/* Estilos para selección de universidad/carrera en paso 4 */
+.section-title {
+    color: #FFFFFF;
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 1.5rem 0 1rem 0;
+    text-align: left;
+}
+
+.select-wrapper {
+    margin-bottom: 1rem;
+}
+
+.select-list {
+    background: transparent;
+    padding: 0;
+}
+
+.select-item {
+    --background: rgba(55, 65, 81, 0.5);
+    --border-radius: 0.5rem;
+    --padding-start: 1rem;
+    --padding-end: 1rem;
+    --min-height: 3.5rem;
+    --inner-padding-end: 0;
+    border-radius: 0.5rem;
+}
+
+.select-item ion-select {
+    --placeholder-color: rgba(255, 255, 255, 0.6);
+    color: #FFFFFF;
+    font-size: 1rem;
+    width: 100%;
+}
+
+.select-item::part(native) {
+    border-radius: 0.5rem;
+    background: rgba(55, 65, 81, 0.5);
 }
 </style>
 

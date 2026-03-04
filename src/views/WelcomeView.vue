@@ -189,7 +189,7 @@ export default {
             this.$router.push('/tabs/tab1')
         },
         goToRegister() {
-            this.$router.push('/university-select')
+            this.$router.push('/register')
         },
         goToLogin() {
             this.$router.push('/login')

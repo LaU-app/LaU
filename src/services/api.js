@@ -1,7 +1,7 @@
 //importaciones axios para hacer peticiones HTTP
 import axios from "axios";
 
-export const BASE_URL = "https://api.sivarsocial.com"; // Verificar URL base de la API
+export const BASE_URL = "http://127.0.0.1:8000"; // Verificar URL base de la API
 // http://127.0.0.1:8000/api
 // https://api.sivarsocial.com/api
 
@@ -95,6 +95,15 @@ export default {
 
   getUsers: () => {
     return api.get("/users"); // GET http://localhost:8000/api/users
+  },
+
+  // Verificar disponibilidad de username y email
+  checkUsernameAvailability: (username) => {
+    return api.post("/auth/check-username", { username });
+  },
+
+  checkEmailAvailability: (email) => {
+    return api.post("/auth/check-email", { email });
   },
 
   // Endpoints de búsqueda de música

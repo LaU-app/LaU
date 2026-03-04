@@ -33,7 +33,7 @@
                     <ion-card-header>
                         <div class="post-header">
                             <ion-avatar class="post-avatar">
-                                <img v-if="post.user?.imagen_url" :src="post.user.imagen_url"
+                                <img v-if="post.user?.imagen_url" :src="getFullImageUrl(post.user.imagen_url)"
                                     :alt="post.user?.name || 'Usuario'" loading="lazy" @error="handleImageError" />
                                 <ion-icon v-else :icon="personCircle" size="large"></ion-icon>
                             </ion-avatar>
@@ -58,7 +58,7 @@
                         </ion-text>
 
                         <div v-if="post.tipo === 'imagen' && post.imagen_url" class="post-media">
-                            <ion-img :src="post.imagen_url" :alt="post.titulo || 'Post'" @ionError="handleImageError">
+                            <ion-img :src="getFullImageUrl(post.imagen_url)" :alt="post.titulo || 'Post'" @ionError="handleImageError">
                             </ion-img>
                         </div>
 
@@ -118,7 +118,7 @@
 
                             <div class="input-row">
                                 <ion-avatar class="current-user-avatar">
-                                    <img v-if="currentUser?.imagen_url" :src="currentUser.imagen_url"
+                                    <img v-if="currentUser?.imagen_url" :src="getFullImageUrl(currentUser.imagen_url)"
                                         :alt="currentUser?.name || 'Tú'" loading="lazy" />
                                     <ion-icon v-else :icon="personCircle"></ion-icon>
                                 </ion-avatar>
@@ -188,6 +188,7 @@ import { FileOpener } from '@capacitor-community/file-opener';
 import { CapacitorHttp } from '@capacitor/core';
 import { Capacitor } from '@capacitor/core';
 import { openNativeFile } from '@/services/FileService';
+import { getFullImageUrl } from '@/utils/imageUtils';
 
 const route = useRoute()
 const router = useRouter()
