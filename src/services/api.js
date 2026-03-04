@@ -1,7 +1,7 @@
 //importaciones axios para hacer peticiones HTTP
 import axios from "axios";
 
-export const BASE_URL = "http://127.0.0.1:8000"; // Verificar URL base de la API
+export const BASE_URL = "https://api.sivarsocial.com"; // Verificar URL base de la API
 // http://127.0.0.1:8000/api
 // https://api.sivarsocial.com/api
 
