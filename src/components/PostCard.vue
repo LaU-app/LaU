@@ -14,14 +14,14 @@
         <div 
             v-if="post.tipo === 'imagen' && post.imagen_url && isAmbientMode" 
             class="card-main-blur" 
-            :style="{ backgroundImage: `url(${post.imagen_url})` }"
+            :style="{ backgroundImage: `url(${getFullImageUrl(post.imagen_url)})` }"
         ></div>
        
         <!-- Post Header -->
         <ion-card-header class="relative-content">
             <div class="post-header">
                 <ion-avatar class="post-avatar">
-                    <img v-if="post.user?.imagen_url" :src="post.user.imagen_url" :alt="post.user?.name || 'Usuario'"
+                    <img v-if="post.user?.imagen_url" :src="getFullImageUrl(post.user.imagen_url)" :alt="post.user?.name || 'Usuario'"
                         loading="lazy" @error="handleImageError" />
                     <ion-icon v-else :icon="personCircle" size="large"></ion-icon>
                 </ion-avatar>
@@ -48,7 +48,7 @@
 
             <!-- Imagen Post -->
             <div v-if="post.tipo === 'imagen' && post.imagen_url" class="post-media">
-                <ion-img :src="post.imagen_url" :alt="post.titulo || 'Post'" @ionError="handleImageError" class="post-media">
+                <ion-img :src="getFullImageUrl(post.imagen_url)" :alt="post.titulo || 'Post'" @ionError="handleImageError" class="post-media">
                     <div slot="image" style="position: relative; padding-top: 75%; background: var(--ion-color-light);">
                         <ion-spinner name="crescent" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></ion-spinner>
                     </div>
@@ -117,6 +117,7 @@ import { FileOpener } from '@capacitor-community/file-opener';
 import { CapacitorHttp } from '@capacitor/core';
 import { Capacitor } from '@capacitor/core';
 import { openNativeFile } from '@/services/FileService';
+import { getFullImageUrl } from '@/utils/imageUtils';
 
 
 export default {
@@ -311,7 +312,7 @@ export default {
                     // console.log("✅ Color actualizado usando el dominio");
                 }
             } catch (e) {
-                console.error("❌ Sigue fallando el servidor:", e.message);
+                // console.error("❌ Sigue fallando el servidor:", e.message);
                 isDarkImage.value = false;
             }
         };
@@ -339,7 +340,8 @@ export default {
             isDarkImage,
             ambientGradient,
             extractColors,
-            isAmbientMode
+            isAmbientMode,
+            getFullImageUrl
         }
     }
 }

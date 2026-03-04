@@ -71,7 +71,7 @@
         <div class="profile-header-row">
           <ion-avatar class="profile-avatar" @click="isMe ? openImagePicker() : null"
             :style="{ cursor: isMe ? 'pointer' : 'default' }">
-            <img v-if="user.imagen_url" :src="user.imagen_url" alt="Foto de perfil" loading="lazy" />
+            <img v-if="user.imagen_url" :src="getFullImageUrl(user.imagen_url)" alt="Foto de perfil" loading="lazy" />
             <ion-icon v-else :icon="personCircle" class="profile-avatar-icon"></ion-icon>
             <div v-if="isMe" class="avatar-overlay">
               <ion-icon :icon="cameraOutline" color="light"></ion-icon>
@@ -383,7 +383,7 @@
             </ion-item>
             <ion-item button v-for="follower in seguidores" :key="follower.id" @click="goToUserProfile(follower)">
               <ion-avatar slot="start">
-                <img :src="follower.imagen_url ||
+                <img :src="getFullImageUrl(follower.imagen_url) ||
                   'https://www.gravatar.com/avatar/?d=mp&f=y'
                   " />
               </ion-avatar>
@@ -413,7 +413,7 @@
             </ion-item>
             <ion-item button v-for="following in siguiendo" :key="following.id" @click="goToUserProfile(following)">
               <ion-avatar slot="start">
-                <img :src="following.imagen_url ||
+                <img :src="getFullImageUrl(following.imagen_url) ||
                   'https://www.gravatar.com/avatar/?d=mp&f=y'
                   " />
               </ion-avatar>
@@ -494,6 +494,7 @@ import { AuthService } from "@/services/auth";
 import { useDarkMode } from "@/utils/useDarkMode";
 import FollowButton from '@/components/FollowButton.vue';
 import { followersService } from '@/services/followersService';
+import { getFullImageUrl } from '@/utils/imageUtils';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
@@ -505,7 +506,7 @@ export default {
     if (typeof window !== "undefined") {
       initDarkMode();
     }
-    return { isDarkMode, toggleDarkMode };
+    return { isDarkMode, toggleDarkMode, getFullImageUrl };
   },
   components: {
     IonPage,

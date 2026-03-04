@@ -48,7 +48,7 @@
 
         <ion-tab-button tab="perfil" href="/tabs/perfil/me">
           <ion-avatar v-if="isAuthenticated" class="header-avatar">
-            <img v-if="user?.imagen_url" :src="user.imagen_url" :alt="user.nombre || 'Usuario'" loading="lazy" />
+            <img v-if="user?.imagen_url" :src="getFullImageUrl(user.imagen_url)" :alt="user.nombre || 'Usuario'" loading="lazy" />
             <ion-icon v-else :icon="personCircle" class="header-icon"></ion-icon>
           </ion-avatar>
         </ion-tab-button>
@@ -74,6 +74,7 @@ import { peopleSharp, personCircle, chatbubbleEllipsesSharp } from "ionicons/ico
 import { useRouter } from "vue-router";
 import { AuthService } from "@/services/auth";
 import { notificationsService } from "@/services/notificationsService";
+import { getFullImageUrl } from '@/utils/imageUtils';
 
 const router = useRouter();
 

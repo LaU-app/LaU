@@ -66,7 +66,7 @@
                 <div v-for="(u, index) in filteredUsers" :key="index" v-memo="[u.id, followingIds.includes(u.id)]">
                     <ion-item v-if="u.id !== currentUserId">
                         <ion-avatar slot="start">
-                            <img v-if="u.imagen_url" :src="u.imagen_url" alt="avatar" loading="lazy"
+                            <img v-if="u.imagen_url" :src="getFullImageUrl(u.imagen_url)" alt="avatar" loading="lazy"
                                 @error="handleImageError" />
                             <ion-icon v-else :icon="personCircle" class="avatar-icon"></ion-icon>
                         </ion-avatar>
@@ -160,6 +160,7 @@ import { AuthService } from "@/services/auth";
 import { useDarkMode } from '@/utils/useDarkMode';
 import FollowButton from '@/components/FollowButton.vue';
 import { followersService } from '@/services/followersService';
+import { getFullImageUrl } from '@/utils/imageUtils';
 
 export default {
     name: "UsersView",
@@ -190,7 +191,7 @@ export default {
     },
     setup() {
         const { isDarkMode } = useDarkMode();
-        return { isDarkMode };
+        return { isDarkMode, getFullImageUrl };
     },
     data() {
         return {
@@ -262,7 +263,7 @@ export default {
                     this.currentUserId = localUser.id;
                 }
             } catch (error) {
-                console.error("Error cargando usuario:", error);
+                // console.error("Error cargando usuario:", error);
             }
         },
 
@@ -272,7 +273,7 @@ export default {
                 this.followingIds = await followersService.getFollowingIds();
                 /* console.log('[UsersView] ✅ Usuarios que sigo (IDs):', this.followingIds); */
             } catch (error) {
-                console.error('[UsersView] Error cargando following IDs:', error);
+                // console.error('[UsersView] Error cargando following IDs:', error);
                 this.followingIds = [];
             }
         },
@@ -282,7 +283,7 @@ export default {
                 const response = await UniversidadService.getUniversidades();
                 this.universidades = response.data || response;
             } catch (error) {
-                console.error("Error al cargar universidades:", error);
+                // console.error("Error al cargar universidades:", error);
                 // No mostrar error al usuario, simplemente no tendrá filtros
             }
         },
@@ -293,7 +294,7 @@ export default {
                     const response = await UniversidadService.getCarreras(this.filters.universidad_id);
                     this.carreras = response.data || response;
                 } catch (error) {
-                    console.error("Error al cargar carreras:", error);
+                    // console.error("Error al cargar carreras:", error);
                     this.carreras = [];
                 }
             } else {
@@ -438,7 +439,7 @@ export default {
                     });
                 } */
             } catch (error) {
-                console.error("Error obteniendo usuarios:", error);
+                // console.error("Error obteniendo usuarios:", error);
 
                 // Si es error 401, el token es inválido
                 if (error.response?.status === 401) {

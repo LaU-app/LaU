@@ -30,7 +30,7 @@
 
                 <div v-for="contact in contacts" :key="contact.id" class="chat-item" @click="openChat(contact)">
                     <ion-avatar class="chat-item-avatar">
-                        <img v-if="contact.imagen_url" :src="contact.imagen_url" />
+                        <img v-if="contact.imagen_url" :src="getFullImageUrl(contact.imagen_url)" />
                         <ion-icon v-else :icon="personCircle" class="chat-avatar-icon"></ion-icon>
                         <span v-if="contact.is_online" class="online-dot"></span>
                     </ion-avatar>
@@ -64,6 +64,7 @@
 import { ref, onMounted, onUnmounted, onActivated, onDeactivated } from 'vue';
 import { useRouter } from 'vue-router';
 import chatService from '@/services/chatService';
+import { getFullImageUrl } from '@/utils/imageUtils';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonSearchbar, IonAvatar, IonIcon } from '@ionic/vue';
 import { personCircle } from 'ionicons/icons';
 import { useDarkMode } from '@/utils/useDarkMode';
