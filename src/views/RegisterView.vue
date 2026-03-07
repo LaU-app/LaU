@@ -43,10 +43,10 @@
                     </div>
 
                     <div v-if="currentStepr === 2" class="step-container">
-                        <form @submit.prevent="isSocialAuth ? handleSocialUpdate() : currentStepr = 3"
+                        <form @submit.prevent="handlePersonalDataStep"
                             class="register-form">
                             <div class="input-wrapper" :class="{ 'focused': nameFocused }">
-                                <ion-input v-model="formData.name" placeholder="Tu nombre" class="register-input"
+                                <ion-input v-model="formData.name" placeholder="Tu nombre y apellido" class="register-input"
                                     @ionFocus="nameFocused = true" @ionBlur="nameFocused = false"></ion-input>
                                 <div class="input-line"></div>
                             </div>
@@ -66,15 +66,10 @@
                                 <div class="input-line"></div>
                             </div>
 
-                            <ion-button v-if="!isSocialAuth" expand="block" class="register-button"
+                            <ion-button expand="block" class="register-button"
                                 @click="handlePersonalDataStep" :disabled="loading">
                                 <ion-spinner v-if="loading" name="crescent"></ion-spinner>
                                 <span v-else>Siguiente</span>
-                            </ion-button>
-                            <ion-button v-else expand="block" class="register-button" @click="handleSocialUpdate"
-                                :disabled="loading">
-                                <ion-spinner v-if="loading" name="crescent"></ion-spinner>
-                                <span v-else>Confirmar Datos</span>
                             </ion-button>
                         </form>
 
@@ -132,20 +127,42 @@
 
                     <!-- Paso 4: Selección de Universidad/Carrera -->
                     <div v-if="currentStepr === 4" class="step-container">
-                        <!-- Para Aspirante: Solo Carrera -->
+                        <!-- Para Aspirante: Solo Carrera (OPCIONAL) -->
                         <div v-if="userRole === 'aspirante'">
-                            <p class="section-title">¿Qué carrera deseas estudiar?</p>
-                            <div class="select-wrapper">
-                                <ion-list class="select-list">
-                                    <ion-item lines="none" class="select-item">
-                                        <ion-select v-model="selectedCarrera" placeholder="Selecciona tu carrera"
-                                            interface="action-sheet"
-                                            :disabled="loadingCarreras">
-                                            <ion-select-option v-for="carrera in todasLasCarreras" :key="carrera.id"
-                                                :value="carrera">
-                                                {{ carrera.nombre }}
-                                            </ion-select-option>
-                                        </ion-select>
+                            <p class="section-title">¿Tienes alguna carrera de interés?</p>
+                            <p style="color: #999; font-size: 14px; margin-bottom: 10px;">Opcional: Puedes omitir este paso si aún no decides</p>
+                            
+                            <!-- Buscador de carreras -->
+                            <ion-searchbar 
+                                v-model="carreraSearchQuery" 
+                                placeholder="Buscar carrera..."
+                                :disabled="loadingCarreras"
+                                animated
+                                show-clear-button="focus"
+                                style="--background: #2d2d3a; --color: white; --placeholder-color: #999; --icon-color: #8A2BE2; padding: 0;">
+                            </ion-searchbar>
+                            
+                            <!-- Lista de carreras filtradas -->
+                            <div v-if="selectedCarrera" style="margin: 10px 0; padding: 12px; background: rgba(138, 43, 226, 0.2); border-left: 3px solid #8A2BE2; color: white;">
+                                <strong>Seleccionada:</strong> {{ selectedCarrera.nombre }}
+                                <ion-button size="small" fill="clear" style="float: right; color: #8A2BE2; font-size: 24px; margin-top: -5px;" @click="selectedCarrera = null">×</ion-button>
+                            </div>
+                            
+                            <div class="carreras-list" style="max-height: 350px; overflow-y: auto; margin-top: 10px;">
+                                <ion-list style="background: transparent; padding: 0;">
+                                    <ion-item 
+                                        v-for="carrera in filteredCarreras" 
+                                        :key="carrera.id"
+                                        @click="selectedCarrera = carrera"
+                                        button
+                                        lines="none"
+                                        class="carrera-item"
+                                        :class="{ 'carrera-selected': selectedCarrera && selectedCarrera.id === carrera.id }"
+                                        style="--background: transparent; --color: white; --padding-start: 0; --padding-end: 0; --inner-padding-end: 0;">
+                                        <span>{{ carrera.nombre }}</span>
+                                    </ion-item>
+                                    <ion-item v-if="filteredCarreras.length === 0" lines="none" style="--background: transparent; --color: #999; text-align: center; --padding-start: 0;">
+                                        No se encontraron carreras
                                     </ion-item>
                                 </ion-list>
                             </div>
@@ -153,9 +170,14 @@
 
                         <!-- Para Estudiante/Egresado: Primero Universidad, luego Carrera -->
                         <div v-else>
-                            <p class="section-title">¿En qué universidad {{ userRole === 'estudiante' ? 'estudias' :
+                            <!-- Mensaje si la universidad fue detectada automáticamente -->
+                            <p v-if="isUniversidadLocked" class="section-title" style="color: #8A2BE2;">
+                                ✓ Universidad detectada: {{ selectedUniversidad.nombre }}
+                            </p>
+                            <p v-else class="section-title">¿En qué universidad {{ userRole === 'estudiante' ? 'estudias' :
                                 'estudiaste' }}?</p>
-                            <div class="select-wrapper">
+                            
+                            <div class="select-wrapper" v-if="!isUniversidadLocked">
                                 <ion-list class="select-list">
                                     <ion-item lines="none" class="select-item">
                                         <ion-select v-model="selectedUniversidad"
@@ -171,7 +193,7 @@
                             </div>
 
                             <div v-if="selectedUniversidad">
-                                <p class="section-title">¿Qué carrera?</p>
+                                <p class="section-title">{{ userRole === 'estudiante' ? '¿Qué carrera estás estudiando?' : '¿Qué carrera estudiaste?' }}</p>
                                 <div class="select-wrapper">
                                     <ion-list class="select-list">
                                         <ion-item lines="none" class="select-item">
@@ -214,6 +236,7 @@ import {
     IonSelectOption,
     IonList,
     IonItem,
+    IonSearchbar,
     toastController
 } from '@ionic/vue'
 import { arrowBack, eyeOutline, eyeOffOutline } from 'ionicons/icons'
@@ -234,7 +257,8 @@ export default {
         IonSelect,
         IonSelectOption,
         IonList,
-        IonItem
+        IonItem,
+        IonSearchbar
     },
     data() {
         return {
@@ -295,10 +319,12 @@ export default {
             universidades: [],
             carreras: [],
             todasLasCarreras: [], // Para aspirantes: todas las carreras disponibles
+            carreraSearchQuery: '', // Término de búsqueda para carreras
             selectedUniversidad: null,
             selectedCarrera: null,
             loadingUniversidades: false,
-            loadingCarreras: false
+            loadingCarreras: false,
+            isUniversidadLocked: false, // Indica si la universidad fue detectada automáticamente
         }
     },
     mounted() {
@@ -310,21 +336,65 @@ export default {
             this.socialToken = localStorage.getItem('social_temp_token');
             this.socialProvider = localStorage.getItem('social_temp_provider');
 
+            // Si el backend identificó una universidad por el dominio del correo
+            const universidadDetectada = localStorage.getItem('social_temp_universidad');
+            if (universidadDetectada) {
+                try {
+                    const uniData = JSON.parse(universidadDetectada);
+                    this.selectedUniversidad = uniData;
+                    this.universidadData.id = uniData.id;
+                    this.universidadData.nombre = uniData.nombre;
+                    this.universidadData.dominio = uniData.dominio;
+                    this.formData.universidad_id = uniData.id;
+                    this.isUniversidadLocked = true;
+                    
+                    // NO cargamos las carreras aquí porque todavía no sabemos el rol
+                    // Las cargaremos cuando seleccione "Estudiante" o "Egresado"
+                } catch (e) {
+                    // Error silencioso
+                }
+            }
+
             this.isSocialAuth = true;
-            this.currentStepr = 2; // Directo a confirmar datos
+            
+            // Recuperar el rol que el usuario seleccionó antes de hacer login con Google/Microsoft
+            const rolGuardado = localStorage.getItem('rol_registro_social');
+            
+            // Si es registro social con correo institucional, ir directo a paso 2
+            // No volver al paso 1 (selección de rol)
+            this.currentStepr = 2;
+            
+            // Si hay universidad detectada O el correo es institucional
+            if (this.isUniversidadLocked || this.formData.email.endsWith('.edu.sv')) {
+                // Usar el rol que seleccionó (estudiante o egresado), o 'estudiante' por defecto
+                this.userRole = rolGuardado || 'estudiante';
+                
+                // Si no se detectó universidad desde el backend, intentar detectarla del email
+                if (!this.isUniversidadLocked && this.formData.email.endsWith('.edu.sv')) {
+                    // Detectar universidad y cargar carreras
+                    this.detectUniversidadFromEmail(this.formData.email);
+                } else if (this.isUniversidadLocked && this.selectedUniversidad) {
+                    // Si ya tenemos universidad detectada, cargar carreras inmediatamente
+                    this.loadCarrerasForUniversidad(this.selectedUniversidad.id);
+                }
+            } else {
+                // Para correos NO institucionales (Gmail, Outlook, etc.), usar el rol que seleccionó
+                this.userRole = rolGuardado || 'aspirante';
+            }
 
             // Limpiamos todo el localStorage temporal por seguridad
             localStorage.removeItem('social_temp_token');
             localStorage.removeItem('social_temp_provider');
             localStorage.removeItem('social_temp_name');
             localStorage.removeItem('social_temp_email');
+            localStorage.removeItem('social_temp_universidad');
+            localStorage.removeItem('rol_registro_social');
             localStorage.removeItem('flujo_registro_social');
         }
 
         // Dentro de mounted() -> listenForAuth
         oauthService.listenForAuth(async (response, error) => {
             if (error) {
-                console.error("Error OAuth:", error);
                 return;
             }
 
@@ -357,7 +427,6 @@ export default {
                     // Nota: Nos quedamos en el currentStepr === 2, NO redirigimos.
 
                 } catch (apiError) {
-                    console.error("Error en el backend:", apiError);
                     const toast = await toastController.create({
                         message: 'Error al vincular cuenta social.',
                         duration: 3000,
@@ -403,12 +472,23 @@ export default {
                 : 'Completa tus datos para unirte a la red universitaria.'
         },
         canFinishRegistration() {
-            // Aspirantes: solo necesitan carrera
+            // Aspirantes: pueden registrarse con o sin carrera
             if (this.userRole === 'aspirante') {
-                return this.selectedCarrera !== null;
+                return true;
             }
             // Estudiantes/Egresados: necesitan universidad Y carrera
             return this.selectedUniversidad !== null && this.selectedCarrera !== null;
+        },
+        filteredCarreras() {
+            // Filtrar carreras según el término de búsqueda
+            if (!this.carreraSearchQuery || this.carreraSearchQuery.trim() === '') {
+                return this.todasLasCarreras;
+            }
+            
+            const query = this.carreraSearchQuery.toLowerCase().trim();
+            return this.todasLasCarreras.filter(carrera => 
+                carrera.nombre.toLowerCase().includes(query)
+            );
         }
     },
     methods: {
@@ -423,6 +503,13 @@ export default {
 
         selectRole(role) {
             this.userRole = role;
+
+            // Si es registro social Y es estudiante/egresado Y hay universidad detectada, cargar carreras
+            if (this.isSocialAuth && (role === 'estudiante' || role === 'egresado')) {
+                if (this.isUniversidadLocked && this.selectedUniversidad) {
+                    this.loadCarrerasForUniversidad(this.selectedUniversidad.id);
+                }
+            }
 
             // Todos continúan al paso 2 (datos personales)
             this.currentStepr = 2;
@@ -521,7 +608,6 @@ export default {
                 } catch (error) {
                     // Si el endpoint no existe (404) o hay error de red, permitir continuar
                     // El backend validará al hacer el registro final
-                    console.warn('No se pudo verificar disponibilidad del username:', error.message);
                 }
 
                 // 5. Verificar disponibilidad de email en el backend
@@ -540,11 +626,39 @@ export default {
                 } catch (error) {
                     // Si el endpoint no existe (404) o hay error de red, permitir continuar
                     // El backend validará al hacer el registro final
-                    console.warn('No se pudo verificar disponibilidad del email:', error.message);
                 }
 
-                // Si todo está bien, avanzar al paso 3 (contraseña)
-                this.currentStepr = 3;
+                // Si todo está bien, decidir el siguiente paso
+                if (this.isSocialAuth) {
+                    // Para registro social: saltamos al paso 4 (universidad/carrera)
+                    // y generamos una contraseña automática
+                    this.formData.password = Math.random().toString(36).slice(-12) + 'Aa1!';
+                    this.formData.password_confirmation = this.formData.password;
+                    
+                    // IMPORTANTE: Antes de ir al paso 4, detectar universidad si no está detectada
+                    if (!this.isUniversidadLocked && this.formData.email.endsWith('.edu.sv')) {
+                        await this.detectUniversidadFromEmail(this.formData.email);
+                    }
+                    
+                    this.currentStepr = 4;
+                    
+                    // Cargar datos según el rol y si la universidad está pre-identificada
+                    if (this.userRole === 'aspirante') {
+                        this.loadAllCarreras();
+                    } else {
+                        // Si la universidad está bloqueada, las carreras ya deberían estar cargadas
+                        if (this.isUniversidadLocked && this.selectedUniversidad) {
+                            if (this.carreras.length === 0) {
+                                await this.loadCarrerasForUniversidad(this.selectedUniversidad.id);
+                            }
+                        } else {
+                            this.loadUniversidades();
+                        }
+                    }
+                } else {
+                    // Para registro manual: ir al paso 3 (contraseña)
+                    this.currentStepr = 3;
+                }
 
             } catch (error) {
                 const toast = await toastController.create({
@@ -590,11 +704,16 @@ export default {
                 // Si todo está bien, ir al paso 4 (selección de universidad/carrera)
                 this.currentStepr = 4;
 
-                // Cargar datos según el rol
+                // Cargar datos según el rol y si la universidad está pre-identificada
                 if (this.userRole === 'aspirante') {
                     this.loadAllCarreras();
                 } else {
-                    this.loadUniversidades();
+                    // Si la universidad ya está pre-identificada (registro social), cargar sus carreras
+                    if (this.isUniversidadLocked && this.selectedUniversidad) {
+                        await this.onUniversidadChange();
+                    } else {
+                        this.loadUniversidades();
+                    }
                 }
             } finally {
                 this.loading = false;
@@ -607,7 +726,6 @@ export default {
                 const response = await UniversidadService.getUniversidades();
                 this.universidades = response.data || response;
             } catch (error) {
-                console.error('[RegisterView] Error al cargar universidades:', error);
                 const toast = await toastController.create({
                     message: 'Error al cargar universidades',
                     duration: 2000,
@@ -626,7 +744,6 @@ export default {
                 const response = await UniversidadService.getAllCarreras();
                 this.todasLasCarreras = response.data || response;
             } catch (error) {
-                console.error('[RegisterView] Error al cargar carreras:', error);
                 const toast = await toastController.create({
                     message: 'Error al cargar carreras',
                     duration: 2000,
@@ -650,7 +767,6 @@ export default {
                 const response = await UniversidadService.getCarreras(this.selectedUniversidad.id);
                 this.carreras = response.data || response;
             } catch (error) {
-                console.error('[RegisterView] Error al cargar carreras:', error);
                 const toast = await toastController.create({
                     message: 'Error al cargar carreras de la universidad',
                     duration: 2000,
@@ -660,6 +776,53 @@ export default {
                 await toast.present();
             } finally {
                 this.loadingCarreras = false;
+            }
+        },
+
+        async loadCarrerasForUniversidad(universidadId) {
+            if (!universidadId) return;
+
+            try {
+                this.loadingCarreras = true;
+                const response = await UniversidadService.getCarreras(universidadId);
+                this.carreras = response.data || response;
+            } catch (error) {
+                const toast = await toastController.create({
+                    message: 'Error al cargar carreras de la universidad',
+                    duration: 2000,
+                    position: 'top',
+                    cssClass: 'danger-toast'
+                });
+                await toast.present();
+            } finally {
+                this.loadingCarreras = false;
+            }
+        },
+
+        async detectUniversidadFromEmail(email) {
+            // Extraer el dominio del email
+            const domain = email.split('@')[1];
+            if (!domain) return;
+
+            try {
+                // Cargar todas las universidades y buscar por dominio
+                const response = await UniversidadService.getUniversidades();
+                const universidades = response.data || response;
+                
+                const universidad = universidades.find(u => u.dominio === domain);
+                
+                if (universidad) {
+                    this.selectedUniversidad = universidad;
+                    this.formData.universidad_id = universidad.id;
+                    this.isUniversidadLocked = true;
+                    
+                    // Cargar carreras automáticamente para estudiantes/egresados
+                    if (this.userRole === 'estudiante' || this.userRole === 'egresado') {
+                        await this.loadCarrerasForUniversidad(universidad.id);
+                    }
+                }
+            } catch (error) {
+                // Error silencioso
             }
         },
 
@@ -679,7 +842,6 @@ export default {
                 // Por ahora, mostramos todas las universidades (el backend debería optimizar esto)
                 this.universidades = todasUniversidades;
             } catch (error) {
-                console.error('[RegisterView] Error al cargar universidades:', error);
                 const toast = await toastController.create({
                     message: 'Error al cargar universidades',
                     duration: 2000,
@@ -698,16 +860,14 @@ export default {
             try {
                 // Validar según el rol
                 if (this.userRole === 'aspirante') {
-                    // Aspirantes solo necesitan carrera
-                    if (!this.selectedCarrera) {
-                        const toast = await toastController.create({
-                            message: 'Debes seleccionar una carrera',
-                            duration: 2500,
-                            position: 'top',
-                            cssClass: 'danger-toast'
-                        });
-                        await toast.present();
-                        return;
+                    // Aspirantes: la carrera es OPCIONAL
+                    // Si seleccionó carrera, guardarla; si no, dejar null
+                    if (this.selectedCarrera) {
+                        this.formData.carrera_id = this.selectedCarrera.id;
+                        this.carreraData.id = this.selectedCarrera.id;
+                        this.carreraData.nombre = this.selectedCarrera.nombre;
+                    } else {
+                        this.formData.carrera_id = null;
                     }
                 } else {
                     // Estudiantes/Egresados necesitan universidad Y carrera
@@ -721,12 +881,12 @@ export default {
                         await toast.present();
                         return;
                     }
+                    
+                    // Guardar carrera para estudiantes/egresados
+                    this.formData.carrera_id = this.selectedCarrera.id;
+                    this.carreraData.id = this.selectedCarrera.id;
+                    this.carreraData.nombre = this.selectedCarrera.nombre;
                 }
-
-                // Guardar carrera (todos los roles)
-                this.formData.carrera_id = this.selectedCarrera.id;
-                this.carreraData.id = this.selectedCarrera.id;
-                this.carreraData.nombre = this.selectedCarrera.nombre;
 
                 // Guardar universidad solo para estudiantes/egresados
                 if (this.userRole !== 'aspirante' && this.selectedUniversidad) {
@@ -736,8 +896,29 @@ export default {
                     this.universidadData.dominio = this.selectedUniversidad.dominio;
                 }
 
-                // Proceder con el registro
-                await this.handleRegister();
+                // Proceder con el registro según el tipo
+                if (this.isSocialAuth) {
+                    // Registro social: usar socialLogin con todos los datos
+                    await AuthService.socialLogin(this.socialProvider, this.socialToken, {
+                        name: this.formData.name,
+                        username: this.formData.username,
+                        universidad_id: this.formData.universidad_id,
+                        carrera_id: this.formData.carrera_id
+                    });
+
+                    const toast = await toastController.create({
+                        message: '¡Registro exitoso! Bienvenido a LaÚ',
+                        duration: 2000,
+                        position: 'top',
+                        cssClass: 'success-toast'
+                    });
+                    await toast.present();
+
+                    this.$router.replace('/tabs/tab1');
+                } else {
+                    // Registro manual: usar el método normal
+                    await this.handleRegister();
+                }
             } finally {
                 this.loading = false;
             }
@@ -753,7 +934,7 @@ export default {
 
                 oauthService.login("google");
             } catch (e) {
-                console.error("[OAUTH] Error Google:", e);
+                // Error silencioso
             }
         },
 
@@ -765,7 +946,7 @@ export default {
 
                 oauthService.login("microsoft");
             } catch (e) {
-                console.error("[OAUTH] Error Microsoft:", e);
+                // Error silencioso
             }
         },
 
@@ -950,8 +1131,6 @@ export default {
                 // Redirigir al home o dashboard
                 this.$router.replace('/tabs/tab1')
             } catch (error) {
-                console.error('Error en registro:', error)
-
                 let errorMessage = '';
                 let errorField = null;
 
@@ -1016,50 +1195,6 @@ export default {
                 await toast.present()
             } finally {
                 this.loading = false
-            }
-        },
-
-        async handleSocialUpdate() {
-            this.errorMessage = '';
-            this.errors.name = false;
-            this.errors.username = false;
-
-            if (!this.formData.name || this.formData.name.trim().length === 0) {
-                this.errors.name = true;
-                return;
-            }
-            if (!this.formData.username || this.formData.username.trim().length === 0) {
-                this.errors.username = true;
-                return;
-            }
-
-            this.loading = true;
-            try {
-                // ¡LA MAGIA OCURRE AQUÍ!
-                // Llamamos al socialLogin enviando el token de Google OTRA VEZ, 
-                // pero ahora le pasamos los datos del formulario. El backend lo creará de verdad.
-                await AuthService.socialLogin(this.socialProvider, this.socialToken, {
-                    name: this.formData.name,
-                    username: this.formData.username,
-                    universidad_id: this.formData.universidad_id, // Debería venir de tu paso 1
-                    carrera_id: this.formData.carrera_id
-                });
-
-                const toast = await toastController.create({
-                    message: '¡Cuenta creada con éxito!',
-                    duration: 2000,
-                    position: 'top',
-                    cssClass: 'success-toast'
-                });
-                await toast.present();
-
-                this.$router.replace('/tabs/tab1');
-
-            } catch (error) {
-                console.error('Error creando cuenta:', error);
-                // Mostrar toast de error si el username ya está en uso, etc.
-            } finally {
-                this.loading = false;
             }
         },
 
@@ -1707,6 +1842,55 @@ ion-input.register-input .input-bottom {
 .select-item::part(native) {
     border-radius: 0.5rem;
     background: rgba(55, 65, 81, 0.5);
+}
+
+/* Estilos para la lista de carreras con búsqueda */
+.carreras-list {
+    scrollbar-width: thin;
+    scrollbar-color: #8A2BE2 transparent;
+}
+
+.carreras-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.carreras-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.carreras-list::-webkit-scrollbar-thumb {
+    background: #8A2BE2;
+    border-radius: 10px;
+}
+
+.carrera-item {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 12px 0 !important;
+    margin: 0;
+}
+
+.carrera-item span {
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.carrera-item:hover {
+    border-bottom-color: rgba(138, 43, 226, 0.6);
+}
+
+.carrera-item:hover span {
+    color: #8A2BE2;
+}
+
+.carrera-item.carrera-selected {
+    border-bottom: 2px solid #8A2BE2;
+}
+
+.carrera-item.carrera-selected span {
+    color: #8A2BE2;
+    font-weight: 500;
 }
 </style>
 

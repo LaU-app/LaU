@@ -72,8 +72,34 @@ export default {
                             // Guardamos los datos de Google/Microsoft temporalmente
                             localStorage.setItem('social_temp_token', tokenData.accessToken);
                             localStorage.setItem('social_temp_provider', provider);
-                            localStorage.setItem('social_temp_name', authData.name);
+                            
+                            // Tomar solo el primer nombre y primer apellido (formato hispano)
+                            // Ejemplo: "MATEO ANDRÉ CANALES PINTO" -> "MATEO CANALES"
+                            const fullName = authData.name || '';
+                            const nameParts = fullName.trim().split(' ').filter(part => part.length > 0);
+                            
+                            let shortName;
+                            if (nameParts.length >= 4) {
+                                // 4 o más partes: primer nombre [0] + primer apellido [2]
+                                shortName = `${nameParts[0]} ${nameParts[2]}`;
+                            } else if (nameParts.length === 3) {
+                                // 3 partes: primer nombre [0] + segundo apellido [2]
+                                shortName = `${nameParts[0]} ${nameParts[2]}`;
+                            } else if (nameParts.length === 2) {
+                                // 2 partes: nombre [0] + apellido [1]
+                                shortName = `${nameParts[0]} ${nameParts[1]}`;
+                            } else {
+                                // 1 parte o vacío: usar tal cual
+                                shortName = fullName;
+                            }
+                            
+                            localStorage.setItem('social_temp_name', shortName);
                             localStorage.setItem('social_temp_email', authData.email);
+                            
+                            // Si el backend identificó una universidad por el dominio, la guardamos
+                            if (authData.universidad) {
+                                localStorage.setItem('social_temp_universidad', JSON.stringify(authData.universidad));
+                            }
                             
                             // Forzamos la redirección al registro
                             window.location.href = '/register';
