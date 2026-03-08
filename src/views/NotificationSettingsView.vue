@@ -259,7 +259,8 @@ const preferences = ref({
 // Habilitar notificaciones push
 const enablePushNotifications = async () => {
     try {
-        await pushNotificationsService.initialize();
+        // CRÍTICO: Pasar requestPermission = true para solicitar permisos
+        await pushNotificationsService.initialize(true);
         pushEnabled.value = true;
 
         showToast('Notificaciones push activadas', 'success');
@@ -269,13 +270,16 @@ const enablePushNotifications = async () => {
     } catch (error) {
         console.error('Error al activar notificaciones:', error);
 
-        if (error.message.includes('denied')) {
+        if (error.message.includes('denied') || error.message.includes('permission')) {
             showAlert(
                 'Permisos denegados',
                 'Has denegado los permisos de notificación. Por favor, actívalos en la configuración de tu dispositivo.'
             );
+        } else if (error.message.includes('Silently aborting')) {
+            // Error esperado cuando no se ha dado permiso desde el banner
+            console.log('Usuario no ha dado permiso desde banner UI');
         } else {
-            showToast('Error al activar notificaciones', 'danger');
+            showToast('Error al activar notificaciones: ' + error.message, 'danger');
         }
     }
 };
@@ -419,7 +423,12 @@ const showAlert = async (header, message) => {
 
 // Lifecycle
 onMounted(async () => {
+    // Verificar disponibilidad
     pushAvailable.value = pushNotificationsService.isAvailable();
+
+    console.log('[NotificationSettings] Push available:', pushAvailable.value);
+    console.log('[NotificationSettings] Push initialized:', pushNotificationsService.isInitialized);
+
     pushEnabled.value = pushNotificationsService.isInitialized;
 
     if (pushEnabled.value) {

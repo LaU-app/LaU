@@ -110,7 +110,7 @@ const routes = [
         name: "MiPerfil",
         component: () => import("@/views/PerfilView.vue"),
         meta: { requiresAuth: true },
-      }
+      },
     ],
   },
   {
@@ -145,7 +145,7 @@ const router = createRouter({
 
 // Listener para manejar navegación desde notificaciones push
 window.addEventListener("pushNotificationAction", (event) => {
-  const { type, postId, userId, notificationId } = event.detail;
+  const { type, postId, userId, notificationId, chatUserId } = event.detail;
 
   // Navegar según el tipo
   if (type === "like" || type === "comment") {
@@ -156,6 +156,13 @@ window.addEventListener("pushNotificationAction", (event) => {
     }
   } else if (type === "follow") {
     router.push("/tabs/notifications");
+  } else if (type === "message" || type === "chat") {
+    // Nueva lógica para mensajes de chat
+    if (chatUserId) {
+      router.push(`/chat/${chatUserId}`);
+    } else {
+      router.push("/tabs/chat");
+    }
   } else {
     // Por defecto, ir a notificaciones
     router.push("/tabs/notifications");
@@ -179,20 +186,19 @@ router.beforeEach(async (to, from, next) => {
   }
   // Si la ruta es para invitados (login/register) y ya está autenticado
   else if (to.meta.requiresGuest && isAuthenticated) {
-    
     // --- EXCEPCIÓN PARA REGISTRO SOCIAL ---
     // Revisamos si tiene la miga de pan que dejamos antes de ir a Google/Microsoft
-    const vieneDeRegistro = localStorage.getItem('flujo_registro_social') === 'true';
-    
+    const vieneDeRegistro =
+      localStorage.getItem("flujo_registro_social") === "true";
+
     // Verificamos si la ruta de destino es el registro
     // (Usa to.path === '/register' o to.name === 'Register' dependiendo de cómo lo llamaste en tu router)
-    if (to.path === '/register' && vieneDeRegistro) {
+    if (to.path === "/register" && vieneDeRegistro) {
       next(); // ¡Le abrimos la puerta para que termine de llenar sus datos!
     } else {
       next("/tabs/tab1"); // Comportamiento normal: lo mandamos al Home
     }
     // --------------------------------------
-
   }
   // Caso normal (incluye /welcome y /tabs/tab1 sin autenticación)
   else {
