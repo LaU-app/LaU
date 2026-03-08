@@ -5,7 +5,7 @@
       <ion-toolbar>
         <ion-buttons slot="start">
           <div class="logo-container">
-            <img src="/LaU.png" alt="LaÚ" class="header-logo" />
+            <img src="/LaU.png" alt="LaU" class="header-logo" />
           </div>
         </ion-buttons>
         <ion-title class="username-title">
@@ -82,16 +82,18 @@
         <!-- Nombre y descripción -->
         <h3 class="profile-name">{{ user.name }}</h3>
         <p class="profile-description">
-          {{
-            universidad?.nombre ||
-            user.universidad?.nombre ||
-            "Sin información académica"
-          }}
-          <br v-if="
-            (universidad?.nombre || user.universidad?.nombre) &&
-            (carrera?.nombre || user.carrera?.nombre)
-          " />
-          {{ carrera?.nombre || user.carrera?.nombre || "" }}
+          <!-- Si tiene universidad, mostrarla -->
+          <template v-if="universidad?.nombre || user.universidad?.nombre">
+            {{ universidad?.nombre || user.universidad?.nombre }}
+            <br v-if="carrera?.nombre || user.carrera?.nombre" />
+            {{ carrera?.nombre || user.carrera?.nombre || "" }}
+          </template>
+          <!-- Si NO tiene universidad (Aspirante) -->
+          <template v-else>
+            Aspirante
+            <br v-if="carrera?.nombre || user.carrera?.nombre" />
+            {{ carrera?.nombre || user.carrera?.nombre || "" }}
+          </template>
         </p>
 
         <!-- Botón Seguir / Editar -->
@@ -131,19 +133,42 @@
         <ion-segment v-model="selectedTab" mode="md" color="primary">
           <ion-segment-button value="posts">
             <ion-label class="tab-label">
-              <ion-icon :icon="grid"></ion-icon>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                class="icon icon-tabler icons-tabler-outline icon-tabler-layout-grid">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M4 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4" />
+                <path d="M14 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4" />
+                <path d="M4 15a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4" />
+                <path d="M14 15a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4" />
+              </svg>
               <span>Posts</span>
             </ion-label>
           </ion-segment-button>
           <ion-segment-button value="archivos">
             <ion-label class="tab-label">
-              <ion-icon :icon="folderOutline"></ion-icon>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                class="icon icon-tabler icons-tabler-outline icon-tabler-files">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M15 3v4a1 1 0 0 0 1 1h4" />
+                <path d="M18 17h-7a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2h4l5 5v7a2 2 0 0 1 -2 2" />
+                <path d="M16 17v2a2 2 0 0 1 -2 2h-7a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2h2" />
+              </svg>
               <span>Archivos</span>
             </ion-label>
           </ion-segment-button>
           <ion-segment-button value="musica">
             <ion-label class="tab-label">
-              <ion-icon :icon="musicalNoteOutline"></ion-icon>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                class="icon icon-tabler icons-tabler-outline icon-tabler-vinyl">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M16 3.937a9 9 0 1 0 5 8.063" />
+                <path d="M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+                <path d="M19 4a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+                <path d="M20 4l-3.5 10l-2.5 2" />
+              </svg>
               <span>Música</span>
             </ion-label>
           </ion-segment-button>
@@ -425,7 +450,7 @@
           </ion-list>
         </ion-content>
       </ion-modal>
-      
+
     </ion-content>
   </ion-page>
 </template>
@@ -935,7 +960,7 @@ export default {
         return response[key];
       }
       if (Array.isArray(response)) {
-       /*  console.log(`[PerfilView] Retornando desde response directo (${response.length} items)`); */
+        /*  console.log(`[PerfilView] Retornando desde response directo (${response.length} items)`); */
         return response;
       }
       /* console.log(`[PerfilView] No se encontraron datos, retornando array vacío`); */
@@ -2235,5 +2260,19 @@ ion-segment-button {
     height: 120px !important;
     font-size: 120px !important;
   }
+}
+
+/* Estilos para avatares de modales de seguidores/siguiendo */
+ion-modal ion-avatar {
+  width: 50px;
+  height: 50px;
+  flex-shrink: 0;
+}
+
+ion-modal ion-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 </style>

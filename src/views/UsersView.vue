@@ -7,7 +7,7 @@
                         <ion-icon slot="icon-only" :icon="closeOutline"></ion-icon>
                     </ion-button>
                 </ion-buttons>
-                <ion-title>Miembros de laÚ</ion-title>
+                <ion-title>Miembros de LaU</ion-title>
             </ion-toolbar>
             <ion-toolbar>
                 <ion-searchbar v-model="searchText" placeholder="Buscar por Nombre, Universidad..." :debounce="500"
@@ -73,7 +73,7 @@
                         <ion-label>
                             <h3 @click="goToProfile(u)" style="cursor: pointer;">
                                 <strong>
-                                    {{ u.name }}
+                                    @{{ u.username }}
                                 </strong>
                             </h3>
                             <!-- Mostrar universidad solo si existe -->
@@ -106,8 +106,8 @@
                                 Sin información universitaria
                             </p>
                         </ion-label>
-                        <FollowButton slot="end" :userId="u.id"
-                            :initialFollowStatus="u.is_following || false" :followersCount="u.followers_count || 0"
+                        <FollowButton slot="end" :userId="u.id" :initialFollowStatus="u.is_following || false"
+                            :followersCount="u.followers_count || 0" :iconOnly="true"
                             @update="handleFollowUpdate(u, $event)" />
                     </ion-item>
                 </div>

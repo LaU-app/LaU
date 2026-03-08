@@ -18,7 +18,7 @@
                 <div class="login-content">
                     <!-- Logo y título -->
                     <div class="title-section">
-                        <img src="/LaU1.png" alt="LaÚ" class="app-logo" />
+                        <img src="/LaU1.png" alt="LaU" class="app-logo" />
                         <h2 class="subtitle">BIENVENIDO DE NUEVO</h2>
                         <p class="description">
                             Ingresa con tu correo institucional para conectar con tu campus.

@@ -2,7 +2,7 @@
   <ion-header class="ion-no-border">
     <ion-toolbar>
       <div class="logo-container">
-        <img src="/LaU.png" alt="LaÚ" class="logo-img" />
+        <img src="/LaU.png" alt="LaU" class="logo-img" />
       </div>
       <ion-buttons slot="end" class="header-buttons">
         <!-- Botón de login para usuarios NO autenticados -->
@@ -24,9 +24,10 @@
           </svg>
         </ion-button>
 
-       <ion-button v-if="isAuthenticated" @click="goToChat" aria-label="Ir a Mensajes" fill="clear" class="tasks-header-btn">
+        <ion-button v-if="isAuthenticated" @click="goToChat" aria-label="Ir a Mensajes" fill="clear"
+          class="tasks-header-btn">
           <ion-icon :icon="chatbubbleEllipsesSharp" class="header-icon"></ion-icon>
-          </ion-button>
+        </ion-button>
       </ion-buttons>
     </ion-toolbar>
   </ion-header>
@@ -41,7 +42,7 @@ import {
   IonIcon,
 
 } from "@ionic/vue";
-import { moon, sunny, logIn, chatbubbleEllipsesSharp} from "ionicons/icons"; import { ref, onMounted, onUnmounted } from "vue";
+import { moon, sunny, logIn, chatbubbleEllipsesSharp } from "ionicons/icons"; import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 
 defineProps({

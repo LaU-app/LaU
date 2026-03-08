@@ -1,12 +1,23 @@
 <template>
     <ion-page>
-        <ion-content :fullscreen="true" class="register-page" :class="{ 'white-background': currentStepr === 1 }">
+        <ion-content :fullscreen="true" class="register-page" :class="{ 'purple-background': currentStepr === 1 }">
+            <!-- Logos animados de fondo para paso 1 -->
+            <div v-if="currentStepr === 1" class="background-container">
+                <img v-for="(logo, index) in logos" :key="index" src="/LaU1.png" class="floating-logo" :style="{
+                    top: logo.top + '%',
+                    left: logo.left + '%',
+                    width: logo.size + 'px',
+                    animationDuration: logo.duration + 's',
+                    animationDelay: logo.delay + 's'
+                }" alt="Logo de fondo" />
+            </div>
+
             <!-- Imagen de fondo -->
             <div class="background-image" v-if="currentStepr !== 1"></div>
             <div class="background-overlay" v-if="currentStepr !== 1"></div>
 
             <!-- Contenido -->
-            <div class="register-container" :class="{ 'white-container': currentStepr === 1 }">
+            <div class="register-container" :class="{ 'purple-container': currentStepr === 1 }">
                 <!-- Header -->
                 <div class="register-header" style="padding-top: env(safe-area-inset-top) !important;">
                     <ion-button fill="clear" class="back-button" @click="goToWelcome">
@@ -23,7 +34,7 @@
                 <!-- Contenido principal -->
                 <div class="register-content" :class="{ 'centered-content': currentStepr === 1 }">
                     <div class="title-section" :class="{ 'centered-title': currentStepr === 1 }">
-                        <img :src="currentStepr === 1 ? '/LaU.png' : '/LaU1.png'" alt="LaÚ" class="app-logo"
+                        <img :src="currentStepr === 1 ? '/LaU1.png' : '/LaU1.png'" alt="LaU" class="app-logo"
                             :class="{ 'logo-large': currentStepr === 1 }" />
                         <h2 v-if="currentStepr !== 1" class="subtitle">{{ pageTitle }}</h2>
                         <p v-if="currentStepr !== 1" class="description">{{ pageDescription }}</p>
@@ -43,11 +54,11 @@
                     </div>
 
                     <div v-if="currentStepr === 2" class="step-container">
-                        <form @submit.prevent="handlePersonalDataStep"
-                            class="register-form">
+                        <form @submit.prevent="handlePersonalDataStep" class="register-form">
                             <div class="input-wrapper" :class="{ 'focused': nameFocused }">
-                                <ion-input v-model="formData.name" placeholder="Tu nombre y apellido" class="register-input"
-                                    @ionFocus="nameFocused = true" @ionBlur="nameFocused = false"></ion-input>
+                                <ion-input v-model="formData.name" placeholder="Tu nombre y apellido"
+                                    class="register-input" @ionFocus="nameFocused = true"
+                                    @ionBlur="nameFocused = false"></ion-input>
                                 <div class="input-line"></div>
                             </div>
 
@@ -66,8 +77,8 @@
                                 <div class="input-line"></div>
                             </div>
 
-                            <ion-button expand="block" class="register-button"
-                                @click="handlePersonalDataStep" :disabled="loading">
+                            <ion-button expand="block" class="register-button" @click="handlePersonalDataStep"
+                                :disabled="loading">
                                 <ion-spinner v-if="loading" name="crescent"></ion-spinner>
                                 <span v-else>Siguiente</span>
                             </ion-button>
@@ -130,38 +141,34 @@
                         <!-- Para Aspirante: Solo Carrera (OPCIONAL) -->
                         <div v-if="userRole === 'aspirante'">
                             <p class="section-title">¿Tienes alguna carrera de interés?</p>
-                            <p style="color: #999; font-size: 14px; margin-bottom: 10px;">Opcional: Puedes omitir este paso si aún no decides</p>
-                            
+                            <p style="color: #999; font-size: 14px; margin-bottom: 10px;">Opcional: Puedes omitir este
+                                paso si aún no decides</p>
+
                             <!-- Buscador de carreras -->
-                            <ion-searchbar 
-                                v-model="carreraSearchQuery" 
-                                placeholder="Buscar carrera..."
-                                :disabled="loadingCarreras"
-                                animated
-                                show-clear-button="focus"
+                            <ion-searchbar v-model="carreraSearchQuery" placeholder="Buscar carrera..."
+                                :disabled="loadingCarreras" animated show-clear-button="focus"
                                 style="--background: #2d2d3a; --color: white; --placeholder-color: #999; --icon-color: #8A2BE2; padding: 0;">
                             </ion-searchbar>
-                            
+
                             <!-- Lista de carreras filtradas -->
-                            <div v-if="selectedCarrera" style="margin: 10px 0; padding: 12px; background: rgba(138, 43, 226, 0.2); border-left: 3px solid #8A2BE2; color: white;">
+                            <div v-if="selectedCarrera"
+                                style="margin: 10px 0; padding: 12px; background: rgba(138, 43, 226, 0.2); border-left: 3px solid #8A2BE2; color: white;">
                                 <strong>Seleccionada:</strong> {{ selectedCarrera.nombre }}
-                                <ion-button size="small" fill="clear" style="float: right; color: #8A2BE2; font-size: 24px; margin-top: -5px;" @click="selectedCarrera = null">×</ion-button>
+                                <ion-button size="small" fill="clear"
+                                    style="float: right; color: #8A2BE2; font-size: 24px; margin-top: -5px;"
+                                    @click="selectedCarrera = null">×</ion-button>
                             </div>
-                            
+
                             <div class="carreras-list" style="max-height: 350px; overflow-y: auto; margin-top: 10px;">
                                 <ion-list style="background: transparent; padding: 0;">
-                                    <ion-item 
-                                        v-for="carrera in filteredCarreras" 
-                                        :key="carrera.id"
-                                        @click="selectedCarrera = carrera"
-                                        button
-                                        lines="none"
-                                        class="carrera-item"
+                                    <ion-item v-for="carrera in filteredCarreras" :key="carrera.id"
+                                        @click="selectedCarrera = carrera" button lines="none" class="carrera-item"
                                         :class="{ 'carrera-selected': selectedCarrera && selectedCarrera.id === carrera.id }"
                                         style="--background: transparent; --color: white; --padding-start: 0; --padding-end: 0; --inner-padding-end: 0;">
                                         <span>{{ carrera.nombre }}</span>
                                     </ion-item>
-                                    <ion-item v-if="filteredCarreras.length === 0" lines="none" style="--background: transparent; --color: #999; text-align: center; --padding-start: 0;">
+                                    <ion-item v-if="filteredCarreras.length === 0" lines="none"
+                                        style="--background: transparent; --color: #999; text-align: center; --padding-start: 0;">
                                         No se encontraron carreras
                                     </ion-item>
                                 </ion-list>
@@ -174,17 +181,17 @@
                             <p v-if="isUniversidadLocked" class="section-title" style="color: #8A2BE2;">
                                 ✓ Universidad detectada: {{ selectedUniversidad.nombre }}
                             </p>
-                            <p v-else class="section-title">¿En qué universidad {{ userRole === 'estudiante' ? 'estudias' :
+                            <p v-else class="section-title">¿En qué universidad {{ userRole === 'estudiante' ?
+                                'estudias' :
                                 'estudiaste' }}?</p>
-                            
+
                             <div class="select-wrapper" v-if="!isUniversidadLocked">
                                 <ion-list class="select-list">
                                     <ion-item lines="none" class="select-item">
                                         <ion-select v-model="selectedUniversidad"
                                             placeholder="Selecciona tu universidad" interface="action-sheet"
                                             @ionChange="onUniversidadChange" :disabled="loadingUniversidades">
-                                            <ion-select-option v-for="uni in universidades" :key="uni.id"
-                                                :value="uni">
+                                            <ion-select-option v-for="uni in universidades" :key="uni.id" :value="uni">
                                                 {{ uni.nombre }}
                                             </ion-select-option>
                                         </ion-select>
@@ -193,7 +200,8 @@
                             </div>
 
                             <div v-if="selectedUniversidad">
-                                <p class="section-title">{{ userRole === 'estudiante' ? '¿Qué carrera estás estudiando?' : '¿Qué carrera estudiaste?' }}</p>
+                                <p class="section-title">{{ userRole === 'estudiante' ? '¿Qué carrera estás estudiando?'
+                                    : '¿Qué carrera estudiaste?' }}</p>
                                 <div class="select-wrapper">
                                     <ion-list class="select-list">
                                         <ion-item lines="none" class="select-item">
@@ -325,9 +333,14 @@ export default {
             loadingUniversidades: false,
             loadingCarreras: false,
             isUniversidadLocked: false, // Indica si la universidad fue detectada automáticamente
+            // Logos animados para el fondo del paso 1
+            logos: []
         }
     },
     mounted() {
+        // Generar logos aleatorios para el fondo animado
+        this.generateBackgroundLogos();
+
         if (localStorage.getItem('social_temp_token')) {
             this.formData.name = localStorage.getItem('social_temp_name');
             this.formData.email = localStorage.getItem('social_temp_email');
@@ -347,7 +360,7 @@ export default {
                     this.universidadData.dominio = uniData.dominio;
                     this.formData.universidad_id = uniData.id;
                     this.isUniversidadLocked = true;
-                    
+
                     // NO cargamos las carreras aquí porque todavía no sabemos el rol
                     // Las cargaremos cuando seleccione "Estudiante" o "Egresado"
                 } catch (e) {
@@ -356,19 +369,19 @@ export default {
             }
 
             this.isSocialAuth = true;
-            
+
             // Recuperar el rol que el usuario seleccionó antes de hacer login con Google/Microsoft
             const rolGuardado = localStorage.getItem('rol_registro_social');
-            
+
             // Si es registro social con correo institucional, ir directo a paso 2
             // No volver al paso 1 (selección de rol)
             this.currentStepr = 2;
-            
+
             // Si hay universidad detectada O el correo es institucional
             if (this.isUniversidadLocked || this.formData.email.endsWith('.edu.sv')) {
                 // Usar el rol que seleccionó (estudiante o egresado), o 'estudiante' por defecto
                 this.userRole = rolGuardado || 'estudiante';
-                
+
                 // Si no se detectó universidad desde el backend, intentar detectarla del email
                 if (!this.isUniversidadLocked && this.formData.email.endsWith('.edu.sv')) {
                     // Detectar universidad y cargar carreras
@@ -484,9 +497,9 @@ export default {
             if (!this.carreraSearchQuery || this.carreraSearchQuery.trim() === '') {
                 return this.todasLasCarreras;
             }
-            
+
             const query = this.carreraSearchQuery.toLowerCase().trim();
-            return this.todasLasCarreras.filter(carrera => 
+            return this.todasLasCarreras.filter(carrera =>
                 carrera.nombre.toLowerCase().includes(query)
             );
         }
@@ -499,6 +512,22 @@ export default {
         // Método para ocultar los botones de navegación
         ocultarBotones() {
             this.botonesVisibles = false;
+        },
+
+        // Generar logos con posiciones aleatorias para animación de fondo
+        generateBackgroundLogos() {
+            const numberOfLogos = 12; // Cantidad de logos en pantalla
+            this.logos = [];
+
+            for (let i = 0; i < numberOfLogos; i++) {
+                this.logos.push({
+                    top: Math.random() * 120 - 20, // Entre -20% y 100% para que algunos empiecen fuera de pantalla
+                    left: Math.random() * 100, // Entre 0% y 100%
+                    size: Math.floor(Math.random() * 100) + 60, // Entre 60px y 160px
+                    duration: Math.floor(Math.random() * 10) + 15, // Duración entre 15s y 25s
+                    delay: Math.random() * 1 // Delay aleatorio para que no todos empiecen al mismo tiempo
+                });
+            }
         },
 
         selectRole(role) {
@@ -634,14 +663,14 @@ export default {
                     // y generamos una contraseña automática
                     this.formData.password = Math.random().toString(36).slice(-12) + 'Aa1!';
                     this.formData.password_confirmation = this.formData.password;
-                    
+
                     // IMPORTANTE: Antes de ir al paso 4, detectar universidad si no está detectada
                     if (!this.isUniversidadLocked && this.formData.email.endsWith('.edu.sv')) {
                         await this.detectUniversidadFromEmail(this.formData.email);
                     }
-                    
+
                     this.currentStepr = 4;
-                    
+
                     // Cargar datos según el rol y si la universidad está pre-identificada
                     if (this.userRole === 'aspirante') {
                         this.loadAllCarreras();
@@ -808,14 +837,14 @@ export default {
                 // Cargar todas las universidades y buscar por dominio
                 const response = await UniversidadService.getUniversidades();
                 const universidades = response.data || response;
-                
+
                 const universidad = universidades.find(u => u.dominio === domain);
-                
+
                 if (universidad) {
                     this.selectedUniversidad = universidad;
                     this.formData.universidad_id = universidad.id;
                     this.isUniversidadLocked = true;
-                    
+
                     // Cargar carreras automáticamente para estudiantes/egresados
                     if (this.userRole === 'estudiante' || this.userRole === 'egresado') {
                         await this.loadCarrerasForUniversidad(universidad.id);
@@ -856,7 +885,7 @@ export default {
 
         async handleUniversityCarreraStep() {
             this.loading = true;
-            
+
             try {
                 // Validar según el rol
                 if (this.userRole === 'aspirante') {
@@ -881,7 +910,7 @@ export default {
                         await toast.present();
                         return;
                     }
-                    
+
                     // Guardar carrera para estudiantes/egresados
                     this.formData.carrera_id = this.selectedCarrera.id;
                     this.carreraData.id = this.selectedCarrera.id;
@@ -907,7 +936,7 @@ export default {
                     });
 
                     const toast = await toastController.create({
-                        message: '¡Registro exitoso! Bienvenido a LaÚ',
+                        message: '¡Registro exitoso! Bienvenido a LaU',
                         duration: 2000,
                         position: 'top',
                         cssClass: 'success-toast'
@@ -1111,7 +1140,7 @@ export default {
                 if (this.formData.carrera_id) {
                     registroData.carrera_id = this.formData.carrera_id;
                 }
-                
+
                 // Agregar universidad solo para estudiantes/egresados
                 if (this.userRole !== 'aspirante' && this.formData.universidad_id) {
                     registroData.universidad_id = this.formData.universidad_id;
@@ -1121,7 +1150,7 @@ export default {
 
                 // Mostrar mensaje de éxito
                 const toast = await toastController.create({
-                    message: '¡Registro exitoso! Bienvenido a LaÚ',
+                    message: '¡Registro exitoso! Bienvenido a LaU',
                     duration: 2000,
                     position: 'top',
                     cssClass: 'success-toast'
@@ -1239,8 +1268,40 @@ export default {
     --background: transparent;
 }
 
-.register-page.white-background {
-    --background: #FFFFFF;
+.register-page.purple-background {
+    --background: #8A2BE2;
+}
+
+/* Contenedor de logos animados en el fondo */
+.background-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #8A2BE2;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+/* Estilo de los logos flotantes */
+.floating-logo {
+    position: absolute;
+    opacity: 0.08;
+    animation: floatUp linear infinite;
+    pointer-events: none;
+}
+
+/* Animación de flotación hacia arriba con rotación */
+@keyframes floatUp {
+    0% {
+        transform: translateY(0) rotate(0deg);
+    }
+
+    100% {
+        transform: translateY(-120vh) rotate(360deg);
+    }
 }
 
 .background-image {
@@ -1276,8 +1337,8 @@ export default {
     padding: 8px 1.5rem 2rem 1.5rem;
 }
 
-.register-container.white-container {
-    background: #FFFFFF;
+.register-container.purple-container {
+    background: transparent;
 }
 
 /* Header */
@@ -1298,9 +1359,9 @@ export default {
     margin: 0;
 }
 
-.white-container .back-button {
-    --background: rgba(138, 43, 226, 0.1);
-    --color: #8A2BE2;
+.purple-container .back-button {
+    --background: rgba(255, 255, 255, 0.2);
+    --color: #FFFFFF;
 }
 
 /* Contenido */
@@ -1380,8 +1441,16 @@ export default {
 }
 
 .step-one .cssbuttons-io {
-    background: linear-gradient(to right, #8e2de2, #4a00e0) !important;
-    border: none;
+    background: transparent !important;
+    border: 2px solid rgba(255, 255, 255, 0.8) !important;
+    transition: all 0.3s ease;
+}
+
+.step-one .cssbuttons-io:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: #FFFFFF !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
 }
 
 .step-one .cssbuttons-io span {
@@ -1390,11 +1459,11 @@ export default {
 }
 
 .step-one .cssbuttons-io::before {
-    background: rgba(138, 43, 226, 0.8);
+    display: none;
 }
 
 .step-one .cssbuttons-io:hover::before {
-    transform: translate3d(100%, 0, 0);
+    display: none;
 }
 
 .cssbuttons-io span {
@@ -1448,12 +1517,16 @@ export default {
     transition: background 0.3s ease;
 }
 
-.white-container .progress-step {
-    background: rgba(138, 43, 226, 0.2);
+.purple-container .progress-step {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 .progress-step.active {
-    background: #8A2BE2;
+    background: #FFFFFF;
+}
+
+.purple-container .progress-step.active {
+    background: #FFFFFF;
 }
 
 
@@ -1740,7 +1813,7 @@ ion-input.register-input .input-bottom {
 }
 
 .profile-question {
-    color: #8A2BE2;
+    color: #FFFFFF;
     text-align: center;
     font-size: 1.2rem;
     font-weight: 600;

@@ -1,18 +1,18 @@
 <template>
   <ion-page>
     <ion-header class="ion-no-border pt-safe-top">
-        <ion-toolbar>
-            <ion-buttons slot="start">
-            <ion-button fill="clear" @click="goBack" color="dark">
-                <ion-icon slot="icon-only" :icon="chevronBackOutline"></ion-icon>
-            </ion-button>
-            </ion-buttons>
-            <ion-title>Ajustes</ion-title>
-        </ion-toolbar>
+      <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-button fill="clear" @click="goBack" color="dark">
+            <ion-icon slot="icon-only" :icon="chevronBackOutline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+        <ion-title>Ajustes</ion-title>
+      </ion-toolbar>
     </ion-header>
 
     <ion-content>
-      
+
       <ion-header collapse="condense">
         <ion-toolbar>
           <ion-title size="large">Ajustes</ion-title>
@@ -29,13 +29,21 @@
             <ion-icon :icon="moonOutline"></ion-icon>
           </div>
           <ion-label>Apariencia</ion-label>
-          <ion-toggle slot="end" mode="ios" :checked="isDarkMode" 
-            @ionChange="handleToggleChange"></ion-toggle>
+          <ion-toggle slot="end" mode="ios" :checked="isDarkMode" @ionChange="handleToggleChange"></ion-toggle>
         </ion-item>
 
         <ion-item>
           <div slot="start" class="icon-box bg-blue">
-            <ion-icon :icon="globeOutline"></ion-icon>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+              class="icon icon-tabler icons-tabler-outline icon-tabler-background">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path d="M4 8l4 -4" />
+              <path d="M14 4l-10 10" />
+              <path d="M4 20l16 -16" />
+              <path d="M20 10l-10 10" />
+              <path d="M20 16l-4 4" />
+            </svg>
           </div>
           <ion-label>
             <h2>Modo Ambiente</h2>
@@ -88,7 +96,7 @@
           <ion-icon slot="start" :icon="logOutOutline"></ion-icon>
           Cerrar Sesión Actual
         </ion-button>
-        
+
         <div class="footer-info">
           <p class="version">v{{ appVersion }} (Build {{ appBuild }})</p>
         </div>
@@ -101,14 +109,14 @@
 </template>
 
 <script setup>
-import { 
-  IonPage, IonHeader, IonToolbar, IonTitle, IonContent, 
+import {
+  IonPage, IonHeader, IonToolbar, IonTitle, IonContent,
   IonList, IonItem, IonLabel, IonNote, IonIcon, IonToggle,
   IonButtons, IonSearchbar, IonButton, alertController
 } from '@ionic/vue';
-import { 
-  globeOutline, keyOutline, moonOutline, notificationsOutline, mailOutline, 
-  timeOutline, fingerPrintOutline, shieldCheckmarkOutline, logOutOutline 
+import {
+  globeOutline, keyOutline, moonOutline, notificationsOutline, mailOutline,
+  timeOutline, fingerPrintOutline, shieldCheckmarkOutline, logOutOutline
 } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
 import { chevronBackOutline } from 'ionicons/icons'; // Importamos el icono
@@ -139,7 +147,7 @@ const { isAmbientMode, toggleAmbientMode } = useAmbientMode();
 const goBack = () => {
   // Aquí puedes agregar lógica extra antes de salir si quieres
   console.log("Saliendo de ajustes...");
-  
+
   router.back(); // Esto regresa a la página anterior en el historial
 };
 
@@ -168,7 +176,7 @@ const presentLogoutAlert = async () => {
         role: 'confirm',
         handler: () => {
           // Si el usuario dice "Sí", ejecutamos la lógica real
-          performLogout(); 
+          performLogout();
         },
       },
     ],
@@ -182,20 +190,20 @@ const performLogout = async () => {
   try {
     // Intentamos cerrar sesión con el servicio
     await AuthService.logout();
-    
+
     // Pequeña espera para asegurar que los procesos asíncronos terminen
     await new Promise((resolve) => setTimeout(resolve, 100));
-    
+
     // Redirección forzada al inicio
     window.location.href = "/welcome";
-    
+
   } catch (error) {
     console.error("Error al cerrar sesión:", error);
-    
+
     // Fallback: Limpieza forzada si falla el servicio
     localStorage.clear();
     sessionStorage.clear();
-    
+
     window.location.href = "/welcome";
   }
 };
@@ -211,6 +219,7 @@ ion-header ion-toolbar {
 ion-content {
   --background: var(--app-background);
 }
+
 /* Estilo para los títulos de sección (iOS style) */
 .section-title {
   padding-left: 20px;
@@ -227,7 +236,8 @@ ion-content {
 .icon-box {
   width: 32px;
   height: 32px;
-  border-radius: 8px; /* Bordes redondeados como en tu diseño */
+  border-radius: 8px;
+  /* Bordes redondeados como en tu diseño */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -238,13 +248,40 @@ ion-content {
   font-size: 20px;
 }
 
-.bg-orange { background: rgba(249, 115, 22, 0.15); color: #f97316; }
-.bg-purple { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
-.bg-red    { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
-.bg-blue   { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
-.bg-indigo { background: rgba(99, 102, 241, 0.15); color: #6366f1; }
-.bg-green  { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
-.bg-gray   { background: rgba(107, 114, 128, 0.15); color: #6b7280; }
+.bg-orange {
+  background: rgba(249, 115, 22, 0.15);
+  color: #f97316;
+}
+
+.bg-purple {
+  background: rgba(168, 85, 247, 0.15);
+  color: #a855f7;
+}
+
+.bg-red {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.bg-blue {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+.bg-indigo {
+  background: rgba(99, 102, 241, 0.15);
+  color: #6366f1;
+}
+
+.bg-green {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.bg-gray {
+  background: rgba(107, 114, 128, 0.15);
+  color: #6b7280;
+}
 
 /* Estilos del Footer */
 .logout-container {
@@ -275,7 +312,7 @@ ion-content {
 }
 
 ion-list.md.list-md.list-inset.hydrated,
-.my-rounded-alert .alert-wrapper  {
-    border-radius: 20px !important;
+.my-rounded-alert .alert-wrapper {
+  border-radius: 20px !important;
 }
 </style>
