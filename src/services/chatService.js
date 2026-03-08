@@ -66,4 +66,22 @@ export default {
   getSharedPhotos(userId) {
     return api.post("/chat/shared", { id: userId });
   },
+
+  /**
+   * Obtener el total de mensajes no leídos de todos los chats
+   * Endpoint debe crearse en el backend: GET /chat/unread-count
+   * @returns {Promise} - Respuesta con el contador total
+   */
+  async getUnreadCount() {
+    try {
+      const response = await api.get("/chat/unread-count");
+      return response.data;
+    } catch (error) {
+      console.error(
+        "[ChatService] Error al obtener contador de mensajes:",
+        error,
+      );
+      throw error;
+    }
+  },
 };
