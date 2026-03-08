@@ -5,7 +5,7 @@
             <div class="welcome-container">
 
                 <div class="logo-container" @click="goToHome">
-                    <img src="/LaU.png" alt="LaÚ" class="logo-img" />
+                    <img src="/LaU.png" alt="LaU" class="logo-img" />
                 </div>
 
                 <!-- Carousel de características -->

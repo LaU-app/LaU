@@ -58,7 +58,8 @@
                         </ion-text>
 
                         <div v-if="post.tipo === 'imagen' && post.imagen_url" class="post-media">
-                            <ion-img :src="getFullImageUrl(post.imagen_url)" :alt="post.titulo || 'Post'" @ionError="handleImageError">
+                            <ion-img :src="getFullImageUrl(post.imagen_url)" :alt="post.titulo || 'Post'"
+                                @ionError="handleImageError">
                             </ion-img>
                         </div>
 
@@ -74,7 +75,8 @@
                                     <p>{{ getFileExtension(post.archivo) }}</p>
                                 </div>
                             </div>
-                            <ion-button fill="outline" size="small" @click.stop="downloadFile(post.archivo_url, post.archivo)">
+                            <ion-button fill="outline" size="small"
+                                @click.stop="downloadFile(post.archivo_url, post.archivo)">
                                 <ion-icon :icon="downloadOutline"></ion-icon>
                             </ion-button>
                         </div>
@@ -277,9 +279,9 @@ const getFileExtension = (filePath) => {
 }
 
 const downloadFile = (urlArchivo, nombreArchivo) => {
-        // Si nombreArchivo viene con la ruta entera, puedes limpiarlo aquí antes
-        // const nombreLimpio = getFileName(nombreArchivo);
-        openNativeFile(urlArchivo, nombreArchivo);
+    // Si nombreArchivo viene con la ruta entera, puedes limpiarlo aquí antes
+    // const nombreLimpio = getFileName(nombreArchivo);
+    openNativeFile(urlArchivo, nombreArchivo);
 };
 
 const getFileIcon = (filePath) => {
@@ -318,16 +320,6 @@ const handleLike = async () => {
             post.value.likes_count = result.data.likes_count !== undefined
                 ? result.data.likes_count
                 : post.value.likes_count
-
-            if (post.value.user_has_liked) {
-                const toast = await toastController.create({
-                    message: 'Like agregado',
-                    duration: 1500,
-                    position: 'bottom',
-                    color: 'danger'
-                })
-                await toast.present()
-            }
         } else {
             // Revertir
             post.value.user_has_liked = previousLikedState
@@ -345,11 +337,7 @@ const startReply = (comment) => {
     // Opcional: agregar @Username al inicio
     // newComment.value = `@${comment.user?.username || ''} `
 
-    nextTick(() => {
-        if (commentInputRef.value) {
-            commentInputRef.value.$el.setFocus()
-        }
-    })
+    // Ya no forzamos el focus - el teclado nativo se encargará cuando el usuario toque el input
 }
 
 const cancelReply = () => {
@@ -359,9 +347,7 @@ const cancelReply = () => {
 
 const focusCommentInput = () => {
     cancelReply() // Asegurar que no esté respondiendo a nadie si clickea el icono general
-    if (commentInputRef.value) {
-        commentInputRef.value.$el.setFocus()
-    }
+    // Ya no forzamos el focus - el teclado nativo se encargará cuando el usuario toque el input
 }
 
 // Función recursiva para encontrar el comentario padre y añadir la respuesta
@@ -458,10 +444,15 @@ const submitComment = async () => {
                 post.value.comentarios = [];
             }
 
+            // Prevenir duplicados: verificar si el comentario ya existe por ID
+            const comentarioExiste = isReply
+                ? false // Para respuestas, usamos recursivelyAddReply que maneja duplicados
+                : post.value.comentarios.some(c => c.id === nuevoComentario.id);
+
             // Inserción Reactiva
             if (isReply) {
                 recursivelyAddReply(post.value.comentarios, parentId, nuevoComentario);
-            } else {
+            } else if (!comentarioExiste) {
                 post.value.comentarios.push(nuevoComentario);
             }
 
@@ -730,6 +721,19 @@ const deletePost = async () => {
     width: 36px;
     height: 36px;
     flex-shrink: 0;
+}
+
+.comment-input-container .current-user-avatar ion-icon {
+    width: 100%;
+    height: 100%;
+    font-size: 36px;
+}
+
+.comment-input-container .current-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
 }
 
 /* Wrapper para el input con línea animada */

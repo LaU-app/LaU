@@ -3,6 +3,11 @@
         <ion-header class="ion-no-border">
             <ion-toolbar>
                 <ion-title>Mensajes</ion-title>
+                <ion-buttons slot="end">
+                    <ion-button @click="openNewChatModal">
+                        <ion-icon :icon="createOutline"></ion-icon>
+                    </ion-button>
+                </ion-buttons>
             </ion-toolbar>
         </ion-header>
 
@@ -52,11 +57,51 @@
                 </div>
 
                 <div v-if="contacts.length === 0" class="empty-state">
+                    <ion-icon :icon="chatbubbleEllipsesOutline" class="empty-icon"></ion-icon>
                     <p>No tienes mensajes recientes.</p>
+                    <ion-button fill="solid" @click="openNewChatModal" class="start-chat-button">
+                        Comenzar una conversación en LaU
+                    </ion-button>
                 </div>
             </div>
 
         </ion-content>
+
+        <!-- Modal para seleccionar contacto mutual -->
+        <ion-modal :is-open="isNewChatModalOpen" @didDismiss="closeNewChatModal">
+            <ion-header>
+                <ion-toolbar>
+                    <ion-title>Nueva conversación</ion-title>
+                    <ion-buttons slot="end">
+                        <ion-button @click="closeNewChatModal">Cerrar</ion-button>
+                    </ion-buttons>
+                </ion-toolbar>
+            </ion-header>
+            <ion-content>
+                <div v-if="loadingMutualFollowers" class="loading-container">
+                    <ion-spinner></ion-spinner>
+                    <p>Cargando contactos...</p>
+                </div>
+
+                <ion-list v-else>
+                    <div v-if="mutualFollowers.length === 0" class="empty-state">
+                        <p>No tienes seguidores mutuos para iniciar conversación.</p>
+                        <p class="helper-text">Solo puedes chatear con usuarios que sigues y que te siguen.</p>
+                    </div>
+
+                    <ion-item v-for="user in mutualFollowers" :key="user.id" button @click="startChatWithUser(user)">
+                        <ion-avatar slot="start">
+                            <img v-if="user.imagen_url" :src="getFullImageUrl(user.imagen_url)" />
+                            <ion-icon v-else :icon="personCircle" class="avatar-icon"></ion-icon>
+                        </ion-avatar>
+                        <ion-label>
+                            <h3>{{ user.name }}</h3>
+                            <p>@{{ user.username }}</p>
+                        </ion-label>
+                    </ion-item>
+                </ion-list>
+            </ion-content>
+        </ion-modal>
     </ion-page>
 </template>
 
@@ -64,9 +109,26 @@
 import { ref, onMounted, onUnmounted, onActivated, onDeactivated } from 'vue';
 import { useRouter } from 'vue-router';
 import chatService from '@/services/chatService';
+import { followersService } from '@/services/followersService';
 import { getFullImageUrl } from '@/utils/imageUtils';
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonSearchbar, IonAvatar, IonIcon } from '@ionic/vue';
-import { personCircle } from 'ionicons/icons';
+import {
+    IonPage,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    IonSearchbar,
+    IonAvatar,
+    IonIcon,
+    IonButtons,
+    IonButton,
+    IonModal,
+    IonList,
+    IonItem,
+    IonLabel,
+    IonSpinner
+} from '@ionic/vue';
+import { personCircle, createOutline, chatbubbleEllipsesOutline } from 'ionicons/icons';
 import { useDarkMode } from '@/utils/useDarkMode';
 
 const { isDarkMode } = useDarkMode();
@@ -75,6 +137,11 @@ const contacts = ref([]);
 const favorites = ref([]);
 const router = useRouter();
 let pollingInterval = null;
+
+// Estado para modal de nueva conversación
+const isNewChatModalOpen = ref(false);
+const mutualFollowers = ref([]);
+const loadingMutualFollowers = ref(false);
 
 const loadData = async () => {
     try {
@@ -106,6 +173,78 @@ const loadData = async () => {
 
 const openChat = (user) => {
     router.push(`/chat/${user.id}`);
+};
+
+// Obtener seguidores mutuos (usuarios que yo sigo y que me siguen)
+const getMutualFollowers = async () => {
+    loadingMutualFollowers.value = true;
+    try {
+        // Obtener usuario actual
+        const currentUser = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || '{}');
+        if (!currentUser.id) {
+            console.error('[ChatList] No hay usuario autenticado');
+            mutualFollowers.value = [];
+            return;
+        }
+
+        // Obtener mis seguidores y a quienes sigo
+        const [followersResult, followingResult] = await Promise.all([
+            followersService.getFollowers(currentUser.id),
+            followersService.getFollowing(currentUser.id)
+        ]);
+
+        if (!followersResult.success || !followingResult.success) {
+            console.error('[ChatList] Error al obtener seguidores/siguiendo');
+            mutualFollowers.value = [];
+            return;
+        }
+
+        // Normalizar datos
+        const followersData = followersResult.data.data || followersResult.data;
+        const followingData = followingResult.data.data || followingResult.data;
+
+        const followers = Array.isArray(followersData) ? followersData : [];
+        const following = Array.isArray(followingData) ? followingData : [];
+
+        // Obtener IDs de seguidores
+        const followerIds = new Set(followers.map(f => {
+            // Los seguidores pueden venir como { follower_id, user_id, id }
+            return f.follower_id || f.user_id || f.id;
+        }));
+
+        // Filtrar usuarios que yo sigo Y que me siguen (mutuos)
+        const mutuals = following.filter(user => {
+            const userId = user.followed_id || user.user_id || user.id;
+            return followerIds.has(userId);
+        });
+
+        console.log('[ChatList] Seguidores mutuos:', mutuals);
+        mutualFollowers.value = mutuals;
+
+    } catch (error) {
+        console.error('[ChatList] Error obteniendo seguidores mutuos:', error);
+        mutualFollowers.value = [];
+    } finally {
+        loadingMutualFollowers.value = false;
+    }
+};
+
+// Abrir modal de nueva conversación
+const openNewChatModal = async () => {
+    isNewChatModalOpen.value = true;
+    await getMutualFollowers();
+};
+
+// Cerrar modal de nueva conversación
+const closeNewChatModal = () => {
+    isNewChatModalOpen.value = false;
+};
+
+// Iniciar chat con usuario seleccionado
+const startChatWithUser = (user) => {
+    closeNewChatModal();
+    const userId = user.followed_id || user.user_id || user.id;
+    router.push(`/chat/${userId}`);
 };
 
 // Polling para actualizar lista cada 5 segundos
@@ -358,7 +497,103 @@ ion-title {
 
 .empty-state {
     text-align: center;
-    padding: 40px;
+    padding: 60px 20px;
     color: var(--ion-text-color-secondary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.empty-state .empty-icon {
+    width: 64px;
+    height: 64px;
+    font-size: 64px;
+    color: var(--ion-color-medium);
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 16px;
+}
+
+.empty-state .start-chat-button {
+    margin-top: 10px;
+    --background: #8A2BE2;
+    --background-hover: #7a24d1;
+    --background-activated: #6a1eb8;
+    --border-radius: 12px;
+    --padding-start: 24px;
+    --padding-end: 24px;
+    --padding-top: 14px;
+    --padding-bottom: 14px;
+    font-weight: 600;
+    font-size: 15px;
+    text-transform: none;
+    letter-spacing: 0.3px;
+    box-shadow: 0 4px 12px rgba(138, 43, 226, 0.3);
+    transition: all 0.3s ease;
+}
+
+.empty-state .start-chat-button:hover {
+    box-shadow: 0 6px 16px rgba(138, 43, 226, 0.4);
+    transform: translateY(-2px);
+}
+
+.empty-state .helper-text {
+    font-size: 12px;
+    margin-top: 10px;
+    color: var(--ion-text-color-step-400);
+}
+
+/* Modal de nueva conversación */
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    gap: 15px;
+}
+
+.loading-container p {
+    color: var(--ion-text-color-secondary);
+    margin: 0;
+}
+
+.avatar-icon {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 40px !important;
+    color: var(--ion-color-medium);
+}
+
+/* Estilos para avatares del modal de nueva conversación */
+ion-modal ion-avatar {
+    width: 50px;
+    height: 50px;
+    flex-shrink: 0;
+}
+
+ion-modal ion-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+ion-modal ion-item {
+    --background: var(--ion-item-background);
+    --color: var(--ion-text-color);
+}
+
+ion-modal ion-item h3 {
+    color: var(--ion-text-color);
+    font-weight: 500;
+}
+
+ion-modal ion-item p {
+    color: var(--ion-text-color-secondary);
+    font-size: 14px;
 }
 </style>

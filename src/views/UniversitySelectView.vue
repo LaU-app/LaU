@@ -24,7 +24,7 @@
                 <div class="university-content">
                     <!-- Logo y título -->
                     <div class="title-section">
-                        <img src="/LaU1.png" alt="LaÚ" class="app-logo" />
+                        <img src="/LaU1.png" alt="LaU" class="app-logo" />
                         <h2 class="subtitle">{{ currentTitle }}</h2>
                         <p class="description">{{ currentDescription }}</p>
                     </div>
@@ -432,7 +432,7 @@ export default {
                 localStorage.removeItem('temp_register_data');
 
                 const toast = await toastController.create({
-                    message: '¡Registro exitoso! Bienvenido a LaÚ',
+                    message: '¡Registro exitoso! Bienvenido a LaU',
                     duration: 2000,
                     position: 'top',
                     color: 'success'

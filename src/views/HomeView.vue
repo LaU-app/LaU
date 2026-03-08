@@ -6,11 +6,8 @@
         <ion-content>
             <!-- Pull to Refresh -->
             <ion-refresher slot="fixed" @ionRefresh="handleRefresh($event)">
-                <ion-refresher-content
-                    pulling-icon="chevron-down-circle-outline"
-                    pulling-text="Desliza para actualizar"
-                    refreshing-spinner="crescent"
-                    refreshing-text="Actualizando...">
+                <ion-refresher-content pulling-icon="chevron-down-circle-outline" pulling-text="Desliza para actualizar"
+                    refreshing-spinner="crescent" refreshing-text="Actualizando...">
                 </ion-refresher-content>
             </ion-refresher>
 
@@ -34,14 +31,9 @@
 
                     <!-- Lista de posts -->
                     <div class="posts-list">
-                        <PostCard 
-                            v-for="post in posts" 
-                            :key="post.id" 
-                            :post="post" 
+                        <PostCard v-for="post in posts" :key="post.id" :post="post"
                             v-memo="[post.id, post.likes_count, post.user_has_liked, post.comments_count]"
-                            @like="handleLike"
-                            @comment="handleComment" 
-                            @share="handleShare" 
+                            @like="handleLike" @comment="handleComment" @share="handleShare"
                             @imageError="handleImageError" />
                     </div>
 
@@ -61,55 +53,35 @@
             </div>
         </ion-content>
 
-        <CustomBanner 
-            :isOpen="showLoginPrompt"
-            title="¡Únete a LaU! 🎓"
-            message="Inicia sesión para seguir viendo el feed y aprovechar al máximo todas las funciones de LaÚ: conecta con estudiantes, comparte material y descubre eventos."
-            confirmText="Iniciar Sesión"
-            cancelText="Más tarde"
-            iconColor="purple"
-            @confirm="goToLogin"
-            @cancel="closeLoginPrompt"
-        >
+        <CustomBanner :isOpen="showLoginPrompt" title="¡Únete a LaU! 🎓"
+            message="Inicia sesión para seguir viendo el feed y aprovechar al máximo todas las funciones de LaU: conecta con estudiantes, comparte material y descubre eventos."
+            confirmText="Iniciar Sesión" cancelText="Más tarde" iconColor="purple" @confirm="goToLogin"
+            @cancel="closeLoginPrompt">
             <template #icon>
-                <img src="/LaU.png" alt="Logo LaÚ" class="w-10 h-10 object-contain drop-shadow-sm" />
+                <img src="/LaU.png" alt="Logo LaU" class="w-10 h-10 object-contain drop-shadow-sm" />
             </template>
         </CustomBanner>
 
-        <CustomBanner 
-            :isOpen="showNotificationsPrompt"
-            title="Activar notificaciones 🔔"
+        <CustomBanner :isOpen="showNotificationsPrompt" title="Activar notificaciones 🔔"
             message="Recibe una notificación de inmediato cuando las personas te envíen mensajes, interactúen con tus publicaciones y más."
-            confirmText="Activar ahora"
-            :showCancelBtn="false" 
-            iconColor="purple"
-            iconSizeClass="w-[14rem] h-[10rem] md:w-[16rem] md:h-[13rem]" 
-            @confirm="activateNotifications"
-            @cancel="closeNotificationsPrompt"
-        >
+            confirmText="Activar ahora" :showCancelBtn="false" iconColor="purple"
+            iconSizeClass="w-[14rem] h-[10rem] md:w-[16rem] md:h-[13rem]" @confirm="activateNotifications"
+            @cancel="closeNotificationsPrompt">
             <template #icon>
                 <div class="flex items-center justify-center w-full h-full">
-                    <img 
-                        src="https://res.cloudinary.com/dtmemrt1j/image/upload/v1771856181/Claro_wjfr9i.png" 
-                        alt="Notificaciones SivarSocial Claro" 
-                        class="block dark:hidden w-full h-full object-contain drop-shadow-md"
-                    />
-                    
-                    <img 
-                        src="https://res.cloudinary.com/dtmemrt1j/image/upload/v1771856178/oscuro_ulh7j6.png" 
-                        alt="Notificaciones SivarSocial Oscuro" 
-                        class="hidden dark:block w-full h-full object-contain drop-shadow-md"
-                    />
+                    <img src="https://res.cloudinary.com/dtmemrt1j/image/upload/v1771856181/Claro_wjfr9i.png"
+                        alt="Notificaciones SivarSocial Claro"
+                        class="block dark:hidden w-full h-full object-contain drop-shadow-md" />
+
+                    <img src="https://res.cloudinary.com/dtmemrt1j/image/upload/v1771856178/oscuro_ulh7j6.png"
+                        alt="Notificaciones SivarSocial Oscuro"
+                        class="hidden dark:block w-full h-full object-contain drop-shadow-md" />
                 </div>
             </template>
         </CustomBanner>
 
-        <CustomBanner 
-            :isOpen="showServerBanner"
-            :banner="serverBannerData"
-            @confirm="handleServerBannerAction"
-            @cancel="handleServerBannerDismiss"
-        />
+        <CustomBanner :isOpen="showServerBanner" :banner="serverBannerData" @confirm="handleServerBannerAction"
+            @cancel="handleServerBannerDismiss" />
     </ion-page>
 </template>
 
@@ -155,21 +127,21 @@ export default {
         const showNotificationsPrompt = ref(false);
 
         onMounted(() => {
-        // 2. EL CANDADO: Si NO está autenticado, detenemos todo aquí mismo.
-        if (!AuthService.isAuthenticated()) {
-            console.log("Usuario invitado. No se mostrará el banner de notificaciones.");
-            return; 
-        }
+            // 2. EL CANDADO: Si NO está autenticado, detenemos todo aquí mismo.
+            if (!AuthService.isAuthenticated()) {
+                console.log("Usuario invitado. No se mostrará el banner de notificaciones.");
+                return;
+            }
 
-        // Si pasa el candado, significa que SÍ hay sesión.
-        // 3. Revisamos si ya le preguntamos antes
-        const hasAsked = localStorage.getItem('has_asked_notifications');
-        
-        if (!hasAsked) {
-            setTimeout(() => {
-            showNotificationsPrompt.value = true;
-            }, 3000); 
-        }
+            // Si pasa el candado, significa que SÍ hay sesión.
+            // 3. Revisamos si ya le preguntamos antes
+            const hasAsked = localStorage.getItem('has_asked_notifications');
+
+            if (!hasAsked) {
+                setTimeout(() => {
+                    showNotificationsPrompt.value = true;
+                }, 3000);
+            }
         });
 
         const activateNotifications = async () => {
@@ -177,24 +149,26 @@ export default {
             localStorage.setItem('has_asked_notifications', 'true');
 
             if (pushNotificationsService.isAvailable()) {
-            try {
-                // AQUÍ LE PASAMOS TRUE PARA QUE LANCE LA ALERTA DE ANDROID
-                await pushNotificationsService.initialize(true); 
-                console.log("Notificaciones activadas exitosamente");
-                localStorage.setItem('notifications_granted', 'true');
-            } catch (error) {
-                console.error("Error al activar:", error);
-            }
+                try {
+                    // AQUÍ LE PASAMOS TRUE PARA QUE LANCE LA ALERTA DE ANDROID
+                    await pushNotificationsService.initialize(true);
+                    console.log("Notificaciones activadas exitosamente");
+                    localStorage.setItem('notifications_granted', 'true');
+                } catch (error) {
+                    console.error("Error al activar:", error);
+                }
             }
         };
 
         const closeNotificationsPrompt = () => {
-        showNotificationsPrompt.value = false;
-        localStorage.setItem('has_asked_notifications', 'true');
+            showNotificationsPrompt.value = false;
+            localStorage.setItem('has_asked_notifications', 'true');
         };
 
-        return { isDarkMode, toggleDarkMode, showNotificationsPrompt, activateNotifications,
-            closeNotificationsPrompt }
+        return {
+            isDarkMode, toggleDarkMode, showNotificationsPrompt, activateNotifications,
+            closeNotificationsPrompt
+        }
     },
     async created() {
         // Verificar autenticación y actualizar estado
@@ -435,7 +409,7 @@ export default {
             this.showLoginPrompt = false;
             this.$router.push('/login');
         },
-        
+
         closeLoginPrompt() {
             this.showLoginPrompt = false;
         },
@@ -452,14 +426,14 @@ export default {
 
             if (bannerReal && bannerReal.id) {
                 this.serverBannerData = bannerReal;
-                
+
                 setTimeout(() => {
                     this.showServerBanner = true;
                 }, 500);
             } else {
                 // 3. Laravel respondió null. Eso significa que el usuario ya vio TODO.
                 // Activamos la bandera para que no vuelva a preguntar en toda la sesión.
-                this.noMoreBanners = true; 
+                this.noMoreBanners = true;
                 console.log("Todos los banners han sido vistos. No se preguntará más en esta sesión.");
             }
         },
@@ -467,10 +441,10 @@ export default {
         // 2. Acción: Cuando le da al botón principal (Probar, Actualizar, etc.)
         async handleServerBannerAction(banner) {
             this.showServerBanner = false;
-            
+
             // Registramos en Laravel que ya lo vio
             await bannerService.markAsViewed(banner.id);
-            
+
             // Redirigimos a la URL de acción
             if (banner.action_url) {
                 if (banner.action_url.startsWith('http')) {
@@ -486,7 +460,7 @@ export default {
         // 3. Acción: Cuando le da a "Enterado" o lo arrastra hacia abajo
         async handleServerBannerDismiss(banner) {
             this.showServerBanner = false;
-            
+
             // Registramos en Laravel que ya lo vio para que no vuelva a salir
             await bannerService.markAsViewed(banner.id);
         }
@@ -496,8 +470,8 @@ export default {
         //     const currentRoute = this.$route.path
         //     if (!this.isAuthenticated && currentRoute === '/tabs/tab1') {
         //         const alert = await alertController.create({
-        //             header: '¡Únete a LaÚ! 🎓',
-        //             message: 'Inicia sesión para seguir viendo el feed y aprovechar al máximo todas las funciones de LaÚ: conecta con estudiantes, comparte material y descubre eventos.',
+        //             header: '¡Únete a LaU! 🎓',
+        //             message: 'Inicia sesión para seguir viendo el feed y aprovechar al máximo todas las funciones de LaU: conecta con estudiantes, comparte material y descubre eventos.',
         //             buttons: [
         //                 {
         //                     text: 'Más tarde',
