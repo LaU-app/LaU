@@ -81,7 +81,8 @@ const loadUnreadChatCount = async () => {
       unreadChatCount.value = response.count;
     }
   } catch (error) {
-    console.error("[AppHeader] Error al cargar contador de mensajes:", error);
+    // Silencioso - el error ya se maneja en chatService
+    // El contador permanecerá en 0 hasta que el backend esté listo
   }
 };
 

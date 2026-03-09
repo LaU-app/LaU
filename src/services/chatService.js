@@ -77,6 +77,10 @@ export default {
       const response = await api.get("/chat/unread-count");
       return response.data;
     } catch (error) {
+      // Silencioso si el endpoint no existe (404) - pendiente de implementación en backend
+      if (error.response?.status === 404) {
+        return { success: true, count: 0 };
+      }
       console.error(
         "[ChatService] Error al obtener contador de mensajes:",
         error,
