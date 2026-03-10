@@ -658,7 +658,7 @@ ion-searchbar {
     --color: var(--ion-text-color);
     --border-radius: 10px;
     --box-shadow: none;
-    --placeholder-color: var(--ion-text-color-secondary);
+    --placeholder-color: var(--ion-placeholder-color);
     --placeholder-font-style: normal;
     --icon-color: var(--ion-text-color-secondary);
     padding: 8px 16px;

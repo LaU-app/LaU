@@ -57,9 +57,9 @@
                                 post.texto }}</p>
                         </ion-text>
 
-                        <div v-if="post.tipo === 'imagen' && post.imagen_url" class="post-media">
+                        <div v-if="post.tipo === 'imagen' && post.imagen_url" class="post-media" @click.stop="openImageModal">
                             <ion-img :src="getFullImageUrl(post.imagen_url)" :alt="post.titulo || 'Post'"
-                                @ionError="handleImageError">
+                                @ionError="handleImageError" class="post-media">
                             </ion-img>
                         </div>
 
@@ -108,7 +108,8 @@
                             </ion-text>
                         </div>
 
-                        <div class="comment-input-container">
+
+                        <!-- <div class="comment-input-container">
                             <div v-if="replyingToComment" class="replying-indicator">
                                 <ion-text color="medium">
                                     <small>Respondiendo a <b>{{ replyingToComment.user?.name }}</b></small>
@@ -136,16 +137,74 @@
                                     <ion-icon :icon="send"></ion-icon>
                                 </ion-button>
                             </div>
-                        </div>
+                        </div> -->
+
+
                     </ion-card-content>
                 </ion-card>
             </div>
+
+            <ion-modal :is-open="isImageModalOpen" @didDismiss="closeImageModal" @didPresent="initGesture" class="image-viewer-modal">
+                <ion-content>
+                    <div class="modal-image-container">
+                        <div v-if="isAmbientMode" class="modal-blur-bg" :style="{ backgroundImage: `url(${getFullImageUrl(post.imagen_url)})` }"></div>
+
+                        <ion-button class="close-image-btn" @click.stop="closeImageModal">
+                            <ion-icon :icon="closeOutline" slot="icon-only"></ion-icon>
+                        </ion-button>
+
+                        <img ref="draggableImage" :src="getFullImageUrl(post.imagen_url)" class="fullscreen-img" @click.stop />
+                    </div>
+                </ion-content>
+            </ion-modal>
         </ion-content>
+
+        <ion-footer class="ion-no-border transparent-footer">
+            <div class="input-gradient-mask"></div>
+
+            <div class="floating-comment-bar">
+                <div v-if="replyingToComment" class="replying-indicator">
+                    <ion-text color="medium">
+                        <small>Respondiendo a <b>{{ replyingToComment.user?.name }}</b></small>
+                    </ion-text>
+                    <ion-button fill="clear" size="small" @click="cancelReply">
+                        <ion-icon slot="icon-only" :icon="closeCircle"></ion-icon>
+                    </ion-button>
+                </div>
+
+                <div class="input-row">
+                    <ion-avatar class="current-user-avatar">
+                        <img v-if="currentUser?.imagen_url" :src="getFullImageUrl(currentUser.imagen_url)"
+                            :alt="currentUser?.name || 'Tú'" loading="lazy" />
+                        <ion-icon v-else :icon="personCircle"></ion-icon>
+                    </ion-avatar>
+                    
+                    <div class="comment-input-wrapper">
+                        <ion-input ref="commentInputRef" v-model="newComment"
+                            :placeholder="replyingToComment ? 'Escribe tu respuesta...' : 'Escribe un comentario...'"
+                            class="comment-input" @keyup.enter="submitComment">
+                        </ion-input>
+                        <div class="comment-input-line"></div>
+                    </div>
+
+                    <ion-button 
+                        fill="solid" 
+                        shape="round" 
+                        size="small" 
+                        color="primary"
+                        @click="submitComment" 
+                        :disabled="!newComment || newComment.trim() === ''" 
+                        class="send-comment-button">
+                        <ion-icon :icon="send"></ion-icon>
+                    </ion-button>
+                </div>
+            </div>
+        </ion-footer>
     </ion-page>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, nextTick } from 'vue'
+import { ref, onMounted, computed, nextTick, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
     IonPage,
@@ -166,7 +225,12 @@ import {
     IonCardContent,
     IonCardTitle,
     toastController,
-    alertController
+    alertController,
+    IonModal,
+    createGesture,
+    IonFooter,
+    onIonViewWillEnter, 
+    onIonViewWillLeave
 } from '@ionic/vue'
 import {
     arrowBack,
@@ -176,7 +240,8 @@ import {
     chatbubbleOutline,
     downloadOutline,
     trashOutline,
-    closeCircle
+    closeCircle,
+    closeOutline
 } from 'ionicons/icons'
 import MusicPlayer from '@/components/MusicPlayer.vue'
 import PostActions from '@/components/PostActions.vue'
@@ -191,6 +256,7 @@ import { CapacitorHttp } from '@capacitor/core';
 import { Capacitor } from '@capacitor/core';
 import { openNativeFile } from '@/services/FileService';
 import { getFullImageUrl } from '@/utils/imageUtils';
+import { useAmbientMode } from "@/utils/useAmbientMode"
 
 const route = useRoute()
 const router = useRouter()
@@ -204,16 +270,58 @@ const ionContentRef = ref(null)
 const currentUser = ref(null)
 const replyingToComment = ref(null)
 
+const { isAmbientMode } = useAmbientMode();
+
+// ==========================================
+// LÓGICA DEL VISOR DE IMÁGENES Y GESTOS
+// ==========================================
+const isImageModalOpen = ref(false);
+const draggableImage = ref(null); 
+let gesture = null;
+
 // Computed para verificar si el post es del usuario actual
 const isMyPost = computed(() => {
     if (!post.value || !currentUser.value) return false
     return post.value.user_id === currentUser.value.id || post.value.user?.id === currentUser.value.id
 })
+// ==========================================
+// OCULTAR TAB BAR GLOBAL AL ENTRAR A LA VISTA
+// ==========================================
+const hideTabBar = () => {
+    requestAnimationFrame(() => {
+        const tabBar = document.querySelector('ion-tab-bar.floating-tabs');
+        const tabGradient = document.querySelector('.tabs-gradient-mask');
+
+        if (tabBar) tabBar.classList.add('hide-tabs-animated');
+        if (tabGradient) tabGradient.classList.add('hide-tabs-animated');
+    });
+};
+
+const showTabBar = () => {
+    requestAnimationFrame(() => {
+        const tabBar = document.querySelector('ion-tab-bar.floating-tabs');
+        const tabGradient = document.querySelector('.tabs-gradient-mask');
+
+        if (tabBar) tabBar.classList.remove('hide-tabs-animated');
+        if (tabGradient) tabGradient.classList.remove('hide-tabs-animated');
+    });
+};
+
+// ==========================================
+// CONTROL DEL MENÚ CON EL CICLO DE VIDA DE IONIC
+// ==========================================
+onIonViewWillEnter(() => {
+    hideTabBar();
+});
+
+onIonViewWillLeave(() => {
+    showTabBar();
+});
 
 onMounted(async () => {
     currentUser.value = AuthService.getUser()
     await loadPost()
-})
+});
 
 const loadPost = async () => {
     loading.value = true
@@ -256,7 +364,15 @@ const loadPost = async () => {
 }
 
 const goBack = () => {
-    router.back()
+    showTabBar(); // 1. Forzamos mostrar el menú inmediatamente
+    
+    // 2. Verificamos si hay historial previo para regresar
+    if (window.history.length > 2) {
+        router.back();
+    } else {
+        // Si recargó la página y no hay historial, lo mandamos al inicio
+        router.push('/tabs/tab1');
+    }
 }
 
 const handleImageError = (event) => {
@@ -543,6 +659,61 @@ const deletePost = async () => {
         await toast.present()
     }
 }
+
+const openImageModal = () => {
+    isImageModalOpen.value = true;
+};
+
+const closeImageModal = () => {
+    isImageModalOpen.value = false;
+    
+    if (gesture) {
+        gesture.destroy();
+        gesture = null;
+    }
+
+    setTimeout(() => {
+        if (draggableImage.value) {
+            draggableImage.value.style.transform = `translateY(0px)`;
+            draggableImage.value.style.transition = 'none';
+        }
+    }, 300);
+};
+
+const initGesture = () => {
+    if (!draggableImage.value) return;
+
+    gesture = createGesture({
+        el: draggableImage.value,
+        gestureName: 'swipe-to-close',
+        direction: 'y',
+        
+        onStart: () => {
+            draggableImage.value.style.transition = 'none';
+        },
+        
+        onMove: (detail) => {
+            draggableImage.value.style.transform = `translateY(${detail.deltaY}px)`;
+        },
+        
+        onEnd: (detail) => {
+            draggableImage.value.style.transition = 'transform 0.3s ease-out';
+            
+            if (Math.abs(detail.deltaY) > 150) {
+                const direccion = detail.deltaY > 0 ? 1 : -1;
+                draggableImage.value.style.transform = `translateY(${direccion * 100}vh)`;
+                
+                setTimeout(() => {
+                    closeImageModal();
+                }, 200); 
+            } else {
+                draggableImage.value.style.transform = `translateY(0px)`;
+            }
+        }
+    });
+    
+    gesture.enable(true);
+};
 </script>
 
 <style scoped>
@@ -620,10 +791,12 @@ const deletePost = async () => {
 }
 
 .post-media {
-    width: 100%;
-    margin-top: 1rem;
-    border-radius: 8px;
-    overflow: hidden;
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center;
+    background: transparent;
+    /* max-height: calc(80vw * 16 / 9) !important; */
 }
 
 .post-media ion-img {
@@ -713,7 +886,7 @@ const deletePost = async () => {
 
 .input-row {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: 0.75rem;
 }
 
@@ -879,6 +1052,219 @@ const deletePost = async () => {
     margin: 0.25rem 0 0 0;
     font-size: 0.8rem;
     color: var(--ion-color-medium);
+}
+
+/* fondo imagen total - imagen completa sin cortes - borde redondeado suave */
+ /* --- VISOR DE IMAGEN A PANTALLA COMPLETA --- */
+ion-modal.image-viewer-modal {
+    --background: rgba(0, 0, 0, 0.95); /* Fondo casi negro */
+}
+
+ion-modal.image-viewer-modal ion-content {
+    --background: #000 !important;
+}
+
+.modal-image-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.fullscreen-img {
+    max-width: 100vw;
+    max-height: 100vh;
+    object-fit: contain; /* Evita que se recorte, igual que en el feed */
+    user-select: none;
+}
+
+.close-image-btn:hover {
+    opacity: 1;
+}
+
+.close-image-btn {
+    position: absolute;
+    top: calc(20px + env(safe-area-inset-top)); /* Respeta el notch del iPhone/Android */
+    right: 15px;
+    z-index: 100;
+
+    /* Diseño del botón redondo gris */
+    --background: rgba(100, 100, 100, 0.6); 
+    --border-radius: 50%; 
+    --padding-start: 0;
+    --padding-end: 0;
+    --border-color: 0.5px solid rgba(255, 255, 255, 0.3);
+    
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    margin: 0;
+    transition: background 0.2s ease;
+}
+
+.close-image-btn ion-icon {
+    color: #ffffff !important; 
+    font-size: 20px !important;
+}
+
+/* Efecto al tocarlo o pasar el mouse */
+.close-image-btn:hover,
+.close-image-btn:active {
+    --background: rgba(100, 100, 100, 0.9);
+}
+
+/* --- FONDO BLUR DEL MODAL --- */
+.modal-blur-bg {
+    position: absolute;
+    top: 0; 
+    left: 0; 
+    right: 0; 
+    bottom: 0;
+    background-size: cover;
+    background-position: center;
+    filter: blur(30px) saturate(1.5) brightness(0.5); 
+    transform: scale(1.1);
+    z-index: 0;
+}
+
+/* --- AJUSTES DEL CONTENEDOR PARA EL BLUR --- */
+.modal-image-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden; 
+}
+
+/* Aseguramos que la foto nítida esté por encima del fondo blur */
+.fullscreen-img {
+    max-width: 100vw;
+    max-height: 100vh;
+    object-fit: contain;
+    user-select: none;
+    z-index: 2; 
+    position: relative;
+}
+
+/* IMPORTANTE: El modal debe ser completamente transparente para ver el blur */
+ion-modal.image-viewer-modal {
+    --background: transparent;
+}
+
+ion-modal.image-viewer-modal ion-content {
+    --background: transparent;
+}
+
+
+
+/* --- ESTILOS DEL FOOTER FLOTANTE TIPO TABS --- */
+
+/* Hacemos que el footer nativo de Ionic no tenga fondo ni sombra */
+.transparent-footer {
+    background: transparent !important;
+}
+
+/* El degradado que difumina el contenido detrás de la barra */
+.input-gradient-mask {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(10px + 40px + 30px + env(safe-area-inset-bottom)); /* Altura suficiente para difuminar */
+    background: linear-gradient(
+        to top,
+        var(--ion-background-color) 0%,
+        rgba(var(--ion-background-color-rgb), 0.5) 50%,
+        transparent 100%
+    );
+    pointer-events: none; /* Que no bloquee los clics atrás */
+    z-index: 1;
+}
+
+/* La barra de comentarios en sí, con diseño tipo píldora flotante */
+.floating-comment-bar {
+    position: relative;
+    z-index: 2; /* Por encima del degradado */
+    
+    /* Mismos márgenes y bordes que los Tabs */
+    margin: 0 15px calc(10px + env(safe-area-inset-bottom)) 15px;
+    padding: 8px 15px;
+    border-radius: 30px;
+    height: 65px;
+    border: 1px solid #b2b2b221;
+    
+    /* Mismo efecto de cristal que los Tabs */
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    background: var(--ion-card-background); /* Fondo sólido sutil */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px); /* Para iOS */
+}
+
+.current-user-avatar {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+}
+
+.current-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.current-user-avatar ion-icon {
+    width: 100%;
+    height: 100%;
+    font-size: 36px;
+}
+
+.comment-input-wrapper {
+    flex: 1;
+}
+
+/* Hacemos el input invisible para que se funda con la barra pill */
+.comment-input {
+    --background: transparent; /* Transparente para usar el fondo de la barra */
+    --padding-start: 5px;
+    --padding-end: 5px;
+    --padding-top: 8px;
+    --padding-bottom: 8px;
+    min-height: 40px;
+    font-size: 0.95rem;
+}
+
+/* Quitamos la sombra y bordes que trae ionic nativo */
+.comment-input::part(native) {
+    background: transparent !important;
+    border: none !important;
+}
+
+.send-comment-button {
+    --padding-start: 8px;
+    --padding-end: 8px;
+    margin: 0;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    --border-radius: 50%;
+}
+
+.replying-indicator {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--ion-color-light);
+    padding: 0.2rem 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 20px;
+    border-left: none; /* Quitamos la raya lateral para que se vea más limpio */
+    font-size: 0.85rem;
 }
 </style>
 

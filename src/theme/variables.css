@@ -135,3 +135,32 @@ ion-tabs.layout-with-tabs ion-content {
     --ion-color-dark-shade: #d7d8da;
     --ion-color-dark-tint: #f5f6f9;
 }
+
+ion-input, 
+ion-textarea, 
+ion-searchbar,
+input,
+textarea {
+    caret-color: #8A2BE2 !important;
+}
+
+/* Rompemos el Shadow DOM para asegurar que afecte al campo nativo por dentro */
+ion-input::part(native),
+ion-textarea::part(native),
+ion-searchbar::part(search-input) {
+    caret-color: #8A2BE2 !important;
+}
+
+/* =======================================================
+   ANIMACIÓN PARA OCULTAR EL MENÚ DE TABS FLOTANTE
+   ======================================================= */
+ion-tab-bar.floating-tabs.hide-tabs-animated {
+    transform: translateY(120px) !important; /* Lo empuja hacia abajo */
+    opacity: 0 !important; /* Lo hace transparente */
+    pointer-events: none !important; /* Evita que se pueda hacer clic invisible */
+}
+
+.tabs-gradient-mask.hide-tabs-animated {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}

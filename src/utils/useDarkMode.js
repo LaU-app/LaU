@@ -55,6 +55,7 @@ export function useDarkMode() {
       root.style.setProperty('--ion-toolbar-background', '#1E1E1E')
       root.style.setProperty('--ion-tab-bar-background', '#1E1E1E')
       root.style.setProperty('--ion-border-color', '#282c34')
+
       root.style.setProperty('--ion-color-step-50', '#1E1E1E')
       root.style.setProperty('--ion-color-step-100', '#2A2A2A')
       root.style.setProperty('--ion-color-step-150', '#363636')
