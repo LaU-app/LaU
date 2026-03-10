@@ -47,7 +47,7 @@
             </ion-text>
 
             <!-- Imagen Post -->
-            <div v-if="post.tipo === 'imagen' && post.imagen_url" class="post-media">
+            <div v-if="post.tipo === 'imagen' && post.imagen_url" class="post-media" @click.stop="openImageModal">
                 <ion-img :src="getFullImageUrl(post.imagen_url)" :alt="post.titulo || 'Post'" @ionError="handleImageError" class="post-media">
                     <div slot="image" style="position: relative; padding-top: 75%; background: var(--ion-color-light);">
                         <ion-spinner name="crescent" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></ion-spinner>
@@ -89,6 +89,30 @@
             <PostActions :post="post" @like="handleLike" @comment="handleComment" />
         </ion-card-content>
 
+        <!-- <ion-modal :is-open="isImageModalOpen" @didDismiss="closeImageModal" @didPresent="initGesture" class="image-viewer-modal">
+            <ion-content>
+                <div class="modal-image-container" >
+                    
+                    <div   v-if="isAmbientMode" class="modal-blur-bg" :style="{ backgroundImage: `url(${getFullImageUrl(post.imagen_url)})` }"></div>
+
+                    <ion-button class="close-image-btn" @click.stop="closeImageModal">
+                        <ion-icon :icon="closeOutline" slot="icon-only"></ion-icon>
+                    </ion-button>
+
+                    <img ref="draggableImage" :src="post.imagen_url" class="fullscreen-img" @click.stop />
+
+                </div>
+            </ion-content>
+        </ion-modal> -->
+
+        <FullScreenImageViewer 
+            v-if="post" 
+            :is-open="isImageModalOpen"
+            :image-url="getFullImageUrl(post.imagen_url)"
+            :is-ambient-mode="isAmbientMode"
+            @close="isImageModalOpen = false"
+        />
+
     </ion-card>
 </template>
 
@@ -102,9 +126,11 @@ import {
     IonIcon,
     IonImg,
     IonButton,
-    IonSpinner
+    IonSpinner,
+    IonModal,
+    createGesture
 } from '@ionic/vue'
-import { personCircle, documentAttach, downloadOutline } from 'ionicons/icons'
+import { personCircle, documentAttach, downloadOutline, closeOutline } from 'ionicons/icons'
 import MusicPlayer from './MusicPlayer.vue'
 import PostActions from './PostActions.vue'
 import { timeAgo } from '@/utils/timeUtils'
@@ -118,6 +144,7 @@ import { CapacitorHttp } from '@capacitor/core';
 import { Capacitor } from '@capacitor/core';
 import { openNativeFile } from '@/services/FileService';
 import { getFullImageUrl } from '@/utils/imageUtils';
+import FullScreenImageViewer from './FullScreenImageViewer.vue';
 
 
 export default {
@@ -133,7 +160,9 @@ export default {
         IonButton,
         IonSpinner,
         MusicPlayer,
-        PostActions
+        PostActions,
+        IonModal,
+        FullScreenImageViewer
     },
     props: {
         post: {
@@ -297,7 +326,7 @@ export default {
                     const dvPop = palette.DarkVibrant ? palette.DarkVibrant.getPopulation() : 0;
 
                     isDarkImage.value = (brightness < 150) || (dvPop > vPop * 2);
-                    ambientGradient.value = `linear-gradient(135deg, rgba(${rgb.join(',')}, 0.6), rgba(0,0,0,0.4))`;
+                    ambientGradient.value = `linear-gradient(135deg, rgba(${rgb.join(',')}, 0.9), rgba(0,0,0,0.4))`;
 
                     // LOG NIVEL INGENIERO PARA SIVARSOCIAL
                     // console.log(
@@ -316,6 +345,70 @@ export default {
                 isDarkImage.value = false;
             }
         };
+
+        // --- LÓGICA DEL VISOR DE IMÁGENES Y GESTOS ---
+        // ==========================================
+        // LÓGICA DEL VISOR DE IMÁGENES Y GESTOS
+        // ==========================================
+        const isImageModalOpen = ref(false);
+        const draggableImage = ref(null); 
+        let gesture = null;
+
+        const openImageModal = () => {
+            isImageModalOpen.value = true;
+        };
+
+        const closeImageModal = () => {
+            isImageModalOpen.value = false;
+            
+            if (gesture) {
+                gesture.destroy();
+                gesture = null;
+            }
+
+            setTimeout(() => {
+                if (draggableImage.value) {
+                    draggableImage.value.style.transform = `translateY(0px)`;
+                    draggableImage.value.style.transition = 'none';
+                }
+            }, 300);
+        };
+
+        const initGesture = () => {
+            if (!draggableImage.value) return;
+
+            gesture = createGesture({
+                el: draggableImage.value,
+                gestureName: 'swipe-to-close',
+                direction: 'y',
+                
+                onStart: () => {
+                    draggableImage.value.style.transition = 'none';
+                },
+                
+                onMove: (detail) => {
+                    draggableImage.value.style.transform = `translateY(${detail.deltaY}px)`;
+                },
+                
+                onEnd: (detail) => {
+                    draggableImage.value.style.transition = 'transform 0.3s ease-out';
+                    
+                    if (Math.abs(detail.deltaY) > 150) {
+                        const direccion = detail.deltaY > 0 ? 1 : -1;
+                        draggableImage.value.style.transform = `translateY(${direccion * 100}vh)`;
+                        
+                        setTimeout(() => {
+                            closeImageModal();
+                        }, 200); 
+                    } else {
+                        draggableImage.value.style.transform = `translateY(0px)`;
+                    }
+                }
+            });
+            
+            gesture.enable(true);
+        };
+        // ==========================================
 
         onMounted(() => {
             if (props.post.tipo === 'imagen' && props.post.imagen_url) {
@@ -341,7 +434,14 @@ export default {
             ambientGradient,
             extractColors,
             isAmbientMode,
-            getFullImageUrl
+            getFullImageUrl,
+
+            closeOutline,
+            isImageModalOpen,
+            openImageModal,
+            closeImageModal,
+            draggableImage,
+            initGesture
         }
     }
 }
@@ -451,8 +551,8 @@ export default {
   background-size: cover;
   background-position: center;
   /* En modo claro: un poco vibrante */
-  filter: blur(30px) saturate(1.4) brightness(0.8);
-  transform: scale(1.2);
+  filter: blur(20px) saturate(1.4) brightness(0.8);
+  transform: scale(1.05);
   z-index: 0;
 }
 
@@ -523,5 +623,130 @@ export default {
     box-shadow: 0 15px 50px -15px var(--ambient-gradient) !important;
     transition: all 0.6s ease-in-out;
     border: none !important;
+}
+
+/* --- ESTILOS PARA EVITAR QUE LA IMAGEN SE CORTE --- */
+.post-media {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center;
+    background: transparent;
+    /* max-height: calc(80vw * 16 / 9) !important; */
+}
+
+/* Apuntamos directamente a la imagen nativa dentro de ion-img */
+/* ion-img.post-media::part(image) {
+    object-fit: contain !important;
+    width: 100%;
+    height: 100%;
+    border-radius: 8px; 
+} */
+
+
+ /* fondo imagen total - imagen completa sin cortes - borde redondeado suave */
+ /* --- VISOR DE IMAGEN A PANTALLA COMPLETA --- */
+ion-modal.image-viewer-modal {
+    --background: rgba(0, 0, 0, 0.95); /* Fondo casi negro */
+}
+
+ion-modal.image-viewer-modal ion-content {
+    --background: #000 !important;
+}
+
+.modal-image-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.fullscreen-img {
+    max-width: 100vw;
+    max-height: 100vh;
+    object-fit: contain; /* Evita que se recorte, igual que en el feed */
+    user-select: none;
+}
+
+.close-image-btn:hover {
+    opacity: 1;
+}
+
+.close-image-btn {
+    position: absolute;
+    top: calc(20px + env(safe-area-inset-top)); /* Respeta el notch del iPhone/Android */
+    right: 15px;
+    z-index: 100;
+
+    /* Diseño del botón redondo gris */
+    --background: rgba(100, 100, 100, 0.6); 
+    --border-radius: 50%; 
+    --padding-start: 0;
+    --padding-end: 0;
+    --border-color: 0.5px solid rgba(255, 255, 255, 0.3);
+    
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    margin: 0;
+    transition: background 0.2s ease;
+}
+
+.close-image-btn ion-icon {
+    color: #ffffff !important; 
+    font-size: 20px !important;
+}
+
+/* Efecto al tocarlo o pasar el mouse */
+.close-image-btn:hover,
+.close-image-btn:active {
+    --background: rgba(100, 100, 100, 0.9);
+}
+
+/* --- FONDO BLUR DEL MODAL --- */
+.modal-blur-bg {
+    position: absolute;
+    top: 0; 
+    left: 0; 
+    right: 0; 
+    bottom: 0;
+    background-size: cover;
+    background-position: center;
+    filter: blur(30px) saturate(1.5) brightness(0.5); 
+    transform: scale(1.1);
+    z-index: 0;
+}
+
+/* --- AJUSTES DEL CONTENEDOR PARA EL BLUR --- */
+.modal-image-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden; 
+}
+
+/* Aseguramos que la foto nítida esté por encima del fondo blur */
+.fullscreen-img {
+    max-width: 100vw;
+    max-height: 100vh;
+    object-fit: contain;
+    user-select: none;
+    z-index: 2; 
+    position: relative;
+}
+
+/* IMPORTANTE: El modal debe ser completamente transparente para ver el blur */
+ion-modal.image-viewer-modal {
+    --background: transparent;
+}
+
+ion-modal.image-viewer-modal ion-content {
+    --background: transparent;
 }
 </style>

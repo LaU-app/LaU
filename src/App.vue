@@ -11,13 +11,34 @@ import { useDarkMode } from '@/utils/useDarkMode';
 import { useSyncQueue } from '@/utils/useSyncQueue';
 import { AuthService } from '@/services/auth';
 import { App } from '@capacitor/app';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { StatusBar } from '@capacitor/status-bar';
+import { Keyboard, KeyboardResize } from '@capacitor/keyboard';
 
 StatusBar.setOverlaysWebView({ overlay: true });
 
 const ionRouter = useIonRouter();
 const route = useRoute();
+const router = useRouter();
+
+// ✨ 2. EL GUARDIÁN DEL MENÚ ✨
+router.afterEach((to) => {
+  // Si la ruta a la que vamos NO es el detalle de un post...
+  if (!to.path.includes('/post/')) {
+    // Forzamos a que el menú y el degradado reaparezcan
+    setTimeout(() => {
+      try {
+        const tabBar = document.querySelector('ion-tab-bar.floating-tabs');
+        const tabGradient = document.querySelector('.tabs-gradient-mask');
+        
+        if (tabBar) tabBar.style.display = 'flex';
+        if (tabGradient) tabGradient.style.display = 'block';
+      } catch (e) {
+        console.warn('Error al restaurar menú', e);
+      }
+    }, 50);
+  }
+});
 
 // ÚNICO LUGAR DE CONTROL
 useBackButton(10, (processNextHandler) => {
@@ -53,9 +74,32 @@ const { startAutoSync } = useSyncQueue();
 
 onMounted(() => {
   initDarkMode();
-  // Solo iniciar sincronización si el usuario está autenticado
+  
   if (AuthService.isAuthenticated()) {
     startAutoSync();
   }
+
+  // ✨ NUEVO: CONFIGURACIÓN DEL TECLADO ✨
+  if (window.Capacitor?.isNativePlatform()) {
+    // Evita que el teclado empuje toda la pantalla hacia arriba
+    Keyboard.setResizeMode({ mode: KeyboardResize.Ionic });
+    // Opcional: Esto ayuda en iOS a tener una mejor experiencia
+    Keyboard.setScroll({ isDisabled: true }); 
+  }
 });
 </script>
+
+<style scoped>
+ion-input, 
+ion-textarea, 
+ion-searchbar {
+    caret-color: var(--ion-text-color) !important;
+}
+
+/* Rompemos el Shadow DOM para asegurar que afecte al campo nativo por dentro */
+ion-input::part(native),
+ion-textarea::part(native),
+ion-searchbar::part(search-input) {
+    caret-color: var(--ion-text-color) !important;
+}
+</style>

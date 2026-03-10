@@ -34,19 +34,10 @@
 
         <ion-item>
           <div slot="start" class="icon-box bg-blue">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
-              class="icon icon-tabler icons-tabler-outline icon-tabler-background">
-              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-              <path d="M4 8l4 -4" />
-              <path d="M14 4l-10 10" />
-              <path d="M4 20l16 -16" />
-              <path d="M20 10l-10 10" />
-              <path d="M20 16l-4 4" />
-            </svg>
+           <Blur color="currentColor" />
           </div>
           <ion-label>
-            <h2>Modo Ambiente</h2>
+            <h2>Modo Ambiente - BETA</h2>
             <p>Colores dinámicos basados en fotos (usalo si tu celular es gama alta)</p>
           </ion-label>
           <ion-toggle slot="end" mode="ios" :checked="isAmbientMode" @ionChange="toggleAmbientMode"></ion-toggle>
@@ -125,6 +116,7 @@ import { AuthService } from "@/services/auth";
 import { ref, onMounted } from 'vue'; // Importamos onMounted
 import { App } from '@capacitor/app';
 import { useAmbientMode } from "@/utils/useAmbientMode";
+import { Blur } from '@boxicons/vue';
 
 const appVersion = ref('0.0.0'); // Puedes poner la versión actual de tu build
 const appBuild = ref('0000000');

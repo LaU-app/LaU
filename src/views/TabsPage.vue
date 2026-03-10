@@ -69,6 +69,8 @@ import {
   IonRouterOutlet,
   IonBadge,
   IonAvatar,
+  onIonViewWillEnter,
+  onIonViewWillLeave
 } from "@ionic/vue";
 import { peopleSharp, personCircle } from "ionicons/icons";
 import { ref, onMounted, onUnmounted } from "vue";
@@ -159,6 +161,7 @@ const openUsers = () => {
 const openNotifications = () => {
   router.push("/notifications");
 };
+
 </script>
 
 <style scoped>

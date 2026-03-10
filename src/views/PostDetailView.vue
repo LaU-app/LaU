@@ -7,7 +7,30 @@
                         <ion-icon :icon="arrowBack" slot="icon-only"></ion-icon>
                     </ion-button>
                 </ion-buttons>
-                <ion-title>Detalle de Publicación</ion-title>
+                <!-- <ion-title>Detalle de Publicación</ion-title> -->
+
+                <ion-title>
+                    <div class="header-title-container">
+                        <transition name="slide-fade">
+                            <div v-if="!showUserInHeader" class="header-default-title">
+                                Detalle de Publicación
+                            </div>
+
+                            <div v-else class="header-user-info">
+                                <ion-avatar class="header-avatar">
+                                    <img v-if="post?.user?.imagen_url" :src="getFullImageUrl(post.user.imagen_url)" 
+                                        :alt="post?.user?.name" @error="handleImageError" />
+                                    <ion-icon v-else :icon="personCircle"></ion-icon>
+                                </ion-avatar>
+                                <div class="header-user-text">
+                                    <span class="header-name">{{ post?.user?.name || 'Usuario' }}</span>
+                                    <span class="header-username">{{ post?.user?.username || 'username' }}</span>
+                                </div>
+                            </div>
+                        </transition>
+                    </div>
+                </ion-title>
+
                 <ion-buttons slot="end" v-if="isMyPost">
                     <ion-button @click="confirmDelete" color="danger">
                         <ion-icon :icon="trashOutline" slot="icon-only"></ion-icon>
@@ -16,7 +39,7 @@
             </ion-toolbar>
         </ion-header>
 
-        <ion-content :fullscreen="true" ref="ionContentRef">
+        <ion-content :fullscreen="true" ref="ionContentRef" :scroll-events="true" @ionScroll="handleScroll">
             <div v-if="loading" class="loading-container">
                 <ion-spinner name="crescent"></ion-spinner>
                 <p>Cargando publicación...</p>
@@ -57,9 +80,10 @@
                                 post.texto }}</p>
                         </ion-text>
 
-                        <div v-if="post.tipo === 'imagen' && post.imagen_url" class="post-media">
+                        <div v-if="post.tipo === 'imagen' && post.imagen_url" class="post-media"
+                            @click.stop="openImageModal">
                             <ion-img :src="getFullImageUrl(post.imagen_url)" :alt="post.titulo || 'Post'"
-                                @ionError="handleImageError">
+                                @ionError="handleImageError" class="post-media">
                             </ion-img>
                         </div>
 
@@ -108,7 +132,8 @@
                             </ion-text>
                         </div>
 
-                        <div class="comment-input-container">
+
+                        <!-- <div class="comment-input-container">
                             <div v-if="replyingToComment" class="replying-indicator">
                                 <ion-text color="medium">
                                     <small>Respondiendo a <b>{{ replyingToComment.user?.name }}</b></small>
@@ -136,16 +161,70 @@
                                     <ion-icon :icon="send"></ion-icon>
                                 </ion-button>
                             </div>
-                        </div>
+                        </div> -->
+
+
                     </ion-card-content>
                 </ion-card>
             </div>
+
+            <FullScreenImageViewer 
+                v-if="post" 
+                :is-open="isImageModalOpen"
+                :image-url="getFullImageUrl(post.imagen_url)"
+                :is-ambient-mode="isAmbientMode"
+                @close="isImageModalOpen = false"
+            />
         </ion-content>
+
+        <ion-footer class="ion-no-border transparent-footer">
+            <div class="input-gradient-mask"></div>
+
+            <div class="floating-comment-bar">
+                <div v-if="replyingToComment" class="replying-indicator">
+                    <ion-text color="medium">
+                        <small>Respondiendo a <b>{{ replyingToComment.user?.name }}</b></small>
+                    </ion-text>
+                    <ion-button fill="clear" size="small" @click="cancelReply">
+                        <ion-icon slot="icon-only" :icon="closeCircle"></ion-icon>
+                    </ion-button>
+                </div>
+
+                <div class="input-row">
+                    <ion-avatar class="current-user-avatar">
+                        <img v-if="currentUser?.imagen_url" :src="getFullImageUrl(currentUser.imagen_url)"
+                            :alt="currentUser?.name || 'Tú'" loading="lazy" />
+                        <ion-icon v-else :icon="personCircle"></ion-icon>
+                    </ion-avatar>
+                    
+                    <div class="comment-input-wrapper">
+                        <ion-textarea ref="commentInputRef" v-model="newComment"
+                            :placeholder="replyingToComment ? 'Escribe tu respuesta...' : 'Escribe un comentario...'"
+                            class="comment-input auto-expand" 
+                            auto-grow="true"
+                            rows="1"
+                            @keyup.enter.exact="submitComment"> </ion-textarea>
+                        <div class="comment-input-line"></div>
+                    </div>
+
+                    <ion-button 
+                        fill="solid" 
+                        shape="round" 
+                        size="small" 
+                        color="primary"
+                        @click="submitComment" 
+                        :disabled="!newComment || newComment.trim() === ''" 
+                        class="send-comment-button">
+                        <ion-icon :icon="send"></ion-icon>
+                    </ion-button>
+                </div>
+            </div>
+        </ion-footer>
     </ion-page>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, nextTick } from 'vue'
+import { ref, onMounted, computed, nextTick, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
     IonPage,
@@ -160,13 +239,18 @@ import {
     IonText,
     IonImg,
     IonSpinner,
-    IonInput,
+    IonTextarea,
     IonCard,
     IonCardHeader,
     IonCardContent,
     IonCardTitle,
     toastController,
-    alertController
+    alertController,
+    IonModal,
+    createGesture,
+    IonFooter,
+    onIonViewWillEnter,
+    onIonViewWillLeave
 } from '@ionic/vue'
 import {
     arrowBack,
@@ -176,7 +260,8 @@ import {
     chatbubbleOutline,
     downloadOutline,
     trashOutline,
-    closeCircle
+    closeCircle,
+    closeOutline
 } from 'ionicons/icons'
 import MusicPlayer from '@/components/MusicPlayer.vue'
 import PostActions from '@/components/PostActions.vue'
@@ -191,6 +276,8 @@ import { CapacitorHttp } from '@capacitor/core';
 import { Capacitor } from '@capacitor/core';
 import { openNativeFile } from '@/services/FileService';
 import { getFullImageUrl } from '@/utils/imageUtils';
+import { useAmbientMode } from "@/utils/useAmbientMode";
+import FullScreenImageViewer from '@/components/FullScreenImageViewer.vue';
 
 const route = useRoute()
 const router = useRouter()
@@ -204,16 +291,75 @@ const ionContentRef = ref(null)
 const currentUser = ref(null)
 const replyingToComment = ref(null)
 
+// Variable para controlar qué mostrar en el header
+const showUserInHeader = ref(false);
+
+// Función que se ejecuta cada vez que el usuario hace scroll
+const handleScroll = (event) => {
+    // Obtenemos la posición actual del scroll
+    const scrollTop = event.detail.scrollTop;
+    
+    // 120 píxeles es aproximadamente donde la foto del usuario original desaparece.
+    // Puedes ajustar este número si notas que aparece muy rápido o muy lento.
+    if (scrollTop > 120) {
+        if (!showUserInHeader.value) showUserInHeader.value = true;
+    } else {
+        if (showUserInHeader.value) showUserInHeader.value = false;
+    }
+};
+
+const canSendComment = computed(() => (newComment.value ?? '').trim().length > 0)
+
+const { isAmbientMode } = useAmbientMode();
+
+// ==========================================
+// LÓGICA DEL VISOR DE IMÁGENES Y GESTOS
+// ==========================================
+const isImageModalOpen = ref(false);
+
 // Computed para verificar si el post es del usuario actual
 const isMyPost = computed(() => {
     if (!post.value || !currentUser.value) return false
     return post.value.user_id === currentUser.value.id || post.value.user?.id === currentUser.value.id
 })
+// ==========================================
+// OCULTAR TAB BAR GLOBAL AL ENTRAR A LA VISTA
+// ==========================================
+const hideTabBar = () => {
+    requestAnimationFrame(() => {
+        const tabBar = document.querySelector('ion-tab-bar.floating-tabs');
+        const tabGradient = document.querySelector('.tabs-gradient-mask');
+
+        if (tabBar) tabBar.classList.add('hide-tabs-animated');
+        if (tabGradient) tabGradient.classList.add('hide-tabs-animated');
+    });
+};
+
+const showTabBar = () => {
+    requestAnimationFrame(() => {
+        const tabBar = document.querySelector('ion-tab-bar.floating-tabs');
+        const tabGradient = document.querySelector('.tabs-gradient-mask');
+
+        if (tabBar) tabBar.classList.remove('hide-tabs-animated');
+        if (tabGradient) tabGradient.classList.remove('hide-tabs-animated');
+    });
+};
+
+// ==========================================
+// CONTROL DEL MENÚ CON EL CICLO DE VIDA DE IONIC
+// ==========================================
+onIonViewWillEnter(() => {
+    hideTabBar();
+});
+
+onIonViewWillLeave(() => {
+    showTabBar();
+});
 
 onMounted(async () => {
     currentUser.value = AuthService.getUser()
     await loadPost()
-})
+});
 
 const loadPost = async () => {
     loading.value = true
@@ -256,7 +402,15 @@ const loadPost = async () => {
 }
 
 const goBack = () => {
-    router.back()
+    showTabBar(); // 1. Forzamos mostrar el menú inmediatamente
+
+    // 2. Verificamos si hay historial previo para regresar
+    if (window.history.length > 2) {
+        router.back();
+    } else {
+        // Si recargó la página y no hay historial, lo mandamos al inicio
+        router.push('/tabs/tab1');
+    }
 }
 
 const handleImageError = (event) => {
@@ -350,6 +504,10 @@ const focusCommentInput = () => {
     // Ya no forzamos el focus - el teclado nativo se encargará cuando el usuario toque el input
 }
 
+const handleCommentInput = (event) => {
+    newComment.value = event?.detail?.value ?? ''
+}
+
 // Función recursiva para encontrar el comentario padre y añadir la respuesta
 const recursivelyAddReply = (commentsArray, parentId, newCommentObject) => {
     for (let i = 0; i < commentsArray.length; i++) {
@@ -375,7 +533,8 @@ const recursivelyAddReply = (commentsArray, parentId, newCommentObject) => {
 }
 
 const submitComment = async () => {
-    if (!newComment.value.trim()) return
+    const comentarioTexto = (newComment.value ?? '').trim()
+    if (!comentarioTexto) return
 
     if (!AuthService.isAuthenticated()) {
         const toast = await toastController.create({
@@ -389,7 +548,6 @@ const submitComment = async () => {
     }
 
     try {
-        const comentarioTexto = newComment.value.trim()
         const parentId = replyingToComment.value?.id || null
         const isReply = parentId !== null
 
@@ -543,11 +701,19 @@ const deletePost = async () => {
         await toast.present()
     }
 }
+
+const openImageModal = () => {
+    isImageModalOpen.value = true;
+};
 </script>
 
 <style scoped>
 @import '../theme/colors.css';
 @import '../theme/home.css';
+
+ion-tabs.layout-with-tabs ion-content {
+  --padding-bottom: 0px;
+}
 
 .loading-container,
 .error-container {
@@ -620,10 +786,12 @@ const deletePost = async () => {
 }
 
 .post-media {
-    width: 100%;
-    margin-top: 1rem;
-    border-radius: 8px;
-    overflow: hidden;
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center;
+    background: transparent;
+    /* max-height: calc(80vw * 16 / 9) !important; */
 }
 
 .post-media ion-img {
@@ -711,12 +879,6 @@ const deletePost = async () => {
     border-left: 3px solid var(--ion-color-primary);
 }
 
-.input-row {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
 .comment-input-container .current-user-avatar {
     width: 36px;
     height: 36px;
@@ -802,6 +964,24 @@ const deletePost = async () => {
     display: none;
 }
 
+.comment-input-wrapper ion-input,
+.comment-input-wrapper ion-textarea {
+    --highlight-color-focused: transparent !important;
+    --highlight-color-valid: transparent !important;
+    --highlight-color-invalid: transparent !important;
+    --highlight-height: 0 !important;
+}
+
+.comment-input-wrapper ion-input .input-highlight,
+.comment-input-wrapper ion-textarea .input-highlight {
+    display: none !important;
+}
+
+.comment-input-wrapper ion-input .input-bottom,
+.comment-input-wrapper ion-textarea .input-bottom {
+    display: none !important;
+}
+
 /* Estilos para el botón de enviar comentario */
 .send-comment-button {
     --padding-start: 10px;
@@ -880,22 +1060,343 @@ const deletePost = async () => {
     font-size: 0.8rem;
     color: var(--ion-color-medium);
 }
+
+/* fondo imagen total - imagen completa sin cortes - borde redondeado suave */
+/* --- VISOR DE IMAGEN A PANTALLA COMPLETA --- */
+ion-modal.image-viewer-modal {
+    --background: rgba(0, 0, 0, 0.95);
+    /* Fondo casi negro */
+}
+
+ion-modal.image-viewer-modal ion-content {
+    --background: #000 !important;
+}
+
+.modal-image-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.fullscreen-img {
+    max-width: 100vw;
+    max-height: 100vh;
+    object-fit: contain;
+    /* Evita que se recorte, igual que en el feed */
+    user-select: none;
+}
+
+.close-image-btn:hover {
+    opacity: 1;
+}
+
+.close-image-btn {
+    position: absolute;
+    top: calc(20px + env(safe-area-inset-top));
+    /* Respeta el notch del iPhone/Android */
+    right: 15px;
+    z-index: 100;
+
+    /* Diseño del botón redondo gris */
+    --background: rgba(100, 100, 100, 0.6);
+    --border-radius: 50%;
+    --padding-start: 0;
+    --padding-end: 0;
+    --border-color: 0.5px solid rgba(255, 255, 255, 0.3);
+
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    margin: 0;
+    transition: background 0.2s ease;
+}
+
+.close-image-btn ion-icon {
+    color: #ffffff !important;
+    font-size: 20px !important;
+}
+
+/* Efecto al tocarlo o pasar el mouse */
+.close-image-btn:hover,
+.close-image-btn:active {
+    --background: rgba(100, 100, 100, 0.9);
+}
+
+/* --- FONDO BLUR DEL MODAL --- */
+.modal-blur-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-size: cover;
+    background-position: center;
+    filter: blur(30px) saturate(1.5) brightness(0.5);
+    transform: scale(1.1);
+    z-index: 0;
+}
+
+/* --- AJUSTES DEL CONTENEDOR PARA EL BLUR --- */
+.modal-image-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Aseguramos que la foto nítida esté por encima del fondo blur */
+.fullscreen-img {
+    max-width: 100vw;
+    max-height: 100vh;
+    object-fit: contain;
+    user-select: none;
+    z-index: 2;
+    position: relative;
+}
+
+/* IMPORTANTE: El modal debe ser completamente transparente para ver el blur */
+ion-modal.image-viewer-modal {
+    --background: transparent;
+}
+
+ion-modal.image-viewer-modal ion-content {
+    --background: transparent;
+}
+
+
+
+/* --- ESTILOS DEL FOOTER FLOTANTE TIPO TABS --- */
+
+/* Hacemos que el footer nativo de Ionic no tenga fondo ni sombra */
+.transparent-footer {
+    background: transparent !important;
+}
+
+/* El degradado que difumina el contenido detrás de la barra */
+.input-gradient-mask {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(10px + 40px + 30px + env(safe-area-inset-bottom));
+    /* Altura suficiente para difuminar */
+    background: linear-gradient(to top,
+            var(--ion-background-color) 0%,
+            rgba(var(--ion-background-color-rgb), 0.5) 50%,
+            transparent 100%);
+    pointer-events: none;
+    /* Que no bloquee los clics atrás */
+    z-index: 1;
+}
+
+/* La barra de comentarios en sí, con diseño tipo píldora flotante */
+.floating-comment-bar {
+    position: relative;
+    z-index: 2; 
+    margin: 0 15px calc(10px + env(safe-area-inset-bottom)) 15px;
+    padding: 8px 15px;
+    border-radius: 30px;
+    
+    /* CAMBIO AQUÍ: Cambia 'height' fijo por 'min-height' y 'height: auto' */
+    min-height: 65px;
+    height: auto;
+    
+    border: 1px solid #b2b2b221;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    background: var(--ion-card-background); 
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px); 
+    
+    /* Asegurarnos de que el contenido se alinee hacia abajo */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+/* Limitamos cuánto puede crecer el textarea antes de hacer scroll interno */
+/* .comment-input.auto-expand {
+    max-height: 120px; 
+    overflow-y: auto;
+    --padding-start: 5px;
+    --padding-end: 5px;
+    --padding-top: 8px;
+    --padding-bottom: 8px;
+} */
+
+.comment-input.auto-expand {
+    max-height: 120px;
+    overflow-y: auto;
+    
+    /* ¡AQUÍ ESTÁ LA MAGIA! Aumenta estos valores (12px o 15px suelen verse muy bien) */
+    --padding-start: 15px; 
+    --padding-end: 15px;
+    
+    /* Mantenemos el padding superior e inferior */
+    --padding-top: 8px;
+    --padding-bottom: 8px;
+}
+
+/* Opcional: Centrar verticalmente los elementos de la fila inferior */
+.input-row {
+    display: flex;
+    align-items: flex-end; /* Mantiene el avatar y botón abajo mientras el textarea crece */
+    gap: 0.75rem;
+    padding-bottom: 4px; /* Un poco de respiro al crecer */
+}
+
+.current-user-avatar {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+}
+
+.current-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.current-user-avatar ion-icon {
+    width: 100%;
+    height: 100%;
+    font-size: 36px;
+}
+
+.comment-input-wrapper {
+    flex: 1;
+}
+
+/* Hacemos el input invisible para que se funda con la barra pill */
+.comment-input {
+    --background: transparent;
+    /* Transparente para usar el fondo de la barra */
+    --padding-start: 5px;
+    --padding-end: 5px;
+    --padding-top: 8px;
+    --padding-bottom: 8px;
+    min-height: 40px;
+    font-size: 0.95rem;
+}
+
+/* Quitamos la sombra y bordes que trae ionic nativo */
+.comment-input::part(native) {
+    background: transparent !important;
+    border: none !important;
+}
+
+.send-comment-button {
+    --padding-start: 8px;
+    --padding-end: 8px;
+    margin: 0;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    --border-radius: 50%;
+}
+
+.replying-indicator {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--ion-color-light);
+    padding: 0.2rem 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 20px;
+    border-left: none;
+    /* Quitamos la raya lateral para que se vea más limpio */
+    font-size: 0.85rem;
+}
+
+
+/* --- ESTILOS DEL HEADER DINÁMICO --- */
+.header-title-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    min-height: 40px; /* Asegura que el contenedor tenga altura */
+}
+
+.header-default-title {
+    position: absolute;
+    width: 100%;
+}
+
+.header-user-info {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.header-avatar {
+    width: 32px;
+    height: 32px;
+}
+
+.header-user-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: left;
+}
+
+.header-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--ion-color-dark);
+}
+
+.header-username {
+    font-size: 0.75rem;
+    color: var(--ion-color-medium);
+    line-height: 1.1;
+}
+
+/* --- ANIMACIÓN SLIDE-FADE --- */
+/* Estado activo de la transición (velocidad y curva) */
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Estado inicial al ENTRAR y final al SALIR */
+.slide-fade-enter-from {
+    opacity: 0;
+    transform: translateX(-20px); /* Entra desde la izquierda */
+}
+
+.slide-fade-leave-to {
+    opacity: 0;
+    transform: translateX(20px); /* Sale hacia la derecha */
+}
 </style>
 
 <style>
 /* Estilos globales */
-.comment-input-wrapper ion-input {
+.comment-input-wrapper ion-textarea {
     --highlight-color-focused: transparent !important;
     --highlight-color-valid: transparent !important;
     --highlight-color-invalid: transparent !important;
     --highlight-height: 0 !important;
 }
 
-.comment-input-wrapper ion-input .input-highlight {
+.comment-input-wrapper ion-textarea .input-highlight {
     display: none !important;
 }
 
-.comment-input-wrapper ion-input .input-bottom {
+.comment-input-wrapper ion-textarea .input-bottom {
     display: none !important;
 }
 
