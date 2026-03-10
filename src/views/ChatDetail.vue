@@ -334,8 +334,36 @@ const handleTyping = () => { const now = Date.now(); if (now - lastTypingTime > 
 const isMe = (fromId) => String(fromId) === String(myId.value);
 const formatDate = (d) => d ? new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
 
-onMounted(async () => { const user = AuthService.getUser(); if (user) { myId.value = user.id; subscribe(); } await loadData(); });
-onUnmounted(() => unsubscribe());
+onMounted(async () => { 
+  const user = AuthService.getUser(); 
+  if (user) { 
+    myId.value = user.id; 
+    subscribe(); 
+  } 
+  await loadData(); 
+  
+  // Listener para notificaciones push de mensajes recibidos
+  window.addEventListener('pushNotificationReceived', handlePushNotification);
+});
+
+onUnmounted(() => {
+  unsubscribe();
+  window.removeEventListener('pushNotificationReceived', handlePushNotification);
+});
+
+// Manejar notificación push de mensaje nuevo
+const handlePushNotification = (event) => {
+  const notification = event.detail;
+  const data = notification.data || {};
+  
+  // Si la notificación es de un mensaje y es del usuario actual del chat
+  if ((data.type === 'message' || data.type === 'chat') && 
+      String(data.chat_user_id) === String(userId)) {
+    console.log('Nuevo mensaje recibido en el chat actual');
+    // Recargar mensajes
+    loadData();
+  }
+};
 </script>
 
 <style scoped>

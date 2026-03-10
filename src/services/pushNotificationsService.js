@@ -72,7 +72,7 @@ class PushNotificationsService {
                 extra: notification.data,
                 // Asegúrate de tener un icono 'push_icon.png' en
                 // android/app/src/main/res/drawable-XXXX/
-                smallIcon: "res://push_icon", 
+                smallIcon: "res://push_icon",
               },
             ],
           });
@@ -89,9 +89,9 @@ class PushNotificationsService {
               data: notification.data,
               id: notification.id,
             },
-          })
+          }),
         );
-      }
+      },
     );
 
     // Listener para cuando el usuario hace tap en una notificación
@@ -102,7 +102,7 @@ class PushNotificationsService {
 
         // Manejar la navegación según el tipo de notificación
         this.handleNotificationAction(notification);
-      }
+      },
     );
   }
 
@@ -118,7 +118,9 @@ class PushNotificationsService {
         permStatus = await PushNotifications.requestPermissions();
       } else {
         // Si no tenemos permiso para preguntar, abortamos silenciosamente
-        throw new Error("Silently aborting: User hasn't granted permission via UI banner yet.");
+        throw new Error(
+          "Silently aborting: User hasn't granted permission via UI banner yet.",
+        );
       }
     }
 
@@ -195,9 +197,10 @@ class PushNotificationsService {
           postId: data?.post_id,
           userId: data?.user_id,
           notificationId: data?.notification_id,
+          chatUserId: data?.chat_user_id, // Nuevo: ID del usuario del chat
           actionId: notification.actionId,
         },
-      })
+      }),
     );
   }
 

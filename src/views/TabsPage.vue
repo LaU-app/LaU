@@ -72,7 +72,8 @@ import {
   onIonViewWillEnter,
   onIonViewWillLeave
 } from "@ionic/vue";
-import { peopleSharp, personCircle, chatbubbleEllipsesSharp } from "ionicons/icons"; import { ref, onMounted, onUnmounted } from "vue";
+import { peopleSharp, personCircle } from "ionicons/icons";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { AuthService } from "@/services/auth";
 import { notificationsService } from "@/services/notificationsService";

@@ -25,8 +25,11 @@
         </ion-button>
 
         <ion-button v-if="isAuthenticated" @click="goToChat" aria-label="Ir a Mensajes" fill="clear"
-          class="tasks-header-btn">
+          class="tasks-header-btn chat-button-wrapper">
           <ion-icon :icon="chatbubbleEllipsesSharp" class="header-icon"></ion-icon>
+          <ion-badge v-if="unreadChatCount > 0" color="danger" class="header-chat-badge">
+            {{ unreadChatCount > 99 ? "99+" : unreadChatCount }}
+          </ion-badge>
         </ion-button>
       </ion-buttons>
     </ion-toolbar>
@@ -40,12 +43,14 @@ import {
   IonButtons,
   IonButton,
   IonIcon,
-
+  IonBadge,
 } from "@ionic/vue";
-import { moon, sunny, logIn, chatbubbleEllipsesSharp } from "ionicons/icons"; import { ref, onMounted, onUnmounted } from "vue";
+import { moon, sunny, logIn, chatbubbleEllipsesSharp } from "ionicons/icons";
+import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
+import chatService from "@/services/chatService";
 
-defineProps({
+const props = defineProps({
   isDarkMode: {
     type: Boolean,
     required: true,
@@ -63,6 +68,71 @@ defineProps({
 defineEmits(["toggleDarkMode"]);
 
 const router = useRouter();
+
+// Estado del contador de mensajes no leídos
+const unreadChatCount = ref(0);
+let pollInterval = null;
+
+// Cargar contador de mensajes no leídos
+const loadUnreadChatCount = async () => {
+  try {
+    const response = await chatService.getUnreadCount();
+    if (response.success) {
+      unreadChatCount.value = response.count;
+    }
+  } catch (error) {
+    // Silencioso - el error ya se maneja en chatService
+    // El contador permanecerá en 0 hasta que el backend esté listo
+  }
+};
+
+// Manejar notificación push de mensaje recibido
+const handlePushNotification = (event) => {
+  const notification = event.detail;
+  const data = notification.data || {};
+  
+  // Si es un mensaje de chat, actualizar contador
+  if (data.type === 'message' || data.type === 'chat') {
+    loadUnreadChatCount();
+  }
+};
+
+// Iniciar/detener polling según autenticación
+const startPolling = () => {
+  if (pollInterval) return;
+  
+  loadUnreadChatCount();
+  pollInterval = setInterval(() => {
+    loadUnreadChatCount();
+  }, 30000); // Cada 30 segundos
+};
+
+const stopPolling = () => {
+  if (pollInterval) {
+    clearInterval(pollInterval);
+    pollInterval = null;
+  }
+  unreadChatCount.value = 0;
+};
+
+onMounted(() => {
+  // Listener para notificaciones push en tiempo real
+  window.addEventListener('pushNotificationReceived', handlePushNotification);
+});
+
+onUnmounted(() => {
+  stopPolling();
+  window.removeEventListener('pushNotificationReceived', handlePushNotification);
+});
+
+// Observar cambios en isAuthenticated para iniciar/detener polling
+watch(() => props.isAuthenticated, (newValue) => {
+  if (newValue) {
+    startPolling();
+  } else {
+    stopPolling();
+  }
+}, { immediate: true });
 
 const goToLogin = () => {
   router.push("/login");
@@ -101,6 +171,28 @@ const goToChat = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.chat-button-wrapper {
+  position: relative;
+}
+
+.header-chat-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 14px;
+  height: 14px;
+  font-size: 8px;
+  font-weight: 600;
+  padding: 0 3px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  z-index: 10;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .header-hourglass svg {
