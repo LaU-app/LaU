@@ -57,7 +57,8 @@
                                 post.texto }}</p>
                         </ion-text>
 
-                        <div v-if="post.tipo === 'imagen' && post.imagen_url" class="post-media" @click.stop="openImageModal">
+                        <div v-if="post.tipo === 'imagen' && post.imagen_url" class="post-media"
+                            @click.stop="openImageModal">
                             <ion-img :src="getFullImageUrl(post.imagen_url)" :alt="post.titulo || 'Post'"
                                 @ionError="handleImageError" class="post-media">
                             </ion-img>
@@ -144,16 +145,19 @@
                 </ion-card>
             </div>
 
-            <ion-modal :is-open="isImageModalOpen" @didDismiss="closeImageModal" @didPresent="initGesture" class="image-viewer-modal">
+            <ion-modal :is-open="isImageModalOpen" @didDismiss="closeImageModal" @didPresent="initGesture"
+                class="image-viewer-modal">
                 <ion-content>
                     <div class="modal-image-container">
-                        <div v-if="isAmbientMode" class="modal-blur-bg" :style="{ backgroundImage: `url(${getFullImageUrl(post.imagen_url)})` }"></div>
+                        <div v-if="isAmbientMode" class="modal-blur-bg"
+                            :style="{ backgroundImage: `url(${getFullImageUrl(post.imagen_url)})` }"></div>
 
                         <ion-button class="close-image-btn" @click.stop="closeImageModal">
                             <ion-icon :icon="closeOutline" slot="icon-only"></ion-icon>
                         </ion-button>
 
-                        <img ref="draggableImage" :src="getFullImageUrl(post.imagen_url)" class="fullscreen-img" @click.stop />
+                        <img ref="draggableImage" :src="getFullImageUrl(post.imagen_url)" class="fullscreen-img"
+                            @click.stop />
                     </div>
                 </ion-content>
             </ion-modal>
@@ -178,23 +182,17 @@
                             :alt="currentUser?.name || 'Tú'" loading="lazy" />
                         <ion-icon v-else :icon="personCircle"></ion-icon>
                     </ion-avatar>
-                    
+
                     <div class="comment-input-wrapper">
-                        <ion-input ref="commentInputRef" v-model="newComment"
+                        <ion-textarea ref="commentInputRef" :value="newComment" @ionInput="handleCommentInput"
                             :placeholder="replyingToComment ? 'Escribe tu respuesta...' : 'Escribe un comentario...'"
-                            class="comment-input" @keyup.enter="submitComment">
-                        </ion-input>
+                            class="comment-input" auto-grow="true" rows="1">
+                        </ion-textarea>
                         <div class="comment-input-line"></div>
                     </div>
 
-                    <ion-button 
-                        fill="solid" 
-                        shape="round" 
-                        size="small" 
-                        color="primary"
-                        @click="submitComment" 
-                        :disabled="!newComment || newComment.trim() === ''" 
-                        class="send-comment-button">
+                    <ion-button fill="solid" shape="round" size="small" color="primary" @click="submitComment"
+                        :disabled="!canSendComment" class="send-comment-button">
                         <ion-icon :icon="send"></ion-icon>
                     </ion-button>
                 </div>
@@ -219,7 +217,7 @@ import {
     IonText,
     IonImg,
     IonSpinner,
-    IonInput,
+    IonTextarea,
     IonCard,
     IonCardHeader,
     IonCardContent,
@@ -229,7 +227,7 @@ import {
     IonModal,
     createGesture,
     IonFooter,
-    onIonViewWillEnter, 
+    onIonViewWillEnter,
     onIonViewWillLeave
 } from '@ionic/vue'
 import {
@@ -270,13 +268,15 @@ const ionContentRef = ref(null)
 const currentUser = ref(null)
 const replyingToComment = ref(null)
 
+const canSendComment = computed(() => (newComment.value ?? '').trim().length > 0)
+
 const { isAmbientMode } = useAmbientMode();
 
 // ==========================================
 // LÓGICA DEL VISOR DE IMÁGENES Y GESTOS
 // ==========================================
 const isImageModalOpen = ref(false);
-const draggableImage = ref(null); 
+const draggableImage = ref(null);
 let gesture = null;
 
 // Computed para verificar si el post es del usuario actual
@@ -365,7 +365,7 @@ const loadPost = async () => {
 
 const goBack = () => {
     showTabBar(); // 1. Forzamos mostrar el menú inmediatamente
-    
+
     // 2. Verificamos si hay historial previo para regresar
     if (window.history.length > 2) {
         router.back();
@@ -466,6 +466,10 @@ const focusCommentInput = () => {
     // Ya no forzamos el focus - el teclado nativo se encargará cuando el usuario toque el input
 }
 
+const handleCommentInput = (event) => {
+    newComment.value = event?.detail?.value ?? ''
+}
+
 // Función recursiva para encontrar el comentario padre y añadir la respuesta
 const recursivelyAddReply = (commentsArray, parentId, newCommentObject) => {
     for (let i = 0; i < commentsArray.length; i++) {
@@ -491,7 +495,8 @@ const recursivelyAddReply = (commentsArray, parentId, newCommentObject) => {
 }
 
 const submitComment = async () => {
-    if (!newComment.value.trim()) return
+    const comentarioTexto = (newComment.value ?? '').trim()
+    if (!comentarioTexto) return
 
     if (!AuthService.isAuthenticated()) {
         const toast = await toastController.create({
@@ -505,7 +510,6 @@ const submitComment = async () => {
     }
 
     try {
-        const comentarioTexto = newComment.value.trim()
         const parentId = replyingToComment.value?.id || null
         const isReply = parentId !== null
 
@@ -666,7 +670,7 @@ const openImageModal = () => {
 
 const closeImageModal = () => {
     isImageModalOpen.value = false;
-    
+
     if (gesture) {
         gesture.destroy();
         gesture = null;
@@ -687,31 +691,31 @@ const initGesture = () => {
         el: draggableImage.value,
         gestureName: 'swipe-to-close',
         direction: 'y',
-        
+
         onStart: () => {
             draggableImage.value.style.transition = 'none';
         },
-        
+
         onMove: (detail) => {
             draggableImage.value.style.transform = `translateY(${detail.deltaY}px)`;
         },
-        
+
         onEnd: (detail) => {
             draggableImage.value.style.transition = 'transform 0.3s ease-out';
-            
+
             if (Math.abs(detail.deltaY) > 150) {
                 const direccion = detail.deltaY > 0 ? 1 : -1;
                 draggableImage.value.style.transform = `translateY(${direccion * 100}vh)`;
-                
+
                 setTimeout(() => {
                     closeImageModal();
-                }, 200); 
+                }, 200);
             } else {
                 draggableImage.value.style.transform = `translateY(0px)`;
             }
         }
     });
-    
+
     gesture.enable(true);
 };
 </script>
@@ -1055,9 +1059,10 @@ const initGesture = () => {
 }
 
 /* fondo imagen total - imagen completa sin cortes - borde redondeado suave */
- /* --- VISOR DE IMAGEN A PANTALLA COMPLETA --- */
+/* --- VISOR DE IMAGEN A PANTALLA COMPLETA --- */
 ion-modal.image-viewer-modal {
-    --background: rgba(0, 0, 0, 0.95); /* Fondo casi negro */
+    --background: rgba(0, 0, 0, 0.95);
+    /* Fondo casi negro */
 }
 
 ion-modal.image-viewer-modal ion-content {
@@ -1076,7 +1081,8 @@ ion-modal.image-viewer-modal ion-content {
 .fullscreen-img {
     max-width: 100vw;
     max-height: 100vh;
-    object-fit: contain; /* Evita que se recorte, igual que en el feed */
+    object-fit: contain;
+    /* Evita que se recorte, igual que en el feed */
     user-select: none;
 }
 
@@ -1086,17 +1092,18 @@ ion-modal.image-viewer-modal ion-content {
 
 .close-image-btn {
     position: absolute;
-    top: calc(20px + env(safe-area-inset-top)); /* Respeta el notch del iPhone/Android */
+    top: calc(20px + env(safe-area-inset-top));
+    /* Respeta el notch del iPhone/Android */
     right: 15px;
     z-index: 100;
 
     /* Diseño del botón redondo gris */
-    --background: rgba(100, 100, 100, 0.6); 
-    --border-radius: 50%; 
+    --background: rgba(100, 100, 100, 0.6);
+    --border-radius: 50%;
     --padding-start: 0;
     --padding-end: 0;
     --border-color: 0.5px solid rgba(255, 255, 255, 0.3);
-    
+
     width: 32px;
     height: 32px;
     min-width: 32px;
@@ -1106,7 +1113,7 @@ ion-modal.image-viewer-modal ion-content {
 }
 
 .close-image-btn ion-icon {
-    color: #ffffff !important; 
+    color: #ffffff !important;
     font-size: 20px !important;
 }
 
@@ -1119,13 +1126,13 @@ ion-modal.image-viewer-modal ion-content {
 /* --- FONDO BLUR DEL MODAL --- */
 .modal-blur-bg {
     position: absolute;
-    top: 0; 
-    left: 0; 
-    right: 0; 
+    top: 0;
+    left: 0;
+    right: 0;
     bottom: 0;
     background-size: cover;
     background-position: center;
-    filter: blur(30px) saturate(1.5) brightness(0.5); 
+    filter: blur(30px) saturate(1.5) brightness(0.5);
     transform: scale(1.1);
     z-index: 0;
 }
@@ -1138,7 +1145,7 @@ ion-modal.image-viewer-modal ion-content {
     width: 100%;
     height: 100%;
     position: relative;
-    overflow: hidden; 
+    overflow: hidden;
 }
 
 /* Aseguramos que la foto nítida esté por encima del fondo blur */
@@ -1147,7 +1154,7 @@ ion-modal.image-viewer-modal ion-content {
     max-height: 100vh;
     object-fit: contain;
     user-select: none;
-    z-index: 2; 
+    z-index: 2;
     position: relative;
 }
 
@@ -1175,34 +1182,37 @@ ion-modal.image-viewer-modal ion-content {
     bottom: 0;
     left: 0;
     right: 0;
-    height: calc(10px + 40px + 30px + env(safe-area-inset-bottom)); /* Altura suficiente para difuminar */
-    background: linear-gradient(
-        to top,
-        var(--ion-background-color) 0%,
-        rgba(var(--ion-background-color-rgb), 0.5) 50%,
-        transparent 100%
-    );
-    pointer-events: none; /* Que no bloquee los clics atrás */
+    height: calc(10px + 40px + 30px + env(safe-area-inset-bottom));
+    /* Altura suficiente para difuminar */
+    background: linear-gradient(to top,
+            var(--ion-background-color) 0%,
+            rgba(var(--ion-background-color-rgb), 0.5) 50%,
+            transparent 100%);
+    pointer-events: none;
+    /* Que no bloquee los clics atrás */
     z-index: 1;
 }
 
 /* La barra de comentarios en sí, con diseño tipo píldora flotante */
 .floating-comment-bar {
     position: relative;
-    z-index: 2; /* Por encima del degradado */
-    
+    z-index: 2;
+    /* Por encima del degradado */
+
     /* Mismos márgenes y bordes que los Tabs */
     margin: 0 15px calc(10px + env(safe-area-inset-bottom)) 15px;
     padding: 8px 15px;
     border-radius: 30px;
     height: 65px;
     border: 1px solid #b2b2b221;
-    
+
     /* Mismo efecto de cristal que los Tabs */
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-    background: var(--ion-card-background); /* Fondo sólido sutil */
+    background: var(--ion-card-background);
+    /* Fondo sólido sutil */
     backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px); /* Para iOS */
+    -webkit-backdrop-filter: blur(10px);
+    /* Para iOS */
 }
 
 .current-user-avatar {
@@ -1230,7 +1240,8 @@ ion-modal.image-viewer-modal ion-content {
 
 /* Hacemos el input invisible para que se funda con la barra pill */
 .comment-input {
-    --background: transparent; /* Transparente para usar el fondo de la barra */
+    --background: transparent;
+    /* Transparente para usar el fondo de la barra */
     --padding-start: 5px;
     --padding-end: 5px;
     --padding-top: 8px;
@@ -1263,25 +1274,26 @@ ion-modal.image-viewer-modal ion-content {
     padding: 0.2rem 1rem;
     margin-bottom: 0.5rem;
     border-radius: 20px;
-    border-left: none; /* Quitamos la raya lateral para que se vea más limpio */
+    border-left: none;
+    /* Quitamos la raya lateral para que se vea más limpio */
     font-size: 0.85rem;
 }
 </style>
 
 <style>
 /* Estilos globales */
-.comment-input-wrapper ion-input {
+.comment-input-wrapper ion-textarea {
     --highlight-color-focused: transparent !important;
     --highlight-color-valid: transparent !important;
     --highlight-color-invalid: transparent !important;
     --highlight-height: 0 !important;
 }
 
-.comment-input-wrapper ion-input .input-highlight {
+.comment-input-wrapper ion-textarea .input-highlight {
     display: none !important;
 }
 
-.comment-input-wrapper ion-input .input-bottom {
+.comment-input-wrapper ion-textarea .input-bottom {
     display: none !important;
 }
 
