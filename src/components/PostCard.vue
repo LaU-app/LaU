@@ -89,7 +89,7 @@
             <PostActions :post="post" @like="handleLike" @comment="handleComment" />
         </ion-card-content>
 
-        <ion-modal :is-open="isImageModalOpen" @didDismiss="closeImageModal" @didPresent="initGesture" class="image-viewer-modal">
+        <!-- <ion-modal :is-open="isImageModalOpen" @didDismiss="closeImageModal" @didPresent="initGesture" class="image-viewer-modal">
             <ion-content>
                 <div class="modal-image-container" >
                     
@@ -103,7 +103,15 @@
 
                 </div>
             </ion-content>
-        </ion-modal>
+        </ion-modal> -->
+
+        <FullScreenImageViewer 
+            v-if="post" 
+            :is-open="isImageModalOpen"
+            :image-url="getFullImageUrl(post.imagen_url)"
+            :is-ambient-mode="isAmbientMode"
+            @close="isImageModalOpen = false"
+        />
 
     </ion-card>
 </template>
@@ -136,6 +144,7 @@ import { CapacitorHttp } from '@capacitor/core';
 import { Capacitor } from '@capacitor/core';
 import { openNativeFile } from '@/services/FileService';
 import { getFullImageUrl } from '@/utils/imageUtils';
+import FullScreenImageViewer from './FullScreenImageViewer.vue';
 
 
 export default {
@@ -152,7 +161,8 @@ export default {
         IonSpinner,
         MusicPlayer,
         PostActions,
-        IonModal
+        IonModal,
+        FullScreenImageViewer
     },
     props: {
         post: {

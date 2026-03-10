@@ -7,7 +7,30 @@
                         <ion-icon :icon="arrowBack" slot="icon-only"></ion-icon>
                     </ion-button>
                 </ion-buttons>
-                <ion-title>Detalle de Publicación</ion-title>
+                <!-- <ion-title>Detalle de Publicación</ion-title> -->
+
+                <ion-title>
+                    <div class="header-title-container">
+                        <transition name="slide-fade">
+                            <div v-if="!showUserInHeader" class="header-default-title">
+                                Detalle de Publicación
+                            </div>
+
+                            <div v-else class="header-user-info">
+                                <ion-avatar class="header-avatar">
+                                    <img v-if="post?.user?.imagen_url" :src="getFullImageUrl(post.user.imagen_url)" 
+                                        :alt="post?.user?.name" @error="handleImageError" />
+                                    <ion-icon v-else :icon="personCircle"></ion-icon>
+                                </ion-avatar>
+                                <div class="header-user-text">
+                                    <span class="header-name">{{ post?.user?.name || 'Usuario' }}</span>
+                                    <span class="header-username">{{ post?.user?.username || 'username' }}</span>
+                                </div>
+                            </div>
+                        </transition>
+                    </div>
+                </ion-title>
+
                 <ion-buttons slot="end" v-if="isMyPost">
                     <ion-button @click="confirmDelete" color="danger">
                         <ion-icon :icon="trashOutline" slot="icon-only"></ion-icon>
@@ -16,7 +39,7 @@
             </ion-toolbar>
         </ion-header>
 
-        <ion-content :fullscreen="true" ref="ionContentRef">
+        <ion-content :fullscreen="true" ref="ionContentRef" :scroll-events="true" @ionScroll="handleScroll">
             <div v-if="loading" class="loading-container">
                 <ion-spinner name="crescent"></ion-spinner>
                 <p>Cargando publicación...</p>
@@ -145,22 +168,13 @@
                 </ion-card>
             </div>
 
-            <ion-modal :is-open="isImageModalOpen" @didDismiss="closeImageModal" @didPresent="initGesture"
-                class="image-viewer-modal">
-                <ion-content>
-                    <div class="modal-image-container">
-                        <div v-if="isAmbientMode" class="modal-blur-bg"
-                            :style="{ backgroundImage: `url(${getFullImageUrl(post.imagen_url)})` }"></div>
-
-                        <ion-button class="close-image-btn" @click.stop="closeImageModal">
-                            <ion-icon :icon="closeOutline" slot="icon-only"></ion-icon>
-                        </ion-button>
-
-                        <img ref="draggableImage" :src="getFullImageUrl(post.imagen_url)" class="fullscreen-img"
-                            @click.stop />
-                    </div>
-                </ion-content>
-            </ion-modal>
+            <FullScreenImageViewer 
+                v-if="post" 
+                :is-open="isImageModalOpen"
+                :image-url="getFullImageUrl(post.imagen_url)"
+                :is-ambient-mode="isAmbientMode"
+                @close="isImageModalOpen = false"
+            />
         </ion-content>
 
         <ion-footer class="ion-no-border transparent-footer">
@@ -182,17 +196,25 @@
                             :alt="currentUser?.name || 'Tú'" loading="lazy" />
                         <ion-icon v-else :icon="personCircle"></ion-icon>
                     </ion-avatar>
-
+                    
                     <div class="comment-input-wrapper">
-                        <ion-textarea ref="commentInputRef" :value="newComment" @ionInput="handleCommentInput"
+                        <ion-textarea ref="commentInputRef" v-model="newComment"
                             :placeholder="replyingToComment ? 'Escribe tu respuesta...' : 'Escribe un comentario...'"
-                            class="comment-input" auto-grow="true" rows="1">
-                        </ion-textarea>
+                            class="comment-input auto-expand" 
+                            auto-grow="true"
+                            rows="1"
+                            @keyup.enter.exact="submitComment"> </ion-textarea>
                         <div class="comment-input-line"></div>
                     </div>
 
-                    <ion-button fill="solid" shape="round" size="small" color="primary" @click="submitComment"
-                        :disabled="!canSendComment" class="send-comment-button">
+                    <ion-button 
+                        fill="solid" 
+                        shape="round" 
+                        size="small" 
+                        color="primary"
+                        @click="submitComment" 
+                        :disabled="!newComment || newComment.trim() === ''" 
+                        class="send-comment-button">
                         <ion-icon :icon="send"></ion-icon>
                     </ion-button>
                 </div>
@@ -254,7 +276,8 @@ import { CapacitorHttp } from '@capacitor/core';
 import { Capacitor } from '@capacitor/core';
 import { openNativeFile } from '@/services/FileService';
 import { getFullImageUrl } from '@/utils/imageUtils';
-import { useAmbientMode } from "@/utils/useAmbientMode"
+import { useAmbientMode } from "@/utils/useAmbientMode";
+import FullScreenImageViewer from '@/components/FullScreenImageViewer.vue';
 
 const route = useRoute()
 const router = useRouter()
@@ -268,6 +291,23 @@ const ionContentRef = ref(null)
 const currentUser = ref(null)
 const replyingToComment = ref(null)
 
+// Variable para controlar qué mostrar en el header
+const showUserInHeader = ref(false);
+
+// Función que se ejecuta cada vez que el usuario hace scroll
+const handleScroll = (event) => {
+    // Obtenemos la posición actual del scroll
+    const scrollTop = event.detail.scrollTop;
+    
+    // 120 píxeles es aproximadamente donde la foto del usuario original desaparece.
+    // Puedes ajustar este número si notas que aparece muy rápido o muy lento.
+    if (scrollTop > 120) {
+        if (!showUserInHeader.value) showUserInHeader.value = true;
+    } else {
+        if (showUserInHeader.value) showUserInHeader.value = false;
+    }
+};
+
 const canSendComment = computed(() => (newComment.value ?? '').trim().length > 0)
 
 const { isAmbientMode } = useAmbientMode();
@@ -276,8 +316,6 @@ const { isAmbientMode } = useAmbientMode();
 // LÓGICA DEL VISOR DE IMÁGENES Y GESTOS
 // ==========================================
 const isImageModalOpen = ref(false);
-const draggableImage = ref(null);
-let gesture = null;
 
 // Computed para verificar si el post es del usuario actual
 const isMyPost = computed(() => {
@@ -667,62 +705,15 @@ const deletePost = async () => {
 const openImageModal = () => {
     isImageModalOpen.value = true;
 };
-
-const closeImageModal = () => {
-    isImageModalOpen.value = false;
-
-    if (gesture) {
-        gesture.destroy();
-        gesture = null;
-    }
-
-    setTimeout(() => {
-        if (draggableImage.value) {
-            draggableImage.value.style.transform = `translateY(0px)`;
-            draggableImage.value.style.transition = 'none';
-        }
-    }, 300);
-};
-
-const initGesture = () => {
-    if (!draggableImage.value) return;
-
-    gesture = createGesture({
-        el: draggableImage.value,
-        gestureName: 'swipe-to-close',
-        direction: 'y',
-
-        onStart: () => {
-            draggableImage.value.style.transition = 'none';
-        },
-
-        onMove: (detail) => {
-            draggableImage.value.style.transform = `translateY(${detail.deltaY}px)`;
-        },
-
-        onEnd: (detail) => {
-            draggableImage.value.style.transition = 'transform 0.3s ease-out';
-
-            if (Math.abs(detail.deltaY) > 150) {
-                const direccion = detail.deltaY > 0 ? 1 : -1;
-                draggableImage.value.style.transform = `translateY(${direccion * 100}vh)`;
-
-                setTimeout(() => {
-                    closeImageModal();
-                }, 200);
-            } else {
-                draggableImage.value.style.transform = `translateY(0px)`;
-            }
-        }
-    });
-
-    gesture.enable(true);
-};
 </script>
 
 <style scoped>
 @import '../theme/colors.css';
 @import '../theme/home.css';
+
+ion-tabs.layout-with-tabs ion-content {
+  --padding-bottom: 0px;
+}
 
 .loading-container,
 .error-container {
@@ -888,12 +879,6 @@ const initGesture = () => {
     border-left: 3px solid var(--ion-color-primary);
 }
 
-.input-row {
-    display: flex;
-    align-items: flex-end;
-    gap: 0.75rem;
-}
-
 .comment-input-container .current-user-avatar {
     width: 36px;
     height: 36px;
@@ -977,6 +962,24 @@ const initGesture = () => {
 
 .comment-input-wrapper:focus-within::after {
     display: none;
+}
+
+.comment-input-wrapper ion-input,
+.comment-input-wrapper ion-textarea {
+    --highlight-color-focused: transparent !important;
+    --highlight-color-valid: transparent !important;
+    --highlight-color-invalid: transparent !important;
+    --highlight-height: 0 !important;
+}
+
+.comment-input-wrapper ion-input .input-highlight,
+.comment-input-wrapper ion-textarea .input-highlight {
+    display: none !important;
+}
+
+.comment-input-wrapper ion-input .input-bottom,
+.comment-input-wrapper ion-textarea .input-bottom {
+    display: none !important;
 }
 
 /* Estilos para el botón de enviar comentario */
@@ -1196,23 +1199,56 @@ ion-modal.image-viewer-modal ion-content {
 /* La barra de comentarios en sí, con diseño tipo píldora flotante */
 .floating-comment-bar {
     position: relative;
-    z-index: 2;
-    /* Por encima del degradado */
-
-    /* Mismos márgenes y bordes que los Tabs */
+    z-index: 2; 
     margin: 0 15px calc(10px + env(safe-area-inset-bottom)) 15px;
     padding: 8px 15px;
     border-radius: 30px;
-    height: 65px;
+    
+    /* CAMBIO AQUÍ: Cambia 'height' fijo por 'min-height' y 'height: auto' */
+    min-height: 65px;
+    height: auto;
+    
     border: 1px solid #b2b2b221;
-
-    /* Mismo efecto de cristal que los Tabs */
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-    background: var(--ion-card-background);
-    /* Fondo sólido sutil */
+    background: var(--ion-card-background); 
     backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    /* Para iOS */
+    -webkit-backdrop-filter: blur(10px); 
+    
+    /* Asegurarnos de que el contenido se alinee hacia abajo */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+/* Limitamos cuánto puede crecer el textarea antes de hacer scroll interno */
+/* .comment-input.auto-expand {
+    max-height: 120px; 
+    overflow-y: auto;
+    --padding-start: 5px;
+    --padding-end: 5px;
+    --padding-top: 8px;
+    --padding-bottom: 8px;
+} */
+
+.comment-input.auto-expand {
+    max-height: 120px;
+    overflow-y: auto;
+    
+    /* ¡AQUÍ ESTÁ LA MAGIA! Aumenta estos valores (12px o 15px suelen verse muy bien) */
+    --padding-start: 15px; 
+    --padding-end: 15px;
+    
+    /* Mantenemos el padding superior e inferior */
+    --padding-top: 8px;
+    --padding-bottom: 8px;
+}
+
+/* Opcional: Centrar verticalmente los elementos de la fila inferior */
+.input-row {
+    display: flex;
+    align-items: flex-end; /* Mantiene el avatar y botón abajo mientras el textarea crece */
+    gap: 0.75rem;
+    padding-bottom: 4px; /* Un poco de respiro al crecer */
 }
 
 .current-user-avatar {
@@ -1277,6 +1313,73 @@ ion-modal.image-viewer-modal ion-content {
     border-left: none;
     /* Quitamos la raya lateral para que se vea más limpio */
     font-size: 0.85rem;
+}
+
+
+/* --- ESTILOS DEL HEADER DINÁMICO --- */
+.header-title-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    min-height: 40px; /* Asegura que el contenedor tenga altura */
+}
+
+.header-default-title {
+    position: absolute;
+    width: 100%;
+}
+
+.header-user-info {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.header-avatar {
+    width: 32px;
+    height: 32px;
+}
+
+.header-user-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: left;
+}
+
+.header-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--ion-color-dark);
+}
+
+.header-username {
+    font-size: 0.75rem;
+    color: var(--ion-color-medium);
+    line-height: 1.1;
+}
+
+/* --- ANIMACIÓN SLIDE-FADE --- */
+/* Estado activo de la transición (velocidad y curva) */
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Estado inicial al ENTRAR y final al SALIR */
+.slide-fade-enter-from {
+    opacity: 0;
+    transform: translateX(-20px); /* Entra desde la izquierda */
+}
+
+.slide-fade-leave-to {
+    opacity: 0;
+    transform: translateX(20px); /* Sale hacia la derecha */
 }
 </style>
 
