@@ -41,6 +41,8 @@ class PushNotificationsService {
       console.info("Push registration success, token:", token.value);
       this.currentToken = token.value;
 
+      localStorage.setItem('lau_push_enabled', 'true');
+
       // Enviar el token al backend
       await this.sendTokenToBackend(token.value);
     });
@@ -177,6 +179,9 @@ class PushNotificationsService {
       await PushNotifications.removeAllListeners();
       this.isInitialized = false;
       this.currentToken = null;
+
+      localStorage.setItem('lau_push_enabled', 'false');
+      
       console.log("Push notifications unregistered");
     } catch (error) {
       console.error("Error unregistering push notifications:", error);
