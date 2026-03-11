@@ -88,7 +88,9 @@ export default {
       isSharing.value = true;
 
       try {
-        const postUrl = `${window.location.origin}/tabs/post/${props.post.id}`;
+        // const postUrl = `${window.location.origin}/tabs/post/${props.post.id}`;
+
+        const postUrl = `https://lauapp-81f4d.web.app/tabs/post/${props.post.id}`;
 
         // Intentar usar Capacitor Share
         await Share.share({

@@ -86,7 +86,24 @@ onMounted(() => {
     // Opcional: Esto ayuda en iOS a tener una mejor experiencia
     Keyboard.setScroll({ isDisabled: true }); 
   }
+
+  // Escuchar cuando la app se abre desde un enlace externo
+    App.addListener('appUrlOpen', (event) => {
+        // Ejemplo de event.url: https://lauapp-81f4d.web.app/tabs/post/28
+        const urlDomain = 'https://lauapp-81f4d.web.app';
+        
+        if (event.url.includes(urlDomain)) {
+            // Extraemos solo la ruta (ej: /tabs/post/28)
+            const path = event.url.split(urlDomain).pop();
+            
+            if (path) {
+                // Le decimos a Vue Router que navegue a esa pantalla
+                router.push(path);
+            }
+        }
+    });
 });
+
 </script>
 
 <style scoped>

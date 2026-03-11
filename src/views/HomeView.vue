@@ -565,4 +565,9 @@ export default {
 :global(.ion-palette-dark .custom-alert .alert-button-group) {
     border-top-color: #374151;
 }
+
+.container {
+    width: 100% !important;
+    max-width: 100% !important;
+}
 </style>
