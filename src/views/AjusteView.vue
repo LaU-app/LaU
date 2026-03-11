@@ -34,7 +34,7 @@
 
         <ion-item>
           <div slot="start" class="icon-box bg-blue">
-           <Blur color="currentColor" />
+            <Blur color="currentColor" />
           </div>
           <ion-label>
             <h2>Modo Ambiente - BETA</h2>
@@ -51,7 +51,7 @@
             <ion-icon :icon="notificationsOutline"></ion-icon>
           </div>
           <ion-label>Notificaciones Push</ion-label>
-          <ion-toggle slot="end" mode="ios"></ion-toggle>
+          <ion-toggle slot="end" mode="ios" :checked="isPushEnabled" @ionChange="handlePushToggle"></ion-toggle>
         </ion-item>
       </ion-list>
 
@@ -100,10 +100,10 @@
 </template>
 
 <script setup>
-import {
-  IonPage, IonHeader, IonToolbar, IonTitle, IonContent,
-  IonList, IonItem, IonLabel, IonNote, IonIcon, IonToggle,
-  IonButtons, IonSearchbar, IonButton, alertController
+import { 
+  IonPage, IonHeader, IonToolbar, IonTitle, IonContent, 
+  IonList, IonItem, IonLabel, IonToggle, IonIcon, IonButtons, IonButton, IonSearchbar,
+  alertController
 } from '@ionic/vue';
 import {
   globeOutline, keyOutline, moonOutline, notificationsOutline, mailOutline,
@@ -117,9 +117,12 @@ import { ref, onMounted } from 'vue'; // Importamos onMounted
 import { App } from '@capacitor/app';
 import { useAmbientMode } from "@/utils/useAmbientMode";
 import { Blur } from '@boxicons/vue';
+import { pushNotificationsService } from '@/services/pushNotificationsService';
+import { PushNotifications } from '@capacitor/push-notifications';
 
 const appVersion = ref('0.0.0'); // Puedes poner la versión actual de tu build
 const appBuild = ref('0000000');
+const isPushEnabled = ref(false);
 
 onMounted(async () => {
   // Solo intentará obtener info si Capacitor está disponible (entorno nativo)
@@ -130,7 +133,116 @@ onMounted(async () => {
   } catch (error) {
     console.log("Modo navegador: Usando versión estática");
   }
+  //leer si el usuario tenía activadas las notificaciones
+  const savedPushState = localStorage.getItem('lau_push_enabled');
+  if (savedPushState === 'true') {
+    isPushEnabled.value = true;
+  }
+
+  // Preguntarle a Android si realmente tenemos permiso
+  const permStatus = await PushNotifications.checkPermissions();
+  const hasNativePermission = permStatus.receive === 'granted';
+  const hasLocalState = localStorage.getItem('lau_push_enabled') === 'true';
+
+  // Solo si Android dice que sí Y nosotros lo guardamos como true
+  if (hasNativePermission && hasLocalState) {
+    isPushEnabled.value = true;
+  } else {
+    isPushEnabled.value = false;
+    // Forzamos a que esté apagado por si hubo un error de sincronización
+    localStorage.setItem('lau_push_enabled', 'false'); 
+  }
+  
+  //Escuchar cuando la app pasa al fondo o regresa al primer plano
+  App.addListener('appStateChange', async ({ isActive }) => {
+    if (isActive) {
+      // El usuario acaba de regresar a LaU. Revisemos si cambió algo en los ajustes nativos.
+      const permStatus = await PushNotifications.checkPermissions();
+      
+      if (permStatus.receive === 'granted' && !isPushEnabled.value) {
+        // Si nos dio permiso allá y nuestro toggle estaba apagado, lo encendemos e inicializamos
+        await pushNotificationsService.initialize(true);
+        isPushEnabled.value = true;
+      } 
+      else if (permStatus.receive !== 'granted' && isPushEnabled.value) {
+        // Si por el contrario, fue a ajustes a quitarnos el permiso, apagamos y limpiamos
+        await pushNotificationsService.unregister();
+        isPushEnabled.value = false;
+      }
+    }
+  });
 });
+
+// lógica para manejar el cambio
+const handlePushToggle = async (event) => {
+  const isChecked = event.detail.checked;
+  
+  // Evitar bucles infinitos si el estado no ha cambiado
+  if (isChecked === isPushEnabled.value) return;
+
+  try {
+    if (isChecked) {
+      // === LÓGICA DE ACTIVACIÓN ===
+      
+      // Verificar estado actual en Android
+      let permStatus = await PushNotifications.checkPermissions();
+      
+      if (permStatus.receive === 'prompt') {
+        // Pedir permiso nativo si nunca se ha pedido
+        permStatus = await PushNotifications.requestPermissions();
+      }
+
+      if (permStatus.receive !== 'granted') {
+        // Si lo denegó (denied) o desactivó y trata de activarlo, lo mandamos a los Ajustes de Android
+        alert("Para recibir notificaciones, debes habilitarlas en los ajustes de tu teléfono.");
+        await App.openAppSettings();
+        
+        // Regresamos el toggle a apagado
+        isPushEnabled.value = false;
+        event.target.checked = false;
+        return;
+      }
+
+      // Si tiene permiso nativo, inicializamos
+      await pushNotificationsService.initialize(true);
+      isPushEnabled.value = true;
+
+    } else {
+      // === LÓGICA DE DESACTIVACIÓN CON CONFIRMACIÓN ===
+      
+      const alert = await alertController.create({
+        header: 'Desactivar Notificaciones',
+        message: '¿Estás seguro de que ya no quieres recibir notificaciones de LaU?',
+        buttons: [
+          {
+            text: 'Cancelar',
+            role: 'cancel',
+            handler: () => {
+              // Si el usuario cancela, devolvemos el toggle a "Encendido"
+              isPushEnabled.value = true;
+              event.target.checked = true;
+            }
+          },
+          {
+            text: 'Desactivar',
+            role: 'confirm',
+            handler: async () => {
+              // Si confirma, procedemos a destruir el token y limpiar todo
+              await pushNotificationsService.unregister();
+              isPushEnabled.value = false;
+            }
+          }
+        ]
+      });
+
+      await alert.present();
+    }
+  } catch (error) {
+    console.error("Error al procesar toggle:", error);
+    isPushEnabled.value = false;
+    event.target.checked = false;
+  }
+};
 
 const router = useRouter();
 const { isDarkMode, toggleDarkMode } = useDarkMode();
