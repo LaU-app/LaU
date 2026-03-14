@@ -23,6 +23,14 @@
                 d="M17 2a2 2 0 0 1 1.995 1.85l.005 .15v2a6.996 6.996 0 0 1 -3.393 6a6.994 6.994 0 0 1 3.388 5.728l.005 .272v2a2 2 0 0 1 -1.85 1.995l-.15 .005h-10a2 2 0 0 1 -1.995 -1.85l-.005 -.15v-2a6.996 6.996 0 0 1 3.393 -6a6.994 6.994 0 0 1 -3.388 -5.728l-.005 -.272v-2a2 2 0 0 1 1.85 -1.995l.15 -.005h10z" />
             </svg>
           </ion-button>
+          <ion-button v-if="!isMe" fill="clear" @click="openReportModal" aria-label="Reportar usuario">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"
+              class="header-icon">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path
+                d="M12 1.67c.955 0 1.845 .467 2.39 1.247l.105 .16l8.114 13.548a2.914 2.914 0 0 1 -2.307 4.363l-.195 .008h-16.225a2.914 2.914 0 0 1 -2.582 -4.2l.099 -.185l8.11 -13.538a2.914 2.914 0 0 1 2.491 -1.403zm.01 13.33l-.127 .007a1 1 0 0 0 0 1.986l.117 .007l.127 -.007a1 1 0 0 0 0 -1.986l-.117 -.007zm-.01 -7a1 1 0 0 0 -.993 .883l-.007 .117v4l.007 .117a1 1 0 0 0 1.986 0l.007 -.117v-4l-.007 -.117a1 1 0 0 0 -.993 -.883z" />
+            </svg>
+          </ion-button>
           <ion-button v-if="isMe" fill="clear" @click="goToSettings">
             <ion-icon :icon="ellipsisVertical" class="header-icon"></ion-icon>
           </ion-button>
@@ -451,6 +459,43 @@
         </ion-content>
       </ion-modal>
 
+      <!-- Modal Reportar Usuario -->
+      <ion-modal :is-open="showReportModal" @didDismiss="closeReportModal">
+        <ion-header>
+          <ion-toolbar>
+            <ion-title>Reportar Usuario</ion-title>
+            <ion-buttons slot="end">
+              <ion-button @click="closeReportModal">Cerrar</ion-button>
+            </ion-buttons>
+          </ion-toolbar>
+        </ion-header>
+        <ion-content class="ion-padding">
+          <ion-list>
+            <ion-item lines="full">
+              <ion-label position="stacked">Motivo</ion-label>
+              <ion-select v-model="reportForm.motivo" placeholder="Selecciona un motivo" interface="action-sheet">
+                <ion-select-option value="Spam">Spam</ion-select-option>
+                <ion-select-option value="Acoso">Acoso</ion-select-option>
+                <ion-select-option value="Cuenta Falsa">Cuenta Falsa</ion-select-option>
+                <ion-select-option value="Otro">Otro</ion-select-option>
+              </ion-select>
+            </ion-item>
+
+            <ion-item lines="full">
+              <ion-label position="stacked">Detalles (opcional)</ion-label>
+              <ion-textarea v-model="reportForm.descripcion" placeholder="Cuéntanos más sobre el problema"
+                :maxlength="2000" auto-grow></ion-textarea>
+            </ion-item>
+          </ion-list>
+
+          <ion-button expand="block" color="danger" class="ion-margin-top"
+            :disabled="submittingReport || !reportForm.motivo" @click="submitUserReport">
+            <ion-spinner v-if="submittingReport" name="crescent"></ion-spinner>
+            <span v-else>Confirmar Reporte</span>
+          </ion-button>
+        </ion-content>
+      </ion-modal>
+
     </ion-content>
   </ion-page>
 </template>
@@ -483,6 +528,7 @@ import {
   IonCol,
   IonPopover,
   IonInput,
+  IonTextarea,
   IonSelect,
   IonSelectOption,
   IonRefresher,
@@ -508,6 +554,7 @@ import {
   closeCircle,
   cameraOutline,
   imagesOutline,
+  warningOutline,
   closeOutline,
   moon,
   sunny,
@@ -560,6 +607,7 @@ export default {
     IonCol,
     IonPopover,
     IonInput,
+    IonTextarea,
     IonSelect,
     IonSelectOption,
     IonRefresher,
@@ -631,6 +679,12 @@ export default {
       showSettingsModal: false,
       isMenuOpen: false,
       isImagePickerOpen: false,
+      showReportModal: false,
+      submittingReport: false,
+      reportForm: {
+        motivo: "",
+        descripcion: "",
+      },
 
       // Icons
       ellipsisVerticalOutline,
@@ -648,6 +702,7 @@ export default {
       closeCircle,
       cameraOutline,
       imagesOutline,
+      warningOutline,
       closeOutline,
       moon,
       sunny,
@@ -1518,6 +1573,69 @@ export default {
       this.isImagePickerOpen = false;
       this.imagenPreview = null;
       this.archivo = null;
+    },
+
+    openReportModal() {
+      if (this.isMe) return;
+      this.showReportModal = true;
+    },
+
+    closeReportModal() {
+      this.showReportModal = false;
+      this.submittingReport = false;
+      this.reportForm = {
+        motivo: "",
+        descripcion: "",
+      };
+    },
+
+    async submitUserReport() {
+      if (this.isMe || !this.user?.id) {
+        return;
+      }
+
+      if (!this.reportForm.motivo) {
+        await this.showToast("Selecciona un motivo para el reporte", "warning");
+        return;
+      }
+
+      if (
+        this.reportForm.motivo === "Otro" &&
+        !(this.reportForm.descripcion || "").trim()
+      ) {
+        await this.showToast("Agrega una descripción para el motivo 'Otro'", "warning");
+        return;
+      }
+
+      this.submittingReport = true;
+
+      try {
+        await AuthService.reportUser({
+          reported_user_id: this.user.id,
+          motivo: this.reportForm.motivo,
+          descripcion: (this.reportForm.descripcion || "").trim(),
+        });
+
+        await this.showToast("Reporte enviado correctamente", "success");
+        this.closeReportModal();
+      } catch (error) {
+        let errorMessage = "Error al enviar el reporte";
+
+        if (error.response?.status === 422) {
+          if (error.response.data?.message) {
+            errorMessage = error.response.data.message;
+          } else if (error.response.data?.errors) {
+            const firstError = Object.values(error.response.data.errors)[0];
+            errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+          }
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        }
+
+        await this.showToast(errorMessage, "danger");
+      } finally {
+        this.submittingReport = false;
+      }
     },
 
     // ===== HELPERS DE MÚSICA =====
