@@ -200,6 +200,29 @@ export const AuthService = {
   },
 
   /**
+   * Reporta un usuario
+   * @param {{ reported_user_id: number|string, motivo: string, descripcion?: string }} payload
+   * @returns {Promise<Object>}
+   */
+  async reportUser(payload) {
+    try {
+      const reportPayload = {
+        reported_user_id: payload.reported_user_id,
+        motivo: payload.motivo,
+      };
+
+      if (payload.descripcion && payload.descripcion.trim() !== "") {
+        reportPayload.descripcion = payload.descripcion.trim();
+      }
+
+      const res = await api.post("/reportes", reportPayload);
+      return res.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  /**
    * Obtiene los posts de un usuario específico (paginados)
    * Usa el endpoint /posts/user/{id} del backend
    */
