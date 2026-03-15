@@ -145,6 +145,7 @@ import { Capacitor } from '@capacitor/core';
 import { openNativeFile } from '@/services/FileService';
 import { getFullImageUrl } from '@/utils/imageUtils';
 import FullScreenImageViewer from './FullScreenImageViewer.vue';
+import { BASE_URL } from '../services/api.js'; 
 
 
 export default {
@@ -298,7 +299,8 @@ export default {
                 // 2. Definimos la URL final
                 // En local usará el proxy (/uploads) y en el APK usará el dominio completo
                 const isLocal = window.location.host.includes('localhost:8100');
-                const finalUrl = isLocal ? `/${relativePath}` : `https://api.sivarsocial.com/${relativePath}`;
+
+                const finalUrl = isLocal ? `/${relativePath}` : `${BASE_URL}/${relativePath}`;
                 
                 const urlWithCache = `${finalUrl}?t=${Date.now()}`;
 
