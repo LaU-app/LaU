@@ -93,8 +93,10 @@ export default {
     });
   },
 
-  getUsers: () => {
-    return api.get("/users"); // GET http://localhost:8000/api/users
+  getUsers(params = {}) {
+      // Axios toma el objeto 'params' y lo convierte automáticamente en 
+      // ?page=1&search=Juan&universidad_id=2
+      return api.get('/users', { params }); // GET http://localhost:8000/api/users
   },
 
   // Verificar disponibilidad de username y email

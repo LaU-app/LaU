@@ -130,28 +130,10 @@
 
 <script>
 import {
-    IonPage,
-    IonHeader,
-    IonContent,
-    IonList,
-    IonItem,
-    IonAvatar,
-    IonLabel,
-    IonInfiniteScroll,
-    IonInfiniteScrollContent,
-    IonSearchbar,
-    IonSpinner,
-    IonText,
-    IonIcon,
-    IonToolbar,
-    IonTitle,
-    IonButtons,
-    IonButton,
-    IonGrid,
-    IonRow,
-    IonCol,
-    IonSelect,
-    IonSelectOption,
+    IonPage, IonHeader, IonContent, IonList, IonItem, IonAvatar, IonLabel,
+    IonInfiniteScroll, IonInfiniteScrollContent, IonSearchbar, IonSpinner,
+    IonText, IonIcon, IonToolbar, IonTitle, IonButtons, IonButton,
+    IonGrid, IonRow, IonCol, IonSelect, IonSelectOption,
 } from "@ionic/vue";
 import api from "@/services/api";
 import { UniversidadService } from "@/services/universidad";
@@ -165,29 +147,10 @@ import { getFullImageUrl } from '@/utils/imageUtils';
 export default {
     name: "UsersView",
     components: {
-        IonPage,
-        IonHeader,
-        IonContent,
-        IonList,
-        IonItem,
-        IonAvatar,
-        IonLabel,
-        IonInfiniteScroll,
-        IonInfiniteScrollContent,
-        IonSearchbar,
-        IonSpinner,
-        IonText,
-        IonIcon,
-        IonToolbar,
-        IonTitle,
-        IonButtons,
-        IonButton,
-        IonGrid,
-        IonRow,
-        IonCol,
-        IonSelect,
-        IonSelectOption,
-        FollowButton,
+        IonPage, IonHeader, IonContent, IonList, IonItem, IonAvatar, IonLabel,
+        IonInfiniteScroll, IonInfiniteScrollContent, IonSearchbar, IonSpinner,
+        IonText, IonIcon, IonToolbar, IonTitle, IonButtons, IonButton,
+        IonGrid, IonRow, IonCol, IonSelect, IonSelectOption, FollowButton,
     },
     setup() {
         const { isDarkMode } = useDarkMode();
@@ -205,19 +168,16 @@ export default {
             universidades: [],
             carreras: [],
             user: { imagen_url: null, name: "Usuario", username: "usuario" },
-            closeOutline,
-            chevronDownOutline,
-            personCircle,
-            searchOutline,
-            schoolOutline,
-            bookOutline,
-            alertCircleOutline,
-            closeCircleOutline,
+            closeOutline, chevronDownOutline, personCircle, searchOutline, 
+            schoolOutline, bookOutline, alertCircleOutline, closeCircleOutline,
             isAuthenticated: false,
             loading: false,
             searchText: '',
             currentUserId: null,
-            followingIds: [], // Array de IDs de usuarios que sigo
+            followingIds: [],
+            // --- NUEVAS VARIABLES DE PAGINACIÓN ---
+            currentPage: 1,
+            lastPage: 1,
         };
     },
     computed: {
@@ -231,49 +191,36 @@ export default {
         }
     },
     async created() {
-        // Verificar autenticación
         this.isAuthenticated = AuthService.isAuthenticated();
 
-        // Si no está autenticado, redirigir inmediatamente
         if (!this.isAuthenticated) {
             this.$router.replace("/login");
             return;
         }
 
-        // Cargar usuario autenticado
         await this.loadCurrentUser();
-
-        // Cargar la lista de usuarios que sigo (para sincronizar estado)
         await this.loadFollowingIds();
-
-        // Cargar universidades PRIMERO (importante para normalizar datos)
         await this.loadUniversidades();
-
-        // Obtener usuarios DESPUÉS de cargar universidades
-        await this.getUsers();
+        
+        // Carga inicial (Página 1)
+        await this.getUsers(true);
     },
 
     methods: {
         async loadCurrentUser() {
             try {
-                // Obtener el usuario del localStorage
                 const localUser = AuthService.getUser();
                 if (localUser) {
                     this.user = localUser;
                     this.currentUserId = localUser.id;
                 }
-            } catch (error) {
-                // console.error("Error cargando usuario:", error);
-            }
+            } catch (error) { }
         },
 
         async loadFollowingIds() {
             try {
-                /* console.log('[UsersView] Cargando lista de usuarios que sigo...'); */
                 this.followingIds = await followersService.getFollowingIds();
-                /* console.log('[UsersView] ✅ Usuarios que sigo (IDs):', this.followingIds); */
             } catch (error) {
-                // console.error('[UsersView] Error cargando following IDs:', error);
                 this.followingIds = [];
             }
         },
@@ -282,10 +229,7 @@ export default {
             try {
                 const response = await UniversidadService.getUniversidades();
                 this.universidades = response.data || response;
-            } catch (error) {
-                // console.error("Error al cargar universidades:", error);
-                // No mostrar error al usuario, simplemente no tendrá filtros
-            }
+            } catch (error) { }
         },
 
         async onUniversidadChange() {
@@ -294,125 +238,73 @@ export default {
                     const response = await UniversidadService.getCarreras(this.filters.universidad_id);
                     this.carreras = response.data || response;
                 } catch (error) {
-                    // console.error("Error al cargar carreras:", error);
                     this.carreras = [];
                 }
             } else {
                 this.carreras = [];
                 this.filters.carrera_id = null;
             }
+            // Al cambiar la universidad, aplicamos filtros desde cero
             this.applyFilters();
         },
 
+        // Este método ahora solo reinicia la página y llama a la API
         applyFilters() {
-            let filtered = [...this.users];
-
-            // Filtrar por búsqueda de texto
-            if (this.searchText && this.searchText.trim()) {
-                const searchTerm = this.searchText.toLowerCase();
-                filtered = filtered.filter((user) => {
-                    return (
-                        (user.name && user.name.toLowerCase().includes(searchTerm)) ||
-                        (user.universidad?.nombre && user.universidad.nombre.toLowerCase().includes(searchTerm)) ||
-                        (user.carrera?.nombre && user.carrera.nombre.toLowerCase().includes(searchTerm))
-                    );
-                });
-            }
-
-            // Filtrar por universidad
-            if (this.filters.universidad_id) {
-                filtered = filtered.filter(user => user.universidad?.id === this.filters.universidad_id);
-            }
-
-            // Filtrar por carrera
-            if (this.filters.carrera_id) {
-                filtered = filtered.filter(user => user.carrera?.id === this.filters.carrera_id);
-            }
-
-            // Ordenar
-            if (this.filters.order === 'ABC') {
-                filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-            } else if (this.filters.order === 'CBA') {
-                filtered.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
-            } else if (this.filters.order === 'ASC') {
-                filtered.sort((a, b) => a.id - b.id);
-            } else if (this.filters.order === 'DESC') {
-                filtered.sort((a, b) => b.id - a.id);
-            }
-
-            this.filteredUsers = filtered;
+            this.getUsers(true);
         },
 
         clearFilters() {
-            this.filters = {
-                order: null,
-                universidad_id: null,
-                carrera_id: null,
-            };
+            this.filters = { order: null, universidad_id: null, carrera_id: null };
             this.searchText = '';
             this.carreras = [];
-            this.filteredUsers = this.users;
+            this.getUsers(true);
         },
-        async getUsers() {
-            try {
+
+        filterUsers(ev) {
+            this.searchText = ev.detail.value || '';
+            this.applyFilters();
+        },
+
+        // --- MÉTODO ACTUALIZADO PARA RECIBIR PARÁMETROS Y PAGINAR ---
+        async getUsers(isFirstLoad = true) {
+            if (isFirstLoad) {
                 this.loading = true;
-                const response = await api.getUsers();
+                this.currentPage = 1;
+            }
 
-                // Soporta varias formas de respuesta comunes
-                let usersData = [];
-                if (response && response.data) {
-                    usersData =
-                        response.data.data?.data ||
-                        response.data.data ||
-                        response.data ||
-                        [];
-                }
-                if (!Array.isArray(usersData)) {
-                    usersData = [];
-                }
+            try {
+                // 1. Preparamos los parámetros que Laravel espera
+                const params = {
+                    page: this.currentPage,
+                    search: this.searchText,
+                    universidad_id: this.filters.universidad_id,
+                    carrera_id: this.filters.carrera_id,
+                    order: this.filters.order
+                };
 
-                // Obtener el ID del usuario actual
+                // 2. Llamamos a tu servicio API enviando los parámetros
+                const response = await api.getUsers(params);
+
+                // 3. Extraemos datos y meta de paginación
+                let usersData = response.data?.data?.data || response.data?.data || response.data || [];
+                
+                // Actualizamos la última página (si el backend lo devuelve, usualmente en response.data.data.last_page)
+                this.lastPage = response.data?.data?.last_page || response.data?.last_page || 1;
+
                 const currentUserId = this.currentUserId;
 
-                /* console.log('[UsersView] Procesando usuarios - currentUserId:', currentUserId); */
-
-                if (usersData.length > 0) {
-                    /* console.log('[UsersView] ===== DIAGNÓSTICO DEL BACKEND =====');
-                    console.log('[UsersView] Ejemplo de usuario raw del backend:', JSON.stringify(usersData[0], null, 2));
-                    console.log('[UsersView] ¿Tiene is_following?', usersData[0].is_following);
-                    console.log('[UsersView] ¿Tiene followers?', usersData[0].followers);
-                    console.log('[UsersView] ¿Tiene following?', usersData[0].following);
-                    console.log('[UsersView] ========================================'); */
-                }
-
-                // Enriquecer usuarios con información de seguimiento (igual que user_has_liked en posts)
+                // 4. Enriquecer usuarios (Tu misma lógica de is_following)
                 const enrichedUsers = usersData.map((user) => {
                     let isFollowing = false;
-
-                    // PRIORIDAD 1: Verificar si el ID está en la lista de followingIds cargada previamente
                     if (this.followingIds.includes(user.id)) {
                         isFollowing = true;
-                        /* console.log(`[UsersView] ✅ Usuario ${user.id} (${user.name}) - ESTÁ en followingIds`); */
-                    }
-                    // PRIORIDAD 2: Verificar si el backend envía is_following directamente
-                    else if (user.is_following !== undefined && user.is_following !== null) {
+                    } else if (user.is_following !== undefined && user.is_following !== null) {
                         isFollowing = Boolean(user.is_following);
-                        /* console.log(`[UsersView] Usuario ${user.id} (${user.name}) - is_following del backend:`, isFollowing); */
-                    }
-                    // PRIORIDAD 3: Si no viene is_following pero sí el array de followers, calcularlo
-                    else if (user.followers && Array.isArray(user.followers) && currentUserId) {
+                    } else if (user.followers && Array.isArray(user.followers) && currentUserId) {
                         isFollowing = user.followers.some(follower => {
                             const followerId = follower.follower_id || follower.user_id || follower.id;
-                            const isMatch = followerId === currentUserId;
-                            if (isMatch) {
-                                /* console.log(`[UsersView] ✅ Usuario ${user.id} - YO lo sigo (encontrado en followers)`, follower); */
-                            }
-                            return isMatch;
+                            return followerId === currentUserId;
                         });
-                        /* console.log(`[UsersView] Usuario ${user.id} (${user.name}) - calculado desde followers[]:`, isFollowing, '| Total followers:', user.followers.length); */
-                    }
-                    else {
-                        /* console.log(`[UsersView] Usuario ${user.id} (${user.name}) - No sigo a este usuario`); */
                     }
 
                     return {
@@ -424,85 +316,65 @@ export default {
                     };
                 });
 
-                // Asignar usuarios enriquecidos
-                this.users = enrichedUsers;
+                // 5. Decidimos si reemplazamos la lista o agregamos (Scroll infinito)
+                if (isFirstLoad) {
+                    this.users = enrichedUsers;
+                } else {
+                    this.users = [...this.users, ...enrichedUsers];
+                }
+                
                 this.filteredUsers = this.users;
 
-                /* console.log('Usuarios cargados:', this.users.length); */
-                /* if (this.users.length > 0) {
-                    console.log('Primer usuario:', {
-                        id: this.users[0].id,
-                        name: this.users[0].name,
-                        is_following: this.users[0].is_following,
-                        followers_count: this.users[0].followers_count,
-                        followers: this.users[0].followers
-                    });
-                } */
             } catch (error) {
-                // console.error("Error obteniendo usuarios:", error);
-
-                // Si es error 401, el token es inválido
                 if (error.response?.status === 401) {
-                    localStorage.removeItem('auth_token');
-                    localStorage.removeItem('user');
-                    localStorage.removeItem('token_expiry');
-                    localStorage.removeItem('remember_me');
-                    sessionStorage.removeItem('auth_token');
-                    sessionStorage.removeItem('user');
-                    sessionStorage.removeItem('token_expiry');
+                    AuthService.logout(); // Mejor usar tu servicio directamente si tiene esta función
                     this.$router.replace("/login");
                 }
             } finally {
                 this.loading = false;
             }
         },
+
+        // --- INFINITE SCROLL REACTIVADO ---
+        async onIonInfinite(ev) {
+            if (this.currentPage < this.lastPage) {
+                this.currentPage++;
+                await this.getUsers(false); // isFirstLoad = false
+            }
+            
+            ev.target.complete();
+
+            // Si llegamos a la última página, lo deshabilitamos para que no gire sin sentido
+            if (this.currentPage >= this.lastPage) {
+                ev.target.disabled = true;
+            }
+        },
+
         goBack() {
             this.$router.back();
         },
-        filterUsers(ev) {
-            this.searchText = ev.detail.value || '';
-            this.applyFilters();
-        },
+
         handleImageError(ev) {
-            // evita errores en consola si la imagen falla
             ev.target.src = "https://www.gravatar.com/avatar/?d=mp&f=y";
         },
+
         handleFollowUpdate(user, event) {
-            // Actualizar el estado del usuario en la lista
             user.is_following = event.isFollowing;
             user.followers_count = event.followersCount;
 
-            // IMPORTANTE: Actualizar también el array followingIds para persistencia
             if (event.isFollowing) {
-                // Si ahora lo sigo, agregar al array si no está
                 if (!this.followingIds.includes(user.id)) {
                     this.followingIds.push(user.id);
-                    /* console.log('[UsersView] ✅ Usuario agregado a followingIds:', user.id); */
                 }
             } else {
-                // Si dejé de seguirlo, remover del array
                 const index = this.followingIds.indexOf(user.id);
                 if (index > -1) {
                     this.followingIds.splice(index, 1);
-                    /* console.log('[UsersView] ❌ Usuario removido de followingIds:', user.id); */
                 }
             }
+        },
 
-            /* console.log('[UsersView] Follow actualizado:', {
-                userId: user.id,
-                userName: user.name,
-                isFollowing: user.is_following,
-                followersCount: user.followers_count,
-                followingIds: this.followingIds
-            }); */
-        },
-        onIonInfinite(ev) {
-            // Deshabilitado: no cargar usuarios falsos
-            ev.target.disabled = true;
-            ev.target.complete();
-        },
         goToProfile(user) {
-            // Navegar al perfil del usuario usando su username o id
             const identifier = user.username || user.id;
             this.$router.push(`/tabs/perfil/${identifier}`);
         },
