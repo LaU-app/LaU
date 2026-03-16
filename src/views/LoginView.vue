@@ -293,7 +293,7 @@ export default {
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: url('https://res.cloudinary.com/dj848z4er/image/upload/v1763388919/b0c89a4c-efd1-4bc5-b5c0-496c74cf7b5a.png');
+    background-image: url('https://res.cloudinary.com/dj848z4er/image/upload/v1773690095/Dise%C3%B1o_sin_t%C3%ADtulo_4_hrv5nk.jpg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -306,7 +306,7 @@ export default {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.645), rgba(0, 0, 0, 0.201), transparent);
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.645), rgba(0, 0, 0, 0.100), transparent);
     z-index: 1;
 }
 
