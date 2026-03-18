@@ -21,7 +21,9 @@
                 <!-- Header -->
                 <div class="register-header" style="padding-top: env(safe-area-inset-top) !important;">
                     <ion-button fill="clear" class="back-button" @click="goToWelcome">
-                        <ion-icon :icon="arrowBack" slot="icon-only"></ion-icon>
+                        <template #icon-only>
+                            <ion-icon :icon="arrowBack"></ion-icon>
+                        </template>
                     </ion-button>
                 </div>
 
@@ -110,8 +112,10 @@
                                 <ion-input v-model="formData.password" :type="showPassword ? 'text' : 'password'"
                                     placeholder="Contraseña" class="register-input" @ionFocus="passwordFocused = true"
                                     @ionBlur="passwordFocused = false">
-                                    <ion-icon :icon="showPassword ? eyeOffOutline : eyeOutline" slot="end"
-                                        @click="togglePassword" class="password-toggle"></ion-icon>
+                                    <template #end>
+                                        <ion-icon :icon="showPassword ? eyeOffOutline : eyeOutline"
+                                            @click="togglePassword" class="password-toggle"></ion-icon>
+                                    </template>
                                 </ion-input>
                                 <div class="input-line"></div>
                             </div>
@@ -121,8 +125,10 @@
                                     :type="showPasswordConfirm ? 'text' : 'password'" placeholder="Confirmar contraseña"
                                     class="register-input" @ionFocus="passwordConfirmFocused = true"
                                     @ionBlur="passwordConfirmFocused = false">
-                                    <ion-icon :icon="showPasswordConfirm ? eyeOffOutline : eyeOutline" slot="end"
-                                        @click="togglePasswordConfirm" class="password-toggle"></ion-icon>
+                                    <template #end>
+                                        <ion-icon :icon="showPasswordConfirm ? eyeOffOutline : eyeOutline"
+                                            @click="togglePasswordConfirm" class="password-toggle"></ion-icon>
+                                    </template>
                                 </ion-input>
                                 <div class="input-line"></div>
                             </div>
@@ -1146,7 +1152,19 @@ export default {
                     registroData.universidad_id = this.formData.universidad_id;
                 }
 
-                await AuthService.register(registroData)
+                const registerResponse = await AuthService.register(registroData)
+
+                if (registerResponse?.token) {
+                    AuthService.setToken(registerResponse.token, true)
+                    if (registerResponse?.user) {
+                        AuthService.setUser(registerResponse.user, true)
+                    }
+                } else {
+                    await AuthService.login({
+                        email: registroData.email,
+                        password: registroData.password
+                    }, true)
+                }
 
                 // Mostrar mensaje de éxito
                 const toast = await toastController.create({
@@ -1549,6 +1567,7 @@ export default {
     background: linear-gradient(120deg, #DB4437, #F4B400, #0F9D58, #4285F4);
     -webkit-text-fill-color: transparent;
     -webkit-background-clip: text;
+    background-clip: text;
     padding-left: 5px;
 }
 
@@ -1556,6 +1575,7 @@ export default {
     background: linear-gradient(120deg, #F25022, #7FBA00, #00A4EF, #FFB900);
     -webkit-text-fill-color: transparent;
     -webkit-background-clip: text;
+    background-clip: text;
     padding-left: 5px;
 }
 

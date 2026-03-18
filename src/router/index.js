@@ -5,7 +5,9 @@ import { AuthService } from "@/services/auth";
 const routes = [
   {
     path: "/",
-    redirect: "/welcome",
+    redirect: () => {
+      return AuthService.isAuthenticated() ? "/tabs/tab1" : "/welcome";
+    },
   },
   {
     path: "/welcome",

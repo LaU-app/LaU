@@ -311,17 +311,24 @@ export default {
             router.push(`/tasks/${task.id}`);
         };
 
-        const openPomodoroTimer = async () => {
+        const openPomodoroTimer = async (task) => {
             const modal = await modalController.create({
                 component: PomodoroTimer,
                 componentProps: {
-                    taskId: null
+
+                    taskId: task ? task.id : null,
+                    taskTitle: task ? task.title : ''
                 }
             });
             await modal.present();
+            const { data } = await modal.onDidDismiss();
             try {
-                await modal.onDidDismiss();
+                const { data } = await modal.onDidDismiss();
+
+                // Al terminar o cerrar el pomodoro, recargamos la lista para ver
+                // el estado actualizado ("in_progress") desde el backend.
                 await refreshTasks();
+
             } catch (e) {
                 showToast('Error al cerrar el Pomodoro', 'danger');
             }

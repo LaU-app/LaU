@@ -7,16 +7,14 @@ const REMEMBER_KEY = "remember_me";
 const TOKEN_EXPIRY_KEY = "token_expiry";
 
 export const AuthService = {
-  async login(credentials, rememberMe = false) {
+  // Cambiamos 'false' por 'true' aquí:
+  async login(credentials, rememberMe = true) { 
     try {
-      // POST /auth/login con email y password
       const res = await api.post("/auth/login", credentials);
-
-      // Adaptarse a la estructura de respuesta de tu API
       const data = res.data?.data || res.data;
 
       if (data?.token) {
-        // Guardar token según la opción "Recuérdame"
+        // Ahora siempre le pasará 'true' a this.setToken
         this.setToken(data.token, rememberMe);
       }
 

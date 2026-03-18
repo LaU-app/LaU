@@ -241,15 +241,15 @@ export default {
         };
 
         const start = async () => {
-            if (!sessionStarted.value) {
-                // Iniciar nueva sesión en el servidor
+            if (!sessionStarted.value && !isBreak.value) {
+                // Iniciar nueva sesión en el servidor (solo para Pomodoros, no descansos)
                 try {
                     const response = await pomodoroService.startPomodoro({
                         taskId: props.taskId,
                         uuidCliente: crypto.randomUUID()
                     });
 
-                    sessionUuid.value = response.data.uuid_cliente;
+                    sessionUuid.value = response.data.data?.uuid_cliente ?? response.data.uuid_cliente;
                     sessionStarted.value = true;
                 } catch (error) {
                     console.error('Error starting pomodoro:', error);
@@ -262,7 +262,9 @@ export default {
             isRunning.value = true;
 
             intervalId.value = setInterval(() => {
-                remaining.value--;
+                if (remaining.value > 0) {
+                    remaining.value--;
+                }
 
                 if (remaining.value <= 0) {
                     clearInterval(intervalId.value);
@@ -287,19 +289,25 @@ export default {
 
         const handleTimerComplete = async () => {
             if (isBreak.value) {
-                // Descanso completado
+                // Descanso completado — resetear todo para un nuevo Pomodoro
                 await sendNotification(
                     '⏰ Descanso terminado',
                     '¡Hora de volver al trabajo! ¿Listo para otro Pomodoro?'
                 );
-                showBreakSelector.value = false;
+                // Reset completo para el siguiente Pomodoro
                 isBreak.value = false;
+                showBreakSelector.value = false;
                 sessionStarted.value = false;
-                sessionCount.value++;
-                dismissModal(true);
+                sessionUuid.value = null;
+                totalSeconds.value = POMODORO_DURATION;
+                remaining.value = POMODORO_DURATION;
+                isRunning.value = false;
             } else {
                 // Pomodoro completado
-                const actualDuration = totalSeconds.value - remaining.value;
+                const actualDuration = POMODORO_DURATION; // siempre 25min si completó natural
+
+                sessionCount.value++;
+                totalCompletedToday.value++;
 
                 try {
                     await pomodoroService.completePomodoro({
@@ -314,7 +322,6 @@ export default {
                     );
 
                     showBreakSelector.value = true;
-                    totalCompletedToday.value++;
                 } catch (error) {
                     console.error('Error completing pomodoro:', error);
                     await showToast('Error al completar Pomodoro', 'danger');
@@ -365,7 +372,8 @@ export default {
             isBreak.value = true;
             totalSeconds.value = type === 'short' ? SHORT_BREAK : LONG_BREAK;
             remaining.value = totalSeconds.value;
-            sessionStarted.value = false;
+            sessionStarted.value = true; // break no necesita llamar al servidor
+            sessionUuid.value = null;
             start();
         };
 
