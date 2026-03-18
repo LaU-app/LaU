@@ -38,7 +38,7 @@
           </div>
           <ion-label>
             <h2>Modo Ambiente - BETA</h2>
-            <p>Colores dinámicos basados en fotos (usalo si tu celular es gama alta)</p>
+            <p>Colores dinámicos basados en fotos (usalo si tu celular lo soporta)</p>
           </ion-label>
           <ion-toggle slot="end" mode="ios" :checked="isAmbientMode" @ionChange="toggleAmbientMode"></ion-toggle>
         </ion-item>
@@ -85,7 +85,7 @@
       <div class="logout-container">
         <ion-button expand="block" fill="outline" color="danger" class="logout-btn" @click="presentLogoutAlert">
           <ion-icon slot="start" :icon="logOutOutline"></ion-icon>
-          Cerrar Sesión Actual
+          Cerrar Sesión
         </ion-button>
 
         <div class="footer-info">
