@@ -42,8 +42,8 @@
             <!-- Título y/o Descripción o Texto (Dinámico) -->
             <ion-text v-if="post.titulo || post.descripcion || post.texto">
                 <h2 v-if="post.titulo" class="post-title">{{ post.titulo }}</h2>
-                <p v-if="post.descripcion" class="post-text">{{ post.descripcion }}</p>
-                <p v-if="post.texto && !post.descripcion" class="post-text post-text-only">{{ post.texto }}</p>
+                <p v-if="post.descripcion" class="post-text" v-html="formatTextWithLinks(post.descripcion)" @click="handleLinkClick"></p>
+                <p v-if="post.texto && !post.descripcion" class="post-text post-text-only" v-html="formatTextWithLinks(post.texto)" @click="handleLinkClick"></p>
             </ion-text>
 
             <!-- Imagen Post -->
@@ -142,6 +142,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 import { CapacitorHttp } from '@capacitor/core';
 import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 import { openNativeFile } from '@/services/FileService';
 import { getFullImageUrl } from '@/utils/imageUtils';
 import FullScreenImageViewer from './FullScreenImageViewer.vue';
@@ -412,6 +413,31 @@ export default {
         };
         // ==========================================
 
+        // --- LÓGICA DE DETECCIÓN DE LINKS ---
+        const formatTextWithLinks = (text) => {
+            if (!text) return '';
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+            return text.replace(urlRegex, (url) => {
+                return `<a href="${url}" class="post-link">${url}</a>`;
+            });
+        };
+
+        const handleLinkClick = async (event) => {
+            const link = event.target.closest('a');
+
+            if (link && link.classList.contains('post-link')) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                try {
+                    await Browser.open({ url: link.href });
+                } catch (error) {
+                    console.error('Error al abrir el enlace:', error);
+                }
+            }
+        };
+
         onMounted(() => {
             if (props.post.tipo === 'imagen' && props.post.imagen_url) {
                 extractColors(props.post.imagen_url);
@@ -437,6 +463,8 @@ export default {
             extractColors,
             isAmbientMode,
             getFullImageUrl,
+            formatTextWithLinks,
+            handleLinkClick,
 
             closeOutline,
             isImageModalOpen,
@@ -750,5 +778,24 @@ ion-modal.image-viewer-modal {
 
 ion-modal.image-viewer-modal ion-content {
     --background: transparent;
+}
+
+/* --- ESTILOS PARA LOS LINKS EN EL TEXTO --- */
+:deep(.post-link) {
+    color: var(--ion-color-primary);
+    text-decoration: none;
+    font-weight: 500;
+    word-break: break-all;
+}
+
+:deep(.post-link:hover),
+:deep(.post-link:active) {
+    text-decoration: underline;
+    opacity: 0.8;
+}
+
+.card-image-style.is-dark-bg :deep(.post-link) {
+    color: #82b1ff !important;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important;
 }
 </style>
