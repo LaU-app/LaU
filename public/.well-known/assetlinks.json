@@ -4,7 +4,8 @@
     "namespace": "android_app",
     "package_name": "io.ionic.lauapp",
     "sha256_cert_fingerprints": [
-      "09:09:6C:FD:E9:FE:F7:26:EF:23:BE:C3:96:B2:F2:99:9C:E3:FB:95:FC:C1:14:49:CB:2B:D9:A5:F6:DA:C9:86"
+      "09:09:6C:FD:E9:FE:F7:26:EF:23:BE:C3:96:B2:F2:99:9C:E3:FB:95:FC:C1:14:49:CB:2B:D9:A5:F6:DA:C9:86",
+      "DA:49:DE:19:C5:CD:51:DC:5E:72:77:D2:EA:E3:15:7F:AD:75:2E:91:A3:13:5F:50:FD:DF:46:4D:0D:FD:A9:CA"
     ]
   }
 }]

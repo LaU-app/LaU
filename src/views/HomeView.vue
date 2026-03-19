@@ -97,6 +97,10 @@ import CustomBanner from '@/components/CustomBanner.vue';
 import bannerService from '@/services/bannerService';
 import { ref, onMounted } from 'vue';
 import { pushNotificationsService } from '@/services/pushNotificationsService';
+import { Capacitor } from '@capacitor/core';
+import { CapacitorUpdater } from '@capgo/capacitor-updater';
+import apiService from '@/services/api';
+import { App } from '@capacitor/app';
 
 export default {
     name: 'HomeView',
@@ -122,11 +126,43 @@ export default {
         }
     },
     setup() {
+        // Función para buscar y descargar
+        const checkForUpdates = async () => {
+        if (!Capacitor.isNativePlatform()) return;
+
+        try {
+            const response = await apiService.checkAppUpdate();
+            const data = response.data; 
+
+            const lastAttemptedVersion = localStorage.getItem('last_ota_version');
+
+            // Si hay actualización y no es la que ya intentamos descargar antes...
+            if (data.update_available && lastAttemptedVersion !== data.version) {
+            console.log('Descargando nueva versión en segundo plano...');
+            
+            // SOLO descargamos. El usuario no se entera de nada.
+            await CapacitorUpdater.download({
+                url: data.zip_url,
+                version: data.version
+            });
+
+            console.log('¡Descarga lista! Se aplicará la próxima vez que se abra la app.');
+            
+            // Guardamos la versión para no volver a descargarla en este ciclo
+            localStorage.setItem('last_ota_version', data.version);
+            }
+        } catch (error) {
+            console.error('Error al buscar actualizaciones:', error);
+        }
+        };
+
         // Usar composable de modo oscuro
         const { isDarkMode, toggleDarkMode } = useDarkMode()
         const showNotificationsPrompt = ref(false);
 
         onMounted(() => {
+            // 5. Ejecutamos al montar el componente
+            checkForUpdates();
             // 2. EL CANDADO: Si NO está autenticado, detenemos todo aquí mismo.
             if (!AuthService.isAuthenticated()) {
                 console.log("Usuario invitado. No se mostrará el banner de notificaciones.");

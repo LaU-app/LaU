@@ -24,6 +24,7 @@ import Echo from "laravel-echo";
 import Pusher from "pusher-js";
 import axios from "axios";
 import { BASE_URL } from "./services/api"; // <--- IMPORTANTE: Importar la URL
+import { CapacitorUpdater } from '@capgo/capacitor-updater';
 
 window.Pusher = Pusher;
 // Pusher.logToConsole = true; // Descomenta si quieres ver logs
@@ -76,6 +77,7 @@ window.Echo = new Echo({
 });
 
 const app = createApp(App).use(IonicVue).use(router);
+CapacitorUpdater.notifyAppReady();
 
 router.isReady().then(() => {
   app.mount("#app");
