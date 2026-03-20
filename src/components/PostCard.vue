@@ -47,11 +47,27 @@
             </ion-text>
 
             <!-- Imagen Post -->
-            <div v-if="post.tipo === 'imagen' && post.imagen_url" class="post-media" @click.stop="openImageModal">
+            <!-- <div v-if="post.tipo === 'imagen' && post.imagen_url" class="post-media" @click.stop="openImageModal">
                 <ion-img :src="getFullImageUrl(post.imagen_url)" :alt="post.titulo || 'Post'" @ionError="handleImageError" class="post-media">
                     <div slot="image" style="position: relative; padding-top: 75%; background: var(--ion-color-light);">
                         <ion-spinner name="crescent" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></ion-spinner>
                     </div>
+                </ion-img>
+            </div> -->
+
+            <div v-if="post.tipo === 'imagen' && post.imagen_url" class="post-media-container" @click.stop="openImageModal">
+                
+                <div class="image-placeholder" :class="{ 'is-hidden': post.imageLoaded }">
+                    <ion-spinner name="crescent"></ion-spinner>
+                </div>
+
+                <ion-img 
+                    :src="getFullImageUrl(post.imagen_url)" 
+                    alt="" 
+                    @ionImgDidLoad="post.imageLoaded = true" 
+                    @ionError="handleImageError" 
+                    class="post-media"
+                    :class="{ 'is-visible': post.imageLoaded }">
                 </ion-img>
             </div>
 
@@ -797,5 +813,48 @@ ion-modal.image-viewer-modal ion-content {
 .card-image-style.is-dark-bg :deep(.post-link) {
     color: #82b1ff !important;
     text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important;
+}
+
+/* --- Estilos para los post --- */
+/* Contenedor principal de la imagen */
+.post-media-container {
+    position: relative;
+    width: 100%;
+    min-height: 250px; /* Mantiene el espacio para que la pantalla no salte */
+    background-color: var(--ion-color-light); /* Fondo gris claro en día, oscuro en noche */
+    overflow: hidden;
+    border-radius: 8px; /* Opcional: bordes redondeados si tu diseño lo usa */
+}
+
+/* El fondo con el spinner */
+.image-placeholder {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.3s ease;
+    z-index: 1;
+}
+
+/* Ocultar el spinner cuando carga */
+.image-placeholder.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* La imagen de Ionic */
+.post-media {
+    opacity: 0; /* Empieza invisible para tapar el alt text */
+    transition: opacity 0.4s ease-in-out; /* Animación de aparición suave */
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 2;
+}
+
+/* Clase que se activa con el @ionImgDidLoad */
+.post-media.is-visible {
+    opacity: 1;
 }
 </style>
