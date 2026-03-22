@@ -22,8 +22,14 @@
             </div>
         </div>
 
-        <div v-if="comment.children && comment.children.length > 0" class="comment-replies">
-            <CommentItem v-for="reply in comment.children" :key="reply.id" :comment="reply"
+        <div v-if="comment.children && comment.children.length > 0" 
+             class="comment-replies"
+             :class="{ 'max-depth-reached': depth >= 2 }">
+             
+            <CommentItem v-for="reply in comment.children" 
+                :key="reply.id" 
+                :comment="reply"
+                :depth="depth + 1" 
                 @reply="$emit('reply', $event)" />
         </div>
     </div>
@@ -41,6 +47,11 @@ const props = defineProps({
     comment: {
         type: Object,
         required: true
+    },
+    // NUEVO: Contador de profundidad para saber qué tan anidados estamos
+    depth: {
+        type: Number,
+        default: 0
     }
 })
 
@@ -153,6 +164,13 @@ const emitReply = () => {
     /* Sangría para las respuestas */
     border-left: 2px solid var(--ion-color-light-shade);
     padding-left: 0.5rem;
+}
+
+/* NUEVO: Si la profundidad es 1 o mayor, ya no empujamos más a la derecha */
+.comment-replies.max-depth-reached {
+    margin-left: 0;
+    border-left: none;
+    padding-left: 0;
 }
 
 /* Ajustes para modo oscuro */

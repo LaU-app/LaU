@@ -1,5 +1,11 @@
 <template>
-    <ion-modal :is-open="isOpen" @didDismiss="handleDismiss" @didPresent="initGesture" class="image-viewer-modal">
+    <ion-modal 
+    :is-open="isOpen" 
+    @didDismiss="handleDismiss"
+    @didPresent="initGesture" 
+    class="image-viewer-modal"
+    :enter-animation="enterAnimation"
+    :leave-animation="leaveAnimation">
         <ion-content>
             <div class="modal-image-container" @click="toggleUI">
                 
@@ -21,10 +27,39 @@
 
 <script setup>
 import { ref } from 'vue';
-import { IonModal, IonContent, IonButton, IonIcon, createGesture } from '@ionic/vue';
+import { IonModal, IonContent, IonButton, IonIcon, createGesture, createAnimation } from '@ionic/vue';
 import { closeOutline } from 'ionicons/icons';
 import { StatusBar } from '@capacitor/status-bar';
 import { Capacitor } from '@capacitor/core';
+
+// --- NUEVO: Animación de Entrada (Fade + Scale) ---
+const enterAnimation = (baseEl) => {
+    const root = baseEl.shadowRoot;
+    
+    // Animación del fondo oscuro
+    const backdropAnimation = createAnimation()
+        .addElement(root.querySelector('ion-backdrop'))
+        .fromTo('opacity', '0.01', 'var(--backdrop-opacity)');
+
+    // Animación del contenedor de la imagen (Aparece y hace un ligero zoom desde 0.8 a 1)
+    const wrapperAnimation = createAnimation()
+        .addElement(root.querySelector('.modal-wrapper'))
+        .keyframes([
+            { offset: 0, opacity: '0', transform: 'scale(0.8)' },
+            { offset: 1, opacity: '1', transform: 'scale(1)' }
+        ]);
+
+    return createAnimation()
+        .addElement(baseEl)
+        .easing('ease-out')
+        .duration(250) // Duración en milisegundos
+        .addAnimation([backdropAnimation, wrapperAnimation]);
+};
+
+// --- NUEVO: Animación de Salida (Reversa) ---
+const leaveAnimation = (baseEl) => {
+    return enterAnimation(baseEl).direction('reverse');
+};
 
 // Propiedades que el componente recibirá desde fuera
 const props = defineProps({
