@@ -134,8 +134,13 @@ export default {
   },
 
   // ✨ NUEVO: Endpoint para buscar actualizaciones de la app ✨
-  checkAppUpdate: () => {
-    return api.get("/check-update"); // GET https://api.sivarsocial.com/api/check-update
+  checkAppUpdate: (currentVersion) => {
+    return api.get("/check-update", {
+      params: {
+        app_version: currentVersion
+      }
+    }); 
+    // Esto generará automáticamente: GET https://api.sivarsocial.com/api/check-update?app_version=2.0.0
   },
 
   // Métodos HTTP genéricos para usar en otros servicios

@@ -14,6 +14,7 @@ import { App } from '@capacitor/app';
 import { useRoute, useRouter } from 'vue-router';
 import { StatusBar } from '@capacitor/status-bar';
 import { Keyboard, KeyboardResize } from '@capacitor/keyboard';
+import { CapacitorUpdater } from '@capgo/capacitor-updater';
 
 StatusBar.setOverlaysWebView({ overlay: true });
 
@@ -102,6 +103,26 @@ onMounted(() => {
             }
         }
     });
+
+    // ✨ EL TRUCO NINJA: Escuchar cuando el usuario sale de la app ✨
+  App.addListener('appStateChange', async (state) => {
+    // Si state.isActive es falso, significa que la app se minimizó o se usó exitApp()
+    if (!state.isActive) {
+      const pendingId = localStorage.getItem('pending_update_id');
+      
+      // Si hay una actualización esperando, la aplicamos silenciosamente
+      if (pendingId) {
+        console.log('Aplicando actualización mientras el usuario no mira...');
+        try {
+          await CapacitorUpdater.set({ id: pendingId });
+          // Borramos el ID para no volver a instalarla
+          localStorage.removeItem('pending_update_id'); 
+        } catch (e) {
+          console.error('Error aplicando update en background', e);
+        }
+      }
+    }
+  });
 });
 
 </script>
