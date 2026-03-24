@@ -100,7 +100,7 @@ import { pushNotificationsService } from '@/services/pushNotificationsService';
 import { Capacitor } from '@capacitor/core';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import apiService from '@/services/api';
-import { App } from '@capacitor/app';
+import { App as CapacitorApp } from '@capacitor/app';
 
 export default {
     name: 'HomeView',
@@ -128,32 +128,34 @@ export default {
     setup() {
         // Función para buscar y descargar
         const checkForUpdates = async () => {
-        if (!Capacitor.isNativePlatform()) return;
+            if (!Capacitor.isNativePlatform()) return;
 
-        try {
-            const response = await apiService.checkAppUpdate();
-            const data = response.data; 
+            try {
+                // 1. Leemos la versión actual del cascarón nativo (ej. "2.0.0")
+                const appInfo = await CapacitorApp.getInfo();
+                const currentNativeVersion = appInfo.version; 
 
-            const lastAttemptedVersion = localStorage.getItem('last_ota_version');
+                // 2. Le mandamos esa versión a Axios
+                // (Asegúrate de que tu apiService.checkAppUpdate reciba este parámetro)
+                const response = await apiService.checkAppUpdate(currentNativeVersion);
+                const data = response.data; 
 
-            // Si hay actualización y no es la que ya intentamos descargar antes...
-            if (data.update_available && lastAttemptedVersion !== data.version) {
-            console.log('Descargando nueva versión en segundo plano...');
-            
-            // SOLO descargamos. El usuario no se entera de nada.
-            await CapacitorUpdater.download({
-                url: data.zip_url,
-                version: data.version
-            });
+                const lastAttemptedVersion = localStorage.getItem('last_ota_version');
 
-            console.log('¡Descarga lista! Se aplicará la próxima vez que se abra la app.');
-            
-            // Guardamos la versión para no volver a descargarla en este ciclo
-            localStorage.setItem('last_ota_version', data.version);
+                if (data.update_available && lastAttemptedVersion !== data.version) {
+                console.log('Descargando OTA en segundo plano...');
+                
+                const newVersion = await CapacitorUpdater.download({
+                    url: data.zip_url,
+                    version: data.version
+                });
+                
+                localStorage.setItem('pending_update_id', newVersion.id);
+                localStorage.setItem('last_ota_version', data.version);
+                }
+            } catch (error) {
+                console.error('Error al buscar actualizaciones:', error);
             }
-        } catch (error) {
-            console.error('Error al buscar actualizaciones:', error);
-        }
         };
 
         // Usar composable de modo oscuro

@@ -72,6 +72,18 @@
         </ion-item>
       </ion-list>
 
+      <div class="section-title">ACTUALIZACIONES</div>
+      <ion-list :inset="true">
+        <ion-item button detail="true" @click="openDriveUpdates">
+          <div slot="start" class="icon-box bg-green"> <ion-icon :icon="cloudDownloadOutline"></ion-icon>
+          </div>
+          <ion-label>
+            <h2>Descargar nueva versión</h2>
+            <p>Obtener el APK más reciente</p>
+          </ion-label>
+        </ion-item>
+      </ion-list>
+
       <div class="section-title">INFORMACIÓN</div>
       <ion-list :inset="true">
         <ion-item button detail="true">
@@ -107,7 +119,7 @@ import {
 } from '@ionic/vue';
 import {
   globeOutline, keyOutline, moonOutline, notificationsOutline, mailOutline,
-  timeOutline, fingerPrintOutline, shieldCheckmarkOutline, logOutOutline
+  timeOutline, fingerPrintOutline, shieldCheckmarkOutline, logOutOutline, cloudDownloadOutline
 } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
 import { chevronBackOutline } from 'ionicons/icons'; // Importamos el icono
@@ -119,6 +131,8 @@ import { useAmbientMode } from "@/utils/useAmbientMode";
 import { Blur } from '@boxicons/vue';
 import { pushNotificationsService } from '@/services/pushNotificationsService';
 import { PushNotifications } from '@capacitor/push-notifications';
+import { Browser } from '@capacitor/browser';
+import { App as CapacitorApp } from '@capacitor/app';
 
 const appVersion = ref('0.0.0'); // Puedes poner la versión actual de tu build
 const appBuild = ref('0000000');
@@ -241,6 +255,21 @@ const handlePushToggle = async (event) => {
     console.error("Error al procesar toggle:", error);
     isPushEnabled.value = false;
     event.target.checked = false;
+  }
+};
+
+// ✨ LA FUNCIÓN DEL BOTÓN ✨
+const openDriveUpdates = async () => {
+  const driveUrl = 'https://drive.google.com/drive/folders/1pur2Gzg2vekayB0TLPNYZyA1zHzU2noN';
+  
+  try {
+    // Esto obliga a Android a abrir la app de Google Drive 
+    // (o el navegador de Chrome por fuera si no la tiene)
+    await CapacitorApp.openUrl({ url: driveUrl });
+  } catch (error) {
+    console.error('Error al abrir la app externa:', error);
+    // Plan de respaldo clásico
+    window.open(driveUrl, '_system');
   }
 };
 
