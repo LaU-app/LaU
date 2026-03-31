@@ -1,4 +1,4 @@
-<template>
+<!-- <template>
     <ion-card class="music-card">
         <ion-card-content class="music-content">
             <ion-thumbnail class="album-art">
@@ -21,9 +21,40 @@
             </div>
         </ion-card-content>
     </ion-card>
+</template> -->
+
+<template>
+    <ion-card class="music-card">
+        <ion-card-content class="music-content">
+            <ion-thumbnail class="album-art">
+                <img v-if="post.itunes_artwork_url" :src="post.itunes_artwork_url"
+                    :alt="post.itunes_track_name || 'Album'" loading="lazy" @error="$emit('imageError', $event)" />
+                <div v-else class="placeholder-art">
+                    <ion-icon :icon="musicalNotesOutline"></ion-icon>
+                </div>
+            </ion-thumbnail>
+            <div class="music-info">
+                <ion-text>
+                    <h3 class="song-title">{{ post.itunes_track_name || 'Canción' }}</h3>
+                </ion-text>
+                <ion-text>
+                    <p class="artist-name">{{ post.itunes_artist_name || 'Artista' }}</p>
+                </ion-text>
+                <div v-if="post.itunes_preview_url" class="audio-controls">
+                    <audio 
+                        ref="audioElement" 
+                        :src="post.itunes_preview_url" 
+                        controls 
+                        class="audio-player"
+                        @play="onPlay"
+                    ></audio>
+                </div>
+            </div>
+        </ion-card-content>
+    </ion-card>
 </template>
 
-<script>
+<!-- <script>
 import { IonCard, IonCardContent, IonThumbnail, IonText, IonIcon } from '@ionic/vue'
 import { musicalNotesOutline } from 'ionicons/icons'
 
@@ -48,6 +79,68 @@ export default {
         }
     },
     emits: ['imageError']
+}
+</script> -->
+
+<script>
+import { ref, onMounted, onUnmounted } from 'vue';
+import { IonCard, IonCardContent, IonThumbnail, IonText, IonIcon } from '@ionic/vue';
+import { musicalNotesOutline } from 'ionicons/icons';
+import { App } from '@capacitor/app'; // Importamos el plugin de la App
+
+export default {
+    name: 'MusicPlayer',
+    components: {
+        IonCard, IonCardContent, IonThumbnail, IonText, IonIcon
+    },
+    props: {
+        post: {
+            type: Object,
+            required: true
+        }
+    },
+    emits: ['imageError'],
+    setup() {
+        // Referencia directa a la etiqueta <audio> de este componente en el DOM
+        const audioElement = ref(null);
+        let appStateListener = null;
+
+        // --- SOLUCIÓN 1: Evitar que suenen dos al mismo tiempo ---
+        const onPlay = (event) => {
+            // Buscamos TODOS los reproductores de audio en la pantalla actual
+            const audios = document.querySelectorAll('audio');
+            
+            // Recorremos cada uno. Si no es el que acaba de darle "Play", lo pausamos.
+            audios.forEach((audio) => {
+                if (audio !== event.target) {
+                    audio.pause();
+                }
+            });
+        };
+
+        // --- SOLUCIÓN 2: Pausar cuando la app se va a segundo plano ---
+        onMounted(async () => {
+            appStateListener = await App.addListener('appStateChange', (state) => {
+                // state.isActive es "false" cuando el usuario minimiza la app o bloquea el teléfono
+                if (!state.isActive && audioElement.value) {
+                    audioElement.value.pause();
+                }
+            });
+        });
+
+        // Limpiamos el listener cuando el componente se destruye para liberar memoria
+        onUnmounted(() => {
+            if (appStateListener) {
+                appStateListener.remove();
+            }
+        });
+
+        return {
+            musicalNotesOutline,
+            audioElement,
+            onPlay
+        }
+    }
 }
 </script>
 
