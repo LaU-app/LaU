@@ -442,7 +442,6 @@ export default {
 .play-btn ion-icon { 
     font-size: 36px; 
     color: var(--theme-color-hex) !important; 
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
 }
 
 /* MODO AMBIENTE */
@@ -558,7 +557,6 @@ export default {
     background-color: var(--theme-color-hex); /* Color dinámico sólido */
     border-radius: 2px; 
     animation: bounce 0.5s infinite alternate; 
-    box-shadow: 0 1px 3px rgba(0,0,0,0.5);
 }
 
 /* Animaciones de las barritas */
