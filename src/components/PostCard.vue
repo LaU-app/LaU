@@ -55,7 +55,10 @@
                 </ion-img>
             </div> -->
 
-            <div v-if="post.tipo === 'imagen' && post.imagen_url" class="post-media-container" @click.stop="openImageModal">
+            <div v-if="post.tipo === 'imagen' && post.imagen_url" 
+                 class="post-media-container" 
+                 :class="{ 'is-loaded': post.imageLoaded }" 
+                 @click.stop="openImageModal">
                 
                 <div class="image-placeholder" :class="{ 'is-hidden': post.imageLoaded }">
                     <ion-spinner name="crescent"></ion-spinner>
@@ -820,10 +823,18 @@ ion-modal.image-viewer-modal ion-content {
 .post-media-container {
     position: relative;
     width: 100%;
-    min-height: 250px; /* Mantiene el espacio para que la pantalla no salte */
-    background-color: var(--ion-color-light); /* Fondo gris claro en día, oscuro en noche */
+    background-color: var(--ion-color-light);
     overflow: hidden;
-    border-radius: 8px; /* Opcional: bordes redondeados si tu diseño lo usa */
+    border-radius: 8px;
+    /* Eliminamos el min-height fijo de aquí */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Solo aplicamos los 250px como esqueleto MIENTRAS carga el spinner */
+.post-media-container:not(.is-loaded) {
+    min-height: 250px;
 }
 
 /* El fondo con el spinner */
@@ -850,11 +861,12 @@ ion-modal.image-viewer-modal ion-content {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    z-index: 2;
+    display: block; /* Elimina un pequeño margen blanco fantasma nativo de html */
 }
 
 /* Clase que se activa con el @ionImgDidLoad */
 .post-media.is-visible {
     opacity: 1;
 }
+
 </style>
