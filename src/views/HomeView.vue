@@ -3,6 +3,8 @@
         <AppHeader :isDarkMode="isDarkMode" :user="user" :isAuthenticated="isAuthenticated"
             @toggleDarkMode="toggleDarkMode" />
 
+        <FloatingAudioPlayer />
+
         <ion-content>
             <!-- Pull to Refresh -->
             <ion-refresher slot="fixed" @ionRefresh="handleRefresh($event)">
@@ -100,11 +102,12 @@ import { pushNotificationsService } from '@/services/pushNotificationsService';
 import { Capacitor } from '@capacitor/core';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import apiService from '@/services/api';
+import FloatingAudioPlayer from '@/components/FloatingAudioPlayer.vue';
 import { App as CapacitorApp } from '@capacitor/app';
 
 export default {
     name: 'HomeView',
-    components: { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, AppHeader, CreatePostCard, PostCard, CustomBanner },
+    components: { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, AppHeader, CreatePostCard, PostCard, CustomBanner, FloatingAudioPlayer },
     data() {
         return {
             posts: [],
