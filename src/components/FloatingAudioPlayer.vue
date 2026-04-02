@@ -128,7 +128,7 @@ const initGesture = () => {
     position: relative;
     width: 100%;
     max-width: 400px;
-    background: #1a1a1a;
+    background: var(--ion-color-light);
     border-radius: 30px;
     overflow: hidden;
     box-shadow: 0 8px 20px rgba(0,0,0,0.4);
@@ -184,12 +184,14 @@ const initGesture = () => {
 }
 
 .mini-title {
-    font-size: 13px; font-weight: 700; color: #fff;
+    font-size: 13px; font-weight: 700; 
+    color:  var(--ion-text-color);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
 .mini-artist {
-    font-size: 11px; color: rgba(255,255,255,0.7);
+    font-size: 11px; 
+    color:  var(--ion-text-color);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 

@@ -326,7 +326,7 @@ export default {
 .music-content {
     position: relative; 
     padding: 0; 
-    background: #222428; /* Modo Normal: Fondo limpio según el tema de tu app */
+    background: var(--ion-color-light); /* Modo Normal: Fondo limpio según el tema de tu app */
     cursor: pointer;
     display: flex;
     overflow: hidden;
