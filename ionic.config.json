@@ -7,7 +7,7 @@
   "proxies": [
     {
       "path": "/uploads",
-      "proxyUrl": "https://api.sivarsocial.com/uploads"
+      "proxyUrl": "https://api.lauapp.es/uploads"
     }
   ]
 }

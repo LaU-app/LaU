@@ -32,6 +32,12 @@
                 
                 <data android:scheme="http" android:host="lauapp-81f4d.web.app" />
                 <data android:scheme="https" android:host="lauapp-81f4d.web.app" />
+
+                <data android:scheme="http" android:host="lauapp.es" />
+                <data android:scheme="https" android:host="lauapp.es" />
+
+                <data android:scheme="http" android:host="www.lauapp.es" />
+                <data android:scheme="https" android:host="www.lauapp.es" />
             </intent-filter>
 
             <intent-filter>

@@ -213,9 +213,12 @@
                         size="small" 
                         color="primary"
                         @click="submitComment" 
-                        :disabled="!newComment || newComment.trim() === ''" 
+                        :disabled="!newComment || newComment.trim() === '' || isSubmitting" 
                         class="send-comment-button">
-                        <ion-icon :icon="send"></ion-icon>
+                        
+                        <ion-spinner v-if="isSubmitting" name="crescent" class="btn-spinner"></ion-spinner>
+                        <ion-icon v-else :icon="send"></ion-icon>
+                        
                     </ion-button>
                 </div>
             </div>
@@ -290,6 +293,9 @@ const commentInputRef = ref(null)
 const ionContentRef = ref(null)
 const currentUser = ref(null)
 const replyingToComment = ref(null)
+
+// NUEVA VARIABLE: Candado para evitar envíos dobles
+const isSubmitting = ref(false)
 
 // Variable para controlar qué mostrar en el header
 const showUserInHeader = ref(false);
@@ -534,7 +540,9 @@ const recursivelyAddReply = (commentsArray, parentId, newCommentObject) => {
 
 const submitComment = async () => {
     const comentarioTexto = (newComment.value ?? '').trim()
-    if (!comentarioTexto) return
+    
+    // Si está vacío o YA se está enviando un comentario, ignoramos el clic
+    if (!comentarioTexto || isSubmitting.value) return
 
     if (!AuthService.isAuthenticated()) {
         const toast = await toastController.create({
@@ -546,6 +554,9 @@ const submitComment = async () => {
         await toast.present()
         return
     }
+
+    // === ACTIVAMOS EL CANDADO ===
+    isSubmitting.value = true;
 
     try {
         const parentId = replyingToComment.value?.id || null
@@ -644,8 +655,12 @@ const submitComment = async () => {
             color: 'danger'
         })
         await toast.present()
+    } finally {
+        // === APAGAMOS EL CANDADO SIEMPRE (Pase lo que pase) ===
+        isSubmitting.value = false;
     }
 }
+
 
 const confirmDelete = async () => {
     const alert = await alertController.create({
@@ -1380,6 +1395,12 @@ ion-modal.image-viewer-modal ion-content {
 .slide-fade-leave-to {
     opacity: 0;
     transform: translateX(20px); /* Sale hacia la derecha */
+}
+
+.btn-spinner {
+    width: 20px;
+    height: 20px;
+    color: white;
 }
 </style>
 
