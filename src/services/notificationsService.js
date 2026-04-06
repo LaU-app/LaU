@@ -72,7 +72,7 @@ export const notificationsService = {
 
             for (const endpoint of endpoints) {
                 try {
-                    const response = await api.put(endpoint);
+                    const response = await api.post(endpoint);
                     console.log(`✅ Notificación marcada como leída usando: ${endpoint}`);
                     return response.data;
                 } catch (error) {

@@ -7,7 +7,7 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     androidScheme: 'https',
-    allowNavigation: ['api.sivarsocial.com']
+    allowNavigation: ['api.lauapp.es']
   },
   plugins: {
     PushNotifications: {
