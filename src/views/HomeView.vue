@@ -29,6 +29,8 @@
                     <!-- Card para crear post (solo para autenticados) -->
                     <CreatePostCard v-if="isAuthenticated" :user="user" @post-created="handlePostCreated" />
 
+                    <FilterPosts @filter="handleFilterPosts" />
+
                     <!-- Lista de posts -->
                     <div class="posts-list">
                         <PostCard v-for="post in posts" :key="post.id" :post="post"
@@ -89,6 +91,7 @@
 import { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, alertController } from '@ionic/vue';
 import AppHeader from '@/components/AppHeader.vue';
 import CreatePostCard from '@/components/CreatePostCard.vue';
+import FilterPosts from '@/components/FilterPosts.vue';
 import PostCard from '@/components/PostCard.vue';
 import postsService from '@/services/postsService';
 import { AuthService } from '@/services/auth';
@@ -104,7 +107,7 @@ import { App } from '@capacitor/app';
 
 export default {
     name: 'HomeView',
-    components: { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, AppHeader, CreatePostCard, PostCard, CustomBanner },
+    components: { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, AppHeader, CreatePostCard, PostCard, CustomBanner, FilterPosts },
     data() {
         return {
             posts: [],
@@ -122,7 +125,8 @@ export default {
             showLoginPrompt: false,
             showServerBanner: false,
             serverBannerData: null,
-            noMoreBanners: false
+            noMoreBanners: false,
+            postFilters: {} // Filtros activos
         }
     },
     setup() {
@@ -310,11 +314,19 @@ export default {
         handleImageError(event) {
             console.warn('Error al cargar imagen:', event.target?.src)
         },
-        async fetchPosts(page = 1) {
+        async fetchPosts(page = 1, filters = null) {
             this.loading = page === 1
             this.error = null
 
-            const result = await postsService.fetchPosts(page)
+            // Unir filtros activos
+            const params = { page };
+            const activeFilters = filters || this.postFilters;
+            if (activeFilters && (activeFilters.universidad_id || activeFilters.carrera_id)) {
+                if (activeFilters.universidad_id) params.universidad_id = activeFilters.universidad_id;
+                if (activeFilters.carrera_id) params.carrera_id = activeFilters.carrera_id;
+            }
+
+            const result = await postsService.fetchPosts(params.page, params);
 
             if (result.success) {
                 if (page === 1) {
@@ -352,8 +364,12 @@ export default {
                     this.$router.replace('/login')
                 }
             }
-
             this.loading = false
+        },
+
+        handleFilterPosts(filters) {
+            this.postFilters = filters || {};
+            this.fetchPosts(1, this.postFilters);
         },
         async handleLike(postId) {
             // Encontrar el post antes de hacer la petición

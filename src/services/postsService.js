@@ -20,13 +20,35 @@ class PostsService {
    * @param {number} page - Número de página a cargar
    * @returns {Promise<Object>} Respuesta de la API
    */
-  async fetchPosts(page = 1) {
+  async fetchPosts(page = 1, filters = {}) {
     try {
       // El backend detectará automáticamente si hay token en el header
       // y devolverá el feed correspondiente (personalizado o público)
-      const response = await api.get("/posts", {
-        params: { page },
-      });
+      // Construimos los parámetros base (siempre paginación)
+      const queryParams = { page };
+
+      // Verificamos si hay filtros activos de forma limpia
+      const hasFilters = filters.universidad_id || filters.carrera_id;
+
+      let response;
+
+      if (hasFilters) {
+        // Si hay filtros, usamos el endpoint POST
+        // Preparamos el body con los datos exactos que espera la API
+        const filterBody = {
+          universidad: filters.universidad_id,
+          carrera: filters.carrera_id,
+        };
+
+        // Pasamos page en la URL porque POST no suele llevar params de query,
+        // pero Laravel los lee igual de la Request si es necesario para la paginación interna.
+        // Aunque lo ideal sería enviarlo también en el body o que el backend lo maneje.
+        // Asumiré tu estructura actual.
+        response = await api.post(`/posts/filter?page=${page}`, filterBody);
+      } else {
+        // Si hay filtros, usamos el endpoint GET general.
+        response = await api.get("/posts", { params: queryParams });
+      }
 
       if (response.data.success && response.data.data) {
         const posts = response.data.data.data || [];
