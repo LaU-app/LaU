@@ -42,6 +42,18 @@
           </ion-label>
           <ion-toggle slot="end" mode="ios" :checked="isAmbientMode" @ionChange="toggleAmbientMode"></ion-toggle>
         </ion-item>
+
+        <ion-item>
+          <div slot="start" class="icon-box bg-indigo">
+            <ion-icon :icon="colorWandOutline"></ion-icon>
+          </div>
+          <ion-label>
+            <h2>Menú de Cristal (iOS)</h2>
+            <p>Efecto translúcido flotante en la barra inferior</p>
+          </ion-label>
+          <ion-toggle slot="end" mode="ios" :checked="isGlassMode" @ionChange="toggleGlassMode"></ion-toggle>
+        </ion-item>
+
       </ion-list>
 
       <div class="section-title">NOTIFICACIONES</div>
@@ -119,7 +131,7 @@ import {
 } from '@ionic/vue';
 import {
   globeOutline, keyOutline, moonOutline, notificationsOutline, mailOutline,
-  timeOutline, fingerPrintOutline, shieldCheckmarkOutline, logOutOutline, cloudDownloadOutline
+  timeOutline, fingerPrintOutline, shieldCheckmarkOutline, logOutOutline, cloudDownloadOutline, colorWandOutline
 } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
 import { chevronBackOutline } from 'ionicons/icons'; // Importamos el icono
@@ -133,10 +145,12 @@ import { pushNotificationsService } from '@/services/pushNotificationsService';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Browser } from '@capacitor/browser';
 import { App as CapacitorApp } from '@capacitor/app';
+import { useGlassMode } from "@/utils/useGlassMode";
 
 const appVersion = ref('0.0.0'); // Puedes poner la versión actual de tu build
 const appBuild = ref('0000000');
 const isPushEnabled = ref(false);
+const { isGlassMode, toggleGlassMode } = useGlassMode();
 
 onMounted(async () => {
   // Solo intentará obtener info si Capacitor está disponible (entorno nativo)

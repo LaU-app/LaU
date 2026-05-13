@@ -5,7 +5,7 @@
 
         <FloatingAudioPlayer />
 
-        <ion-content>
+        <ion-content ref="contentRef" :scroll-events="true" @ionScroll="trackScroll">
             <!-- Pull to Refresh -->
             <ion-refresher slot="fixed" @ionRefresh="handleRefresh($event)">
                 <ion-refresher-content pulling-icon="chevron-down-circle-outline" pulling-text="Desliza para actualizar"
@@ -14,6 +14,10 @@
             </ion-refresher>
 
             <div class="container">
+                <div class="programmatic-refresher" :class="{ 'is-active': isProgrammaticRefreshing }">
+                    <ion-spinner name="crescent" color="primary"></ion-spinner>
+                </div>
+
                 <div v-if="loading && !isRefreshing" class="loading-container">
                     <ion-spinner name="crescent"></ion-spinner>
                     <ion-text>
@@ -82,6 +86,23 @@
             </template>
         </CustomBanner>
 
+        <CustomBanner 
+            :isOpen="showGlassFeatureBanner" 
+            title="¡Nuevo Efecto Cristal! ✨"
+            message="Hemos rediseñado LaU con un nuevo estilo flotante y cristalino. ¿Quieres probarlo? Puedes encenderlo o apagarlo cuando quieras desde Ajustes."
+            confirmText="¡Probar ahora!" 
+            cancelText="Quizás después" 
+            iconColor="primary" 
+            @confirm="activateGlassMode"
+            @cancel="dismissGlassBanner">
+            <template #icon>
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #4d8dff;">
+                    <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275l5.813 1.912l-5.813 1.912a2 2 0 0 0 -1.275 1.275l-1.912 5.813l-1.912 -5.813a2 2 0 0 0 -1.275 -1.275l-5.813 -1.912l5.813 -1.912a2 2 0 0 0 1.275 -1.275l1.912 -5.813z"></path>
+                    <path d="M5 5l-1.5 4.5l-4.5 1.5l4.5 1.5l1.5 4.5l1.5 -4.5l4.5 -1.5l-4.5 -1.5z"></path>
+                </svg>
+            </template>
+        </CustomBanner>
+
         <CustomBanner :isOpen="showServerBanner" :banner="serverBannerData" @confirm="handleServerBannerAction"
             @cancel="handleServerBannerDismiss" />
     </ion-page>
@@ -105,6 +126,9 @@ import apiService from '@/services/api';
 import FloatingAudioPlayer from '@/components/FloatingAudioPlayer.vue';
 import { App as CapacitorApp } from '@capacitor/app';
 
+import { useGlassMode } from '@/utils/useGlassMode';
+
+
 export default {
     name: 'HomeView',
     components: { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, AppHeader, CreatePostCard, PostCard, CustomBanner, FloatingAudioPlayer },
@@ -125,10 +149,42 @@ export default {
             showLoginPrompt: false,
             showServerBanner: false,
             serverBannerData: null,
-            noMoreBanners: false
+            noMoreBanners: false,
+            currentScrollTop: 0,
+            isProgrammaticRefreshing: false,
         }
     },
     setup() {
+        // 1. Traemos la variable global de tu efecto cristal
+        const { isGlassMode } = useGlassMode();
+
+        // 2. Variable reactiva para controlar si el banner se ve o no
+        const showGlassFeatureBanner = ref(false);
+
+        // 3. Verificamos la memoria al entrar a la pantalla
+        onMounted(() => {
+            const hasSeenGlassBanner = localStorage.getItem('has_seen_glass_banner');
+            
+            // Si no hay registro, mostramos el banner después de 1 segundo
+            if (!hasSeenGlassBanner) {
+                setTimeout(() => {
+                    showGlassFeatureBanner.value = true;
+                }, 1000); 
+            }
+        });
+
+        // 4. Función para cerrar y guardar en memoria
+        const dismissGlassBanner = () => {
+            showGlassFeatureBanner.value = false;
+            localStorage.setItem('has_seen_glass_banner', 'true');
+        };
+
+        // 5. Función para activar el cristal, cerrar y guardar en memoria
+        const activateGlassMode = () => {
+            isGlassMode.value = true; 
+            dismissGlassBanner();
+        };
+
         // Función para buscar y descargar
         const checkForUpdates = async () => {
             if (!Capacitor.isNativePlatform()) return;
@@ -208,8 +264,25 @@ export default {
 
         return {
             isDarkMode, toggleDarkMode, showNotificationsPrompt, activateNotifications,
-            closeNotificationsPrompt
+            closeNotificationsPrompt,
+            isGlassMode,
+            showGlassFeatureBanner,
+            dismissGlassBanner,
+            activateGlassMode
         }
+    },
+    mounted() {
+        // ... tu código existente (si tienes)
+        window.addEventListener('home-tab-clicked', this.onHomeTabDoubleClicked);
+    },
+    beforeUnmount() {
+        // ... tu código existente
+        if (this.alertTimer) {
+            clearTimeout(this.alertTimer)
+            this.alertTimer = null
+        }
+        // <-- NUEVA LÍNEA: Limpiamos el evento para no consumir memoria
+        window.removeEventListener('home-tab-clicked', this.onHomeTabDoubleClicked);
     },
     async created() {
         // Verificar autenticación y actualizar estado
@@ -316,7 +389,8 @@ export default {
             console.warn('Error al cargar imagen:', event.target?.src)
         },
         async fetchPosts(page = 1) {
-            this.loading = page === 1
+            // EVITAMOS que la pantalla se ponga en blanco si estamos usando el refresher visual
+            this.loading = page === 1 && !this.isProgrammaticRefreshing;
             this.error = null
 
             const result = await postsService.fetchPosts(page)
@@ -504,7 +578,55 @@ export default {
 
             // Registramos en Laravel que ya lo vio para que no vuelva a salir
             await bannerService.markAsViewed(banner.id);
-        }
+        },
+
+        // 1. Rastreamos dónde está el usuario
+        trackScroll(event) {
+            this.currentScrollTop = event.detail.scrollTop;
+        },
+
+        // 2. La lógica del doble tap
+        // async onHomeTabDoubleClicked() {
+        //     // Solo actuar si estamos en la pestaña principal
+        //     if (this.$route.path !== '/tabs/tab1') return;
+
+        //     // Si el usuario bajó más de 10 píxeles, lo subimos suavemente
+        //     if (this.currentScrollTop > 10) {
+        //         // Hacemos scroll hasta arriba con una animación de 500ms
+        //         this.$refs.contentRef.$el.scrollToTop(500);
+        //     } else {
+        //         // Si ya está arriba (scrollTop es 0), forzamos el refresco
+        //         this.isRefreshing = true;
+        //         this.currentPage = 1;
+        //         await this.fetchPosts(1);
+        //         this.isRefreshing = false;
+        //     }
+        // },
+
+        // 2. La lógica del doble tap
+        async onHomeTabDoubleClicked() {
+            if (this.$route.path !== '/tabs/tab1') return;
+
+            if (this.currentScrollTop > 10) {
+                // 1. Hacemos scroll hasta arriba (tarda 500ms)
+                this.$refs.contentRef.$el.scrollToTop(500);
+                
+                // 2. Esperamos medio segundo a que llegue arriba y sacamos la ruedita
+                setTimeout(async () => {
+                    this.isProgrammaticRefreshing = true;
+                    this.currentPage = 1;
+                    await this.fetchPosts(1);
+                    this.isProgrammaticRefreshing = false; // Oculta la ruedita
+                }, 500);
+                
+            } else {
+                // Si ya estaba hasta arriba, sacamos la ruedita de inmediato
+                this.isProgrammaticRefreshing = true;
+                this.currentPage = 1;
+                await this.fetchPosts(1);
+                this.isProgrammaticRefreshing = false;
+            }
+        },
 
         // async showLoginAlert() {
         //     // Solo mostrar si el usuario NO está autenticado Y está en la ruta del feed
@@ -610,5 +732,24 @@ export default {
 .container {
     width: 100% !important;
     max-width: 100% !important;
+}
+
+/* --- Refresher Programático --- */
+.programmatic-refresher {
+    height: 0;
+    opacity: 0;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Animación idéntica a la nativa de iOS/Android */
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); 
+}
+
+.programmatic-refresher.is-active {
+    height: 60px;
+    opacity: 1;
+    margin-top: 10px;
+    margin-bottom: 10px;
 }
 </style>

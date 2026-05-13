@@ -3,8 +3,7 @@
         class="post-card" 
         :class="{ 
             'card-image-style': post.tipo === 'imagen' && isAmbientMode, 
-            'is-dark-bg': post.tipo === 'imagen' && isAmbientMode && isDarkImage, 
-            'is-light-bg': post.tipo === 'imagen' && isAmbientMode && !isDarkImage,
+            'is-dark-bg': post.tipo === 'imagen' && isAmbientMode && !isDarkImage, 
             'normal-card': !isAmbientMode || post.tipo !== 'imagen'
         }" 
         :style="isAmbientMode ? { '--ambient-gradient': ambientGradient } : {}"
@@ -12,9 +11,9 @@
     >
        
         <div 
-            v-if="post.tipo === 'imagen' && post.imagen_url && isAmbientMode" 
+            v-if="post.tipo === 'imagen' && (post.imagen_mini_url || post.imagen_url) && isAmbientMode" 
             class="card-main-blur" 
-            :style="{ backgroundImage: `url(${getFullImageUrl(post.imagen_url)})` }"
+            :style="{ backgroundImage: `url(${getFullImageUrl(post.imagen_mini_url || post.imagen_url)})` }"
         ></div>
        
         <!-- Post Header -->
@@ -30,8 +29,10 @@
                         <h3>{{ post.user?.name || 'Usuario' }}</h3>
                     </ion-text>
                     <ion-text>
-                        <p class="post-meta">{{ post.user?.username || 'username' }} • Hace {{
-                            timeAgo(post.created_at) }}</p>
+                        <!-- <p class="post-meta">{{ post.user?.username || 'username' }} • Hace {{
+                            timeAgo(post.created_at) }}</p> -->
+                        
+                        <p class="post-meta">{{ post.user?.username || 'username' }} • {{ formatTimeRelative(post.created_at) }}</p>
                     </ion-text>
                 </div>
             </div>
@@ -55,7 +56,7 @@
                 </ion-img>
             </div> -->
 
-            <div v-if="post.tipo === 'imagen' && post.imagen_url" 
+            <!-- <div v-if="post.tipo === 'imagen' && post.imagen_url" 
                  class="post-media-container" 
                  :class="{ 'is-loaded': post.imageLoaded }" 
                  @click.stop="openImageModal">
@@ -65,13 +66,42 @@
                 </div>
 
                 <ion-img 
-                    :src="getFullImageUrl(post.imagen_url)" 
+                    :src="getFullImageUrl(post.imagen_mini_url || post.imagen_url)" 
                     alt="" 
                     @ionImgDidLoad="post.imageLoaded = true" 
                     @ionError="handleImageError" 
                     class="post-media"
                     :class="{ 'is-visible': post.imageLoaded }">
                 </ion-img>
+            </div> -->
+
+            <div v-if="post.tipo === 'imagen' && post.imagen_url" 
+                 class="post-media-container" 
+                 :class="{ 'is-loaded': isImageLoaded }" 
+                 @click.stop="openImageModal">
+                
+                <div class="image-placeholder" :class="{ 'is-hidden': isImageLoaded }">
+                    <ion-spinner name="crescent"></ion-spinner>
+                </div>
+
+                <!-- <ion-img 
+                    :src="getFullImageUrl(post.imagen_mini_url || post.imagen_url)" 
+                    alt="" 
+                    @ionImgDidLoad="isImageLoaded = true" 
+                    @ionError="handleImageError" 
+                    class="post-media"
+                    :class="{ 'is-visible': isImageLoaded }">
+                </ion-img> -->
+
+                <img 
+                    :src="getFullImageUrl(post.imagen_mini_url || post.imagen_url)" 
+                    loading="lazy"
+                    alt="Publicación" 
+                    @load="isImageLoaded = true" 
+                    @error="handleImageError" 
+                    class="post-media"
+                    :class="{ 'is-visible': isImageLoaded }"
+                />
             </div>
 
             <!-- Música Post -->
@@ -107,22 +137,6 @@
         <ion-card-content class="post-footer relative-content">
             <PostActions :post="post" @like="handleLike" @comment="handleComment" />
         </ion-card-content>
-
-        <!-- <ion-modal :is-open="isImageModalOpen" @didDismiss="closeImageModal" @didPresent="initGesture" class="image-viewer-modal">
-            <ion-content>
-                <div class="modal-image-container" >
-                    
-                    <div   v-if="isAmbientMode" class="modal-blur-bg" :style="{ backgroundImage: `url(${getFullImageUrl(post.imagen_url)})` }"></div>
-
-                    <ion-button class="close-image-btn" @click.stop="closeImageModal">
-                        <ion-icon :icon="closeOutline" slot="icon-only"></ion-icon>
-                    </ion-button>
-
-                    <img ref="draggableImage" :src="post.imagen_url" class="fullscreen-img" @click.stop />
-
-                </div>
-            </ion-content>
-        </ion-modal> -->
 
         <FullScreenImageViewer 
             v-if="post" 
@@ -193,6 +207,8 @@ export default {
     },
     emits: ['like', 'comment', 'share', 'imageError'],
     setup(props, { emit }) {
+        const isImageLoaded = ref(false);
+        
         const router = useRouter()
         const { isAmbientMode } = useAmbientMode();
 
@@ -217,6 +233,50 @@ export default {
             emit('imageError', event)
         }
 
+        // Agrega esta función en tu <script setup> o en tus utilidades
+        const formatTimeRelative = (dateString) => {
+            if (!dateString) return '';
+
+            const date = new Date(dateString);
+            const now = new Date();
+            const secondsDiff = Math.floor((now - date) / 1000);
+
+            // Menos de un minuto
+            if (secondsDiff < 60) {
+                return 'Hace un momento';
+            }
+
+            // Menos de una hora
+            const minutesDiff = Math.floor(secondsDiff / 60);
+            if (minutesDiff < 60) {
+                return `Hace ${minutesDiff}m`; // o 'Hace 5 minutos'
+            }
+
+            // Menos de un día (24 horas)
+            const hoursDiff = Math.floor(minutesDiff / 60);
+            if (hoursDiff < 24) {
+                return `Hace ${hoursDiff}h`; // o 'Hace 3 horas'
+            }
+
+            // Menos de una semana (7 días)
+            const daysDiff = Math.floor(hoursDiff / 24);
+            if (daysDiff < 7) {
+                return daysDiff === 1 ? 'Ayer' : `Hace ${daysDiff} d`; // o 'Hace 2 días'
+            }
+
+            // --- Si pasaron más de 7 días, mostramos la fecha estática (Sin el "Hace") ---
+
+            const options = { month: 'short', day: 'numeric' }; // Ej: "21 feb"
+
+            // Si es de un año anterior, le agregamos el año a la etiqueta
+            if (date.getFullYear() !== now.getFullYear()) {
+                options.year = 'numeric'; // Ej: "21 feb 2025"
+            }
+
+            // Usamos el API nativa de Javascript para traducir los meses al español (es-ES o es-SV)
+            return date.toLocaleDateString('es-SV', options);
+        }
+
         const getFileName = (filePath) => {
             if (!filePath) return 'Archivo'
             const parts = filePath.split('/')
@@ -230,56 +290,6 @@ export default {
             const extension = filePath.split('.').pop().toUpperCase()
             return `Archivo ${extension}`
         }
-
-        // const downloadFile = async (urlCompleta, nombreArchivoPath) => {
-        //     // 1. Extraemos un nombre limpio usando la función que ya tienes en tu template
-        //     const nombreBase = getFileName(nombreArchivoPath); 
-            
-        //     // Limpiamos caracteres raros para el disco duro del celular (cambia espacios y # por _)
-        //     const nombreSeguroCelular = nombreBase.replace(/[^a-zA-Z0-9.-]/g, '_');
-
-        //     // 2. ARREGLAMOS LA URL PARA EL SERVIDOR (El truco del #)
-        //     // Partimos la URL, codificamos SOLO el nombre del archivo, y la volvemos a unir
-        //     const partesUrl = urlCompleta.split('/');
-        //     const nombreArchivoEnUrl = partesUrl.pop();
-        //     const urlSegura = partesUrl.join('/') + '/' + encodeURIComponent(nombreArchivoEnUrl);
-
-        //     console.log("Intentando descargar desde:", urlSegura);
-
-        //     // 3. DESCARGA SEGÚN LA PLATAFORMA
-        //     if (Capacitor.getPlatform() === 'web') {
-        //         // Si estás programando en tu laptop, simplemente lo abre en otra pestaña
-        //         window.open(urlSegura, '_blank');
-        //         return;
-        //     }
-
-        //     // 4. DESCARGA NATIVA PARA EL APK DE SIVARSOCIAL
-        //     try {
-        //         const opciones = {
-        //             url: urlSegura,
-        //             // Nombres correctos para el plugin moderno
-        //             directory: Directory.Documents, 
-        //             path: nombreSeguroCelular 
-        //         };
-
-        //         // Usamos el hilo nativo HTTP para que la app no se trabe con archivos pesados
-        //         const respuesta = await Filesystem.downloadFile(opciones);
-                
-        //         console.log('¡Éxito! Guardado en:', respuesta.path);
-                
-        //         // Aquí podrías usar un Toast de Ionic en lugar de un alert para mejor UX
-        //         alert(`Archivo guardado exitosamente en tus Documentos como ${nombreSeguroCelular}`);
-
-        //     } catch (error) {
-        //         console.error('Error al descargar en el celular:', error);
-                
-        //         // CAMBIO 2: Imprimimos el error real en la pantalla del celular
-        //         // Si es un objeto, JSON.stringify lo convierte en texto legible
-        //         const mensajeError = typeof error === 'object' ? JSON.stringify(error) : error;
-                
-        //         alert(`Error técnico: ${mensajeError}`);
-        //     }
-        // };
 
         const downloadFile = (urlArchivo, nombreArchivo) => {
              // Si nombreArchivo viene con la ruta entera, puedes limpiarlo aquí antes
@@ -307,66 +317,67 @@ export default {
 
         const ambientGradient = ref('linear-gradient(135deg, rgba(0,0,0,0.1), rgba(0,0,0,0.1))');
 
-        const extractColors = async (imageUrl) => {
-            if (!imageUrl) return;
+        // const extractColors = async (imageUrl) => {
+        //     if (!imageUrl) return;
 
-            try {
-                const VibrantClass = VibrantNamespace.Vibrant || VibrantNamespace.default || VibrantNamespace;
+        //     try {
+        //         const VibrantClass = VibrantNamespace.Vibrant || VibrantNamespace.default || VibrantNamespace;
                 
-                // 1. Limpiamos la URL (lo que ya hacías y te funcionaba)
-                const relativePath = imageUrl.replace(/^.*\/\/[^\/]+/, '').replace(/^\//, '');
+        //         // 1. Limpiamos la URL (lo que ya hacías y te funcionaba)
+        //         const relativePath = imageUrl.replace(/^.*\/\/[^\/]+/, '').replace(/^\//, '');
 
-                // 2. Definimos la URL final
-                // En local usará el proxy (/uploads) y en el APK usará el dominio completo
-                const isLocal = window.location.host.includes('localhost:8100');
+        //         // 2. Definimos la URL final
+        //         // En local usará el proxy (/uploads) y en el APK usará el dominio completo
+        //         const isLocal = window.location.host.includes('localhost:8100');
 
-                const finalUrl = isLocal ? `/${relativePath}` : `${BASE_URL}/${relativePath}`;
+        //         const finalUrl = isLocal ? `/${relativePath}` : `${BASE_URL}/${relativePath}`;
                 
-                const urlWithCache = `${finalUrl}?t=${Date.now()}`;
+        //         const urlWithCache = `${finalUrl}?t=${Date.now()}`;
 
-                // 3. CARGA DE IMAGEN (El método más compatible)
-                const img = new Image();
+        //         // 3. CARGA DE IMAGEN (El método más compatible)
+        //         const img = new Image();
                 
-                // Solo pedimos crossOrigin si vamos al dominio real
-                if (!isLocal) {
-                    img.crossOrigin = "anonymous";
-                }
+        //         // Solo pedimos crossOrigin si vamos al dominio real
+        //         if (!isLocal) {
+        //             img.crossOrigin = "anonymous";
+        //         }
 
-                const imagePromise = new Promise((resolve, reject) => {
-                    img.onload = () => resolve(img);
-                    img.onerror = () => reject(new Error("Error de red en el servidor"));
-                    img.src = urlWithCache;
-                });
+        //         const imagePromise = new Promise((resolve, reject) => {
+        //             img.onload = () => resolve(img);
+        //             img.onerror = () => reject(new Error("Error de red en el servidor"));
+        //             img.src = urlWithCache;
+        //         });
 
-                const loadedImg = await imagePromise;
-                const palette = await VibrantClass.from(loadedImg).getPalette();
+        //         const loadedImg = await imagePromise;
+        //         const palette = await VibrantClass.from(loadedImg).getPalette();
 
-                if (palette.Vibrant) {
-                    const rgb = palette.Vibrant.getRgb();
-                    const brightness = (rgb[0] * 0.299 + rgb[1] * 0.587 + rgb[2] * 0.114);
-                    const vPop = palette.Vibrant.getPopulation();
-                    const dvPop = palette.DarkVibrant ? palette.DarkVibrant.getPopulation() : 0;
+        //         if (palette.Vibrant) {
+        //             const rgb = palette.Vibrant.getRgb();
+        //             const brightness = (rgb[0] * 0.299 + rgb[1] * 0.557 + rgb[2] * 0.114);
+        //             const vPop = palette.Vibrant.getPopulation();
+        //             const dvPop = palette.DarkVibrant ? palette.DarkVibrant.getPopulation() : 0;
 
-                    isDarkImage.value = (brightness < 150) || (dvPop > vPop * 2);
-                    ambientGradient.value = `linear-gradient(135deg, rgba(${rgb.join(',')}, 0.9), rgba(0,0,0,0.4))`;
+        //             // isDarkImage.value = (brightness < 150) || (dvPop > vPop * 2);
+        //             isDarkImage.value = (brightness < 165) || (dvPop > vPop * 2);
+        //             ambientGradient.value = `linear-gradient(135deg, rgba(${rgb.join(',')}, 0.9), rgba(0,0,0,0.4))`;
 
-                    // LOG NIVEL INGENIERO PARA SIVARSOCIAL
-                    // console.log(
-                    //     `%c[SivarSocial] ${Capacitor.getPlatform().toUpperCase()} %c
-                    //     🎨 Modo UI: ${isDarkImage.value ? 'OSCURO (Texto Blanco)' : 'CLARO (Texto Negro)'}
-                    //     ✨ Brillo detectado: ${brightness.toFixed(2)} / 255
-                    //     🔗 URL: ${finalUrl}`,
-                    //     `color: ${isDarkImage.value ? '#3498db' : '#f39c12'}; font-weight: bold; font-size: 12px;`,
-                    //     "color: inherit; font-family: monospace;"
-                    // );
+        //             // LOG NIVEL INGENIERO PARA SIVARSOCIAL
+        //             // console.log(
+        //             //     `%c[SivarSocial] ${Capacitor.getPlatform().toUpperCase()} %c
+        //             //     🎨 Modo UI: ${isDarkImage.value ? 'OSCURO (Texto Blanco)' : 'CLARO (Texto Negro)'}
+        //             //     ✨ Brillo detectado: ${brightness.toFixed(2)} / 255
+        //             //     🔗 URL: ${finalUrl}`,
+        //             //     `color: ${isDarkImage.value ? '#3498db' : '#f39c12'}; font-weight: bold; font-size: 12px;`,
+        //             //     "color: inherit; font-family: monospace;"
+        //             // );
                     
-                    // console.log("✅ Color actualizado usando el dominio");
-                }
-            } catch (e) {
-                // console.error("❌ Sigue fallando el servidor:", e.message);
-                isDarkImage.value = false;
-            }
-        };
+        //             // console.log("✅ Color actualizado usando el dominio");
+        //         }
+        //     } catch (e) {
+        //         // console.error("❌ Sigue fallando el servidor:", e.message);
+        //         isDarkImage.value = false;
+        //     }
+        // };
 
         // --- LÓGICA DEL VISOR DE IMÁGENES Y GESTOS ---
         // ==========================================
@@ -457,12 +468,6 @@ export default {
             }
         };
 
-        onMounted(() => {
-            if (props.post.tipo === 'imagen' && props.post.imagen_url) {
-                extractColors(props.post.imagen_url);
-            }
-        });
-
         return {
             personCircle,
             documentAttach,
@@ -477,9 +482,7 @@ export default {
             downloadFile,
             getFileColor,
             timeAgo,
-            isDarkImage,
             ambientGradient,
-            extractColors,
             isAmbientMode,
             getFullImageUrl,
             formatTextWithLinks,
@@ -490,7 +493,9 @@ export default {
             openImageModal,
             closeImageModal,
             draggableImage,
-            initGesture
+            initGesture,
+            isImageLoaded,
+            formatTimeRelative
         }
     }
 }
@@ -603,6 +608,10 @@ export default {
   filter: blur(20px) saturate(1.4) brightness(0.8);
   transform: scale(1.05);
   z-index: 0;
+
+  transform: translateZ(0);
+  will-change: transform, filter;
+  backface-visibility: hidden;
 }
 
 /* Capa de oscuridad para que el texto blanco/negro se lea bien */
@@ -622,40 +631,21 @@ export default {
 
 /* --- DINÁMICA DE COLORES --- */
 
-/* CASO: Imagen Clara -> Texto e Iconos Oscuros */
-.is-light-bg :deep(h2),
-.is-light-bg :deep(h3),
-.is-light-bg :deep(p),
-.is-light-bg :deep(ion-text),
-.is-light-bg :deep(.post-meta),
-.is-light-bg :deep(ion-icon),
-.is-light-bg :deep(.action-button ion-icon),
-.is-light-bg :deep(.action-button ion-label) {
-    color: #1a1a1a !important;
-    --color: #1a1a1a !important;
-    text-shadow: none;
-}
-
-.is-light-bg :deep(.action-button ion-icon),
-.is-light-bg :deep(.action-button ion-label) {
-    color: #000000 !important;
-}
-
-.card-image-style.is-dark-bg :deep(h2),
-.card-image-style.is-dark-bg :deep(h3),
-.card-image-style.is-dark-bg :deep(p),
-.card-image-style.is-dark-bg :deep(ion-text),
-.card-image-style.is-dark-bg :deep(.post-meta),
-.card-image-style.is-dark-bg :deep(ion-icon),
-.card-image-style.is-dark-bg :deep(.action-button ion-icon),
-.card-image-style.is-dark-bg :deep(.action-button ion-label) {
+.is-dark-bg :deep(h2),
+.is-dark-bg :deep(h3),
+.is-dark-bg :deep(p),
+.is-dark-bg :deep(ion-text),
+.is-dark-bg :deep(.post-meta),
+.is-dark-bg :deep(ion-icon),
+.is-dark-bg :deep(.action-button ion-icon),
+.is-dark-bg :deep(.action-button ion-label) {
     color: #ffffff !important;
     --color: #ffffff !important; /* Variable interna de Ionic */
     text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important;
 }
 
-.card-image-style.is-dark-bg :deep(.action-button ion-icon),
-.card-image-style.is-dark-bg :deep(.action-button ion-label) {
+.is-dark-bg :deep(.action-button ion-icon),
+.is-dark-bg :deep(.action-button ion-label) {
     color: #ffffff !important;
 }
 

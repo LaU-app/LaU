@@ -79,7 +79,7 @@
             </div>
         </ion-content>
 
-        <ion-footer class="chat-footer">
+        <!-- <ion-footer class="chat-footer">
             <ion-toolbar>
                 <div v-if="filePreview" slot="top" class="upload-preview-bar">
                     <img :src="filePreview" class="preview-thumb" />
@@ -113,6 +113,57 @@
                     </ion-button>
                 </div>
             </ion-toolbar>
+        </ion-footer> -->
+
+        <ion-footer class="ion-no-border transparent-footer">
+            <div class="input-gradient-mask"></div>
+
+            <div class="floating-chat-input" :class="{ 'is-glass': isGlassMode }">
+                
+                <LiquidGlassBox 
+                    v-if="isGlassMode"
+                    class="chat-glass-bg" 
+                    :height="200" 
+                    :depth="7" 
+                    :radius="30"
+                    :strength="100"
+                    :chromaticAberration="3" 
+                    :blur="1.8"
+                    :width="calculatedBarWidth" 
+                />
+
+                <div class="chat-input-content">
+                    <div v-if="filePreview" class="upload-preview-bar">
+                        <img :src="filePreview" class="preview-thumb" />
+                        <ion-button fill="clear" color="danger" @click="clearFile">
+                            <ion-icon name="close-circle"></ion-icon> X
+                        </ion-button>
+                    </div>
+
+                    <div class="input-area">
+                        <ion-button fill="clear" @click="triggerFileUpload" class="icon-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                            </svg>
+                        </ion-button>
+                        <input type="file" ref="fileInput" @change="handleFileChange" hidden accept="image/*" />
+
+                        <input v-model="newMessage" placeholder="Escribe un mensaje..." @keyup.enter="sendMessage"
+                            @input="handleTyping" class="native-input" />
+
+                        <ion-button @click="sendMessage" fill="clear" class="send-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                class="icon icon-tabler icons-tabler-outline icon-tabler-send">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path d="M10 14l11 -11" />
+                                <path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5" />
+                            </svg>
+                        </ion-button>
+                    </div>
+                </div>
+            </div>
         </ion-footer>
 
         <ion-modal :is-open="showInfo" @didDismiss="toggleInfoPanel(false)" :initial-breakpoint="0.85"
@@ -180,7 +231,13 @@ import { IonPage, IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, Io
 import { personCircle } from 'ionicons/icons';
 import { useDarkMode } from '@/utils/useDarkMode';
 
+import LiquidGlassBox from '@/components/LiquidGlassBox.vue';
+import { useGlassMode } from '@/utils/useGlassMode';
+import { computed } from 'vue'; // Asegúrate de importar 'computed'
+
 const { isDarkMode } = useDarkMode();
+const { isGlassMode } = useGlassMode(); // <-- Extraemos la variable global
+
 
 // FUNCIÓN HELPER PARA COMPLETAR URLS
 const getFullUrl = (path) => {
@@ -376,8 +433,14 @@ const handlePushNotification = (event) => {
     width: 100%;
 }
 
+
+
 .messages-container {
     padding: 15px;
+    
+    /* NUEVO: Espacio en blanco al final para que los mensajes no se escondan detrás de la barra */
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); 
+    
     display: flex;
     flex-direction: column;
     gap: 5px;
@@ -527,26 +590,117 @@ const handlePushNotification = (event) => {
     margin-bottom: 5px;
 }
 
-.chat-footer ion-toolbar {
-    --background: var(--ion-toolbar-background);
-    --border-width: 1px 0 0 0;
-    --border-color: var(--ion-border-color);
-    padding: 5px;
+/* ==================================================
+   DISEÑO FLOTANTE DEL CHAT INPUT
+   ================================================== */
+ion-footer.transparent-footer {
+    --background: transparent !important;
+    background: transparent !important;
+    --border-width: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    
+    /* LA MAGIA: Esto hace que el footer flote sobre los mensajes */
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+}
+
+.input-gradient-mask {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    /* Altura del degradado: cubre el espacio del footer y un poco más */
+    height: calc(90px + env(safe-area-inset-bottom));
+    
+    /* El degradado de color sólido a transparente */
+    background: linear-gradient(
+        to top,
+        var(--ion-background-color) 0%,
+        rgba(var(--ion-background-color-rgb), 0.6) 40%,
+        transparent 100%
+    );
+    
+    /* Vital: que no bloquee los toques/clics a los últimos mensajes */
+    pointer-events: none; 
+    
+    /* Z-index alto para estar sobre los mensajes, pero bajo el footer */
+    z-index: 1; 
+}
+
+/* 1. MODO NORMAL (Apagado) */
+.floating-chat-input {
+    position: relative;
+    z-index: 2;
+    margin: 0 15px calc(15px + env(safe-area-inset-bottom)) 15px;
+    border-radius: 30px;
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    
+    background: var(--ion-card-background);
+    border: 1px solid #b2b2b221;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    
+    overflow: hidden; /* Corta el cristal para que no se salga */
+    transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* 2. MODO CRISTAL (Encendido) */
+.floating-chat-input.is-glass {
+    /* #191919 equivale a rgb(25, 25, 25). 
+       El 0.6 es la transparencia. (Puedes subirlo a 0.8 si lo quieres más sólido) */
+    background: rgba(var(--ion-background-color-rgb), 0.10) !important;
+    
+    border: none;
+    box-shadow: none;
+    
+    /* Opcional pero recomendado: un bordecito sutil le da el toque "Apple" al cristal oscuro */
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Cristal en el fondo (anclado abajo) */
+.chat-glass-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: 30px;
+    background: transparent !important;
+    height: 200px !important; /* Estático para evitar parpadeos negros */
+    transition: none !important;
+    animation: none !important;
+}
+
+
+/* Contenido por encima del cristal */
+.chat-input-content {
+    position: relative;
+    z-index: 1;
+    width: 100%;
 }
 
 .input-area {
     display: flex;
     align-items: center;
     gap: 8px;
+    padding: 8px 15px;
 }
 
+/* El input ahora es transparente para dejar ver la pastilla de atrás */
 .native-input {
     flex: 1;
     border: none;
-    background: var(--app-input-bg);
+    background: transparent; 
     color: var(--ion-text-color);
-    padding: 10px 15px;
-    border-radius: 20px;
+    padding: 10px 0;
     outline: none;
     font-size: 15px;
 }
@@ -556,26 +710,32 @@ const handlePushNotification = (event) => {
 }
 
 .icon-btn {
+    --padding-start: 5px;
+    --padding-end: 5px;
     color: var(--ion-text-color-secondary);
     margin: 0;
 }
 
 .send-btn {
+    --padding-start: 5px;
+    --padding-end: 5px;
     color: #2180f3;
+    margin: 0;
 }
 
+/* Barra de vista previa de imagen acoplada a la cápsula */
 .upload-preview-bar {
-    padding: 10px;
-    background: var(--app-input-bg);
-    border-bottom: 1px solid var(--ion-border-color);
+    padding: 10px 20px;
+    background: rgba(150, 150, 150, 0.1); 
+    border-bottom: 1px solid rgba(150, 150, 150, 0.2);
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
 .preview-thumb {
-    height: 60px;
-    border-radius: 5px;
+    height: 50px;
+    border-radius: 8px;
 }
 
 .info-panel {

@@ -4,9 +4,22 @@
       <ion-router-outlet></ion-router-outlet>
       <div v-if="isAuthenticated" class="tabs-gradient-mask"></div>
       <!-- Tabs solo para usuarios autenticados -->
-      <ion-tab-bar v-if="isAuthenticated" slot="bottom" class="floating-tabs">
+      <ion-tab-bar v-if="isAuthenticated" slot="bottom" class="floating-tabs"
+      :class="isGlassMode ? 'floating-tabs-glass' : 'floating-tabs-normal'">
 
-        <ion-tab-button tab="tab1" href="/tabs/tab1">
+        <LiquidGlassBox 
+          v-if="isGlassMode"
+           class="liquid-bg" 
+           :height="80" 
+           :depth="7" 
+           :radius="30"
+           :strength="100"
+           :chromaticAberration="3" 
+           :blur="1.8"
+           :width="windowWidth - 30" 
+        />
+
+        <ion-tab-button tab="tab1" href="/tabs/tab1" @click="handleHomeClick">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"
             class="custom-icon">
             <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -78,6 +91,11 @@ import { useRouter } from "vue-router";
 import { AuthService } from "@/services/auth";
 import { notificationsService } from "@/services/notificationsService";
 import { getFullImageUrl } from '@/utils/imageUtils';
+import LiquidGlassBox from '@/components/LiquidGlassBox.vue';
+
+import { useGlassMode } from "@/utils/useGlassMode";
+
+const { isGlassMode } = useGlassMode();
 
 const router = useRouter();
 
@@ -97,8 +115,23 @@ const setCurrentTab = (event) => {
   activeTab.value = event.tab; // Guarda el nombre del tab actual (tab1, create-post, perfil)
 };
 
+// Disparamos un evento global cuando tocan el botón de Home
+const handleHomeClick = () => {
+  window.dispatchEvent(new CustomEvent('home-tab-clicked'));
+};
+
+// Agrega esta variable justo debajo de tus otros ref()
+const windowWidth = ref(window.innerWidth);
+
+// Función para actualizar el tamaño si giran el celular
+const updateWidth = () => {
+  windowWidth.value = window.innerWidth;
+};
+
 // Actualizar cuando el componente se monta
 onMounted(() => {
+  window.addEventListener('resize', updateWidth);
+
   isAuthenticated.value = AuthService.isAuthenticated();
 
   // Cargar contador inicial si está autenticado
@@ -117,6 +150,8 @@ onMounted(() => {
 
 // Limpiar interval al desmontar
 onUnmounted(() => {
+  window.removeEventListener('resize', updateWidth);
+
   if (pollInterval) {
     clearInterval(pollInterval);
   }
@@ -167,28 +202,67 @@ const openNotifications = () => {
 <style scoped>
 /* Menu flotante */
 /* Contenedor principal de los Tabs */
-ion-tab-bar.floating-tabs {
+
+ion-tab-bar.floating-tabs-normal {
   --border: none;
   
   position: absolute;
-  bottom: calc(10px + env(safe-area-inset-bottom));
+  bottom: calc(1rem + env(safe-area-inset-bottom));
   padding-bottom: 0px !important;
-  left: 15px;
-  right: 15px;
+  left: 18px;
+  right: 18px;
   
   height: 65px;
-  width: auto; /* Permite que respete los márgenes left/right */
+  width: auto; 
   
-  border-radius: 30px; /* Bordes redondeados */
-  border: 1px solid #b2b2b221; /* Borde sutil */
+  border-radius: 30px; 
+  border: 1px solid #b2b2b221; 
   
-  /* Sombra para dar profundidad */
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
   backdrop-filter: blur(10px);
   
-  /* Evita que el contenido se salga de los bordes redondeados */
   overflow: hidden; 
   transition: all 0.3s ease-in-out;
+}
+
+/* Contenedor principal de los Tabs (La Isla Flotante) */
+ion-tab-bar.floating-tabs-glass {
+  --background: transparent;
+  --border: none;
+  
+  position: absolute;
+  /* Respetamos el área segura del iPhone y lo separamos del fondo */
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  padding-bottom: 0px !important;
+  left: 18px;  /* Equivalente al left-6 de Tailwind */
+  right: 18px; /* Equivalente al right-6 de Tailwind */
+  
+  height: 65px;
+  border-radius: 40px;
+  
+  box-shadow: none;
+  backdrop-filter: none;
+  overflow: visible;
+  transition: all 0.3s ease-in-out;
+}
+
+/* El fondo de cristal líquido */
+.liquid-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0; 
+  pointer-events: none;
+  border-radius: 40px; /* Mismo radio que la barra */
+}
+
+/* Ajuste para los botones (Asegurar que se vean por encima) */
+ion-tab-button {
+  --background: transparent;
+  --color: var(--app-text-secondary);
+  z-index: 10; /* Asegura que estén por encima del cristal */
 }
 
 /* Ajuste para los botones dentro del tab flotante */
@@ -226,6 +300,20 @@ ion-tab-button.tab-selected {
   transition: background 0.5s ease;
 }
 
+
+/* ==================================================
+   COLOR DE ICONOS EN MODO CRISTAL
+   ================================================== */
+
+/* 1. TEMA CLARO: Iconos negros cuando el cristal está activo */
+ion-tab-bar.floating-tabs-glass ion-tab-button {
+  --color: #3a3a3a; /* Negro puro para máximo contraste */
+}
+
+/* 2. TEMA OSCURO: Iconos blancos cuando el cristal está activo en modo oscuro */
+.ion-palette-dark ion-tab-bar.floating-tabs-glass ion-tab-button {
+  --color: #9ca3af; /* Blanco para contrastar con el cristal oscuro */
+}
 
 
 /* Estilos para los iconos SVG personalizados */

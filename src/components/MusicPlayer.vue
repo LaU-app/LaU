@@ -13,7 +13,7 @@
                 :style="{ backgroundImage: `url(${post.itunes_artwork_url})` }"
             ></div>
 
-            <div v-if="isAmbientMode" class="dark-overlay"></div>
+            <div v-if="isAmbientMode" class="dark-overlay" :class="{ 'active-dark': isDarkMode }"></div>
 
             <div class="progress-bg" :style="{ width: progressPercent + '%' }"></div>
             
@@ -86,6 +86,7 @@ import { useAmbientMode } from "@/utils/useAmbientMode";
 import * as VibrantNamespace from 'node-vibrant';
 import { globalAudioState } from '@/utils/audioPlayerState';
 import { App } from '@capacitor/app';
+import { useDarkMode } from "@/utils/useDarkMode";
 
 export default {
     name: 'MusicPlayer',
@@ -98,6 +99,7 @@ export default {
     emits: ['imageError'],
     setup(props) {
         const { isAmbientMode } = useAmbientMode();
+        const { isDarkMode } = useDarkMode();
         const audioElement = ref(null);
 
         const dominantColorHex = ref('#113a82'); 
@@ -297,7 +299,8 @@ export default {
             currentTimeFormatted, durationFormatted, progressPercent,
             updateTime, loadMetadata, onEnded, onNativePlay,
             // Exponemos las refs y estados de la marquesina
-            songTitleRef, artistNameRef, shouldScrollTitle, shouldScrollArtist, isAmbientMode, dominantColorHex, dominantColorRgb, playerContainer
+            songTitleRef, artistNameRef, shouldScrollTitle, shouldScrollArtist, isAmbientMode, dominantColorHex, dominantColorRgb, playerContainer,
+            isDarkMode
         }
     }
 }
@@ -334,7 +337,7 @@ export default {
 
 /* MODO AMBIENTE */
 .music-content.is-ambient {
-    background: #1a1a1a; 
+    background: var(--ion-background-color);; 
 }
 
 /* --- LAS 3 CAPAS DE FONDO INMERSIVO (Spotify Canvas Style) --- */
@@ -348,14 +351,24 @@ export default {
     background-position: center;
     filter: blur(15px) saturate(1.2); /* Difumina y resalta los colores */
     z-index: 0;
+
+    transform: translateZ(0);
+    will-change: transform, filter;
+    backface-visibility: hidden;
 }
 
 /* 2. CAPA MEDIA: Filtro oscuro semi-transparente para garantizar legibilidad extrema */
 .dark-overlay {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.55); /* 55% de oscuridad */
+    background: rgba(255, 255, 255, 0); /* 55% de oscuridad */
     z-index: 1;
+    transition: background 0.3s ease;
+}
+
+.dark-overlay.active-dark {
+    /* El 55% de oscuridad que querías */
+    background: rgba(0, 0, 0, 0.55); 
 }
 
 /* 3. CAPA SUPERIOR DE FONDO: Barra de progreso (Tu color #4d8dff con transparencia) */
