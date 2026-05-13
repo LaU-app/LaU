@@ -155,21 +155,22 @@ export default {
         }
     },
     setup() {
-        // 1. Traemos la variable global de tu efecto cristal
         const { isGlassMode } = useGlassMode();
-
-        // 2. Variable reactiva para controlar si el banner se ve o no
         const showGlassFeatureBanner = ref(false);
 
-        // 3. Verificamos la memoria al entrar a la pantalla
         onMounted(() => {
-            const hasSeenGlassBanner = localStorage.getItem('has_seen_glass_banner');
-            
-            // Si no hay registro, mostramos el banner después de 1 segundo
-            if (!hasSeenGlassBanner) {
-                setTimeout(() => {
-                    showGlassFeatureBanner.value = true;
-                }, 1000); 
+            // 1. Primero verificamos que el usuario SÍ haya iniciado sesión
+            if (AuthService.isAuthenticated()) {
+                
+                // 2. Si está logueado, revisamos si ya vio el banner antes
+                const hasSeenGlassBanner = localStorage.getItem('has_seen_glass_banner');
+                
+                // 3. Si no lo ha visto, se lo mostramos con el retraso
+                if (!hasSeenGlassBanner) {
+                    setTimeout(() => {
+                        showGlassFeatureBanner.value = true;
+                    }, 1000); 
+                }
             }
         });
 
