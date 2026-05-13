@@ -709,7 +709,16 @@ export default {
     };
   },
 
+  // async created() {
+  //   await this.initializeProfile();
+  // },
+
   async created() {
+    // Cálculo instantáneo para evitar parpadeos en la primera carga
+    const routeParam = (this.$route.params.username || "me").toString().trim().toLowerCase();
+    const localUser = AuthService.getUser();
+    this.isMe = routeParam === "me" || (localUser?.username && routeParam === localUser.username.toLowerCase());
+
     await this.initializeProfile();
   },
 
@@ -858,7 +867,30 @@ export default {
       }
     },
 
+    // resetState() {
+    //   this.posts = [];
+    //   this.seguidores = [];
+    //   this.siguiendo = [];
+    //   this.currentPage = 1;
+    //   this.hasMorePages = false;
+    //   this.error = null;
+    //   this.stats = { posts: 0, seguidores: 0, siguiendo: 0 };
+    //   this.isFollowing = false;
+    //   this.isMe = false;
+    //   /* console.log('[PerfilView] Estado reseteado'); */
+    // },
+
     resetState() {
+      // 1. Limpiamos completamente el usuario.
+      // Al poner id en null, forzamos a que se muestre el Skeleton Loader elegante
+      // en lugar de mostrar botones incorrectos.
+      this.user = {
+        imagen_url: null,
+        name: "Cargando...",
+        username: "cargando",
+        id: null,
+      };
+
       this.posts = [];
       this.seguidores = [];
       this.siguiendo = [];
@@ -867,8 +899,16 @@ export default {
       this.error = null;
       this.stats = { posts: 0, seguidores: 0, siguiendo: 0 };
       this.isFollowing = false;
-      this.isMe = false;
-      /* console.log('[PerfilView] Estado reseteado'); */
+
+      // 2. Calculamos 'isMe' de forma INSTANTÁNEA leyendo la URL
+      // Así evitamos el parpadeo de botones mientras esperamos al servidor
+      const routeParam = (this.$route.params.username || "me").toString().trim().toLowerCase();
+      
+      // Intentamos obtener el usuario de la memoria local rápida
+      const localUser = this.user_viewer || AuthService.getUser();
+      
+      // Si la URL dice "me" o coincide con mi username, es mi perfil.
+      this.isMe = routeParam === "me" || (localUser?.username && routeParam === localUser.username.toLowerCase());
     },
 
     async loadCurrentUser() {
@@ -2133,7 +2173,7 @@ ion-segment-button {
   font-size: 12px;
   font-weight: 500;
   color: var(--ion-text-color-secondary);
-  text-align: center;
+  text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
@@ -2142,7 +2182,9 @@ ion-segment-button {
 }
 
 .post-info {
-  padding: 12px;
+  padding: 8px;
+  overflow: hidden;
+  width: 100%;
 }
 
 .post-info .post-title {
@@ -2164,6 +2206,9 @@ ion-segment-button {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+   /* Previene que palabras gigantes o links rompan la caja */
+  word-break: break-word; 
+  text-align: left; /* Evita ese centrado extraño que mencionas */
 }
 
 /* File Cards (Archivos) */

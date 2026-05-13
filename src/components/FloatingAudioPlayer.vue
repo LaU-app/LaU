@@ -4,11 +4,24 @@
             
             <div class="floating-pill" 
                  ref="pillRef"
+                 :class="{ 'is-glass': isGlassMode }"
                  :style="{ 
                      '--theme-color-hex': globalAudioState.themeColorHex, 
                      '--theme-color-rgb': globalAudioState.themeColorRgb 
                  }" 
                  @click.stop="toggleGlobalAudio">
+
+                 <LiquidGlassBox 
+                   v-if="isGlassMode"
+                   class="pill-glass-bg" 
+                   :height="60" 
+                   :depth="5" 
+                   :radius="30"
+                   :strength="100"
+                   :chromaticAberration="3" 
+                   :blur="1.8"
+                   :width="calculatedPillWidth" 
+                />
                 
                 <div class="progress-bg" :style="{ width: globalAudioState.progressPercent + '%' }"></div>
                 
@@ -37,10 +50,30 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick } from 'vue';
+import { ref, watch, nextTick, computed, onMounted, onUnmounted } from 'vue';
 import { IonButton, IonIcon, createGesture } from '@ionic/vue';
 import { playCircle, pauseCircle } from 'ionicons/icons';
 import { globalAudioState, toggleGlobalAudio, dismissGlobalAudio } from '@/utils/audioPlayerState';
+
+import LiquidGlassBox from '@/components/LiquidGlassBox.vue';
+import { useGlassMode } from '@/utils/useGlassMode';
+
+const { isGlassMode } = useGlassMode();
+const windowWidth = ref(window.innerWidth);
+
+// 3. Función para detectar si giran el celular
+const updateWidth = () => {
+    windowWidth.value = window.innerWidth;
+};
+
+onMounted(() => window.addEventListener('resize', updateWidth));
+onUnmounted(() => window.removeEventListener('resize', updateWidth));
+
+// 4. Calculamos el ancho exacto: 
+// El ancho de la pantalla menos los paddings (32px), pero nunca mayor a 400px.
+const calculatedPillWidth = computed(() => {
+    return Math.min(windowWidth.value - 32, 400);
+});
 
 const pillRef = ref(null);
 let gesture = null;
@@ -124,17 +157,38 @@ const initGesture = () => {
     pointer-events: none; 
 }
 
+/* ESTILO NORMAL (Por defecto / Apagado) */
 .floating-pill {
     position: relative;
     width: 100%;
     max-width: 400px;
-    background: var(--ion-color-light);
+    background: var(--ion-color-light); /* Tu fondo sólido */
     border-radius: 30px;
     overflow: hidden;
     box-shadow: 0 8px 20px rgba(0,0,0,0.4);
     pointer-events: auto; 
     cursor: pointer;
     border: 1px solid rgba(255,255,255,0.1);
+    transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* MODO CRISTAL (Encendido) */
+.floating-pill.is-glass {
+    background: transparent; /* Hacemos la caja invisible */
+    border: none;
+    box-shadow: none; /* La sombra la maneja el SVG ahora */
+}
+
+/* Posición del componente de cristal SVG */
+.pill-glass-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1; /* Vital: esto lo pone DETRÁS de la barra de progreso y botones */
+    pointer-events: none;
+    border-radius: 30px;
 }
 
 /* --- COLORES DINÁMICOS AQUÍ --- */
