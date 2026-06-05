@@ -180,43 +180,60 @@
         <ion-footer class="ion-no-border transparent-footer">
             <div class="input-gradient-mask"></div>
 
-            <div class="floating-comment-bar">
-                <div v-if="replyingToComment" class="replying-indicator">
-                    <ion-text color="medium">
-                        <small>Respondiendo a <b>{{ replyingToComment.user?.name }}</b></small>
-                    </ion-text>
-                    <ion-button fill="clear" size="small" @click="cancelReply">
-                        <ion-icon slot="icon-only" :icon="closeCircle"></ion-icon>
-                    </ion-button>
-                </div>
+            <div class="floating-comment-bar" ref="commentBarRef" :class="{ 'is-glass': isGlassMode }">
 
-                <div class="input-row">
-                    <ion-avatar class="current-user-avatar">
-                        <img v-if="currentUser?.imagen_url" :src="getFullImageUrl(currentUser.imagen_url)"
-                            :alt="currentUser?.name || 'Tú'" loading="lazy" />
-                        <ion-icon v-else :icon="personCircle"></ion-icon>
-                    </ion-avatar>
-                    
-                    <div class="comment-input-wrapper">
-                        <ion-textarea ref="commentInputRef" v-model="newComment"
-                            :placeholder="replyingToComment ? 'Escribe tu respuesta...' : 'Escribe un comentario...'"
-                            class="comment-input auto-expand" 
-                            auto-grow="true"
-                            rows="1"
-                            @keyup.enter.exact="submitComment"> </ion-textarea>
-                        <div class="comment-input-line"></div>
+                <LiquidGlassBox 
+                    v-if="isGlassMode"
+                    class="comment-glass-bg" 
+                    :height="200"  :depth="5" 
+                    :radius="30"
+                    :strength="100"
+                    :chromaticAberration="3" 
+                    :blur="1.8"
+                    :width="calculatedBarWidth" 
+                />
+
+                <div class="comment-bar-content">
+                    <div v-if="replyingToComment" class="replying-indicator">
+                        <ion-text color="medium">
+                            <small>Respondiendo a <b>{{ replyingToComment.user?.name }}</b></small>
+                        </ion-text>
+                        <ion-button fill="clear" size="small" @click="cancelReply">
+                            <ion-icon slot="icon-only" :icon="closeCircle"></ion-icon>
+                        </ion-button>
                     </div>
 
-                    <ion-button 
-                        fill="solid" 
-                        shape="round" 
-                        size="small" 
-                        color="primary"
-                        @click="submitComment" 
-                        :disabled="!newComment || newComment.trim() === ''" 
-                        class="send-comment-button">
-                        <ion-icon :icon="send"></ion-icon>
-                    </ion-button>
+                    <div class="input-row">
+                        <ion-avatar class="current-user-avatar">
+                            <img v-if="currentUser?.imagen_url" :src="getFullImageUrl(currentUser.imagen_url)"
+                                :alt="currentUser?.name || 'Tú'" loading="lazy" />
+                            <ion-icon v-else :icon="personCircle"></ion-icon>
+                        </ion-avatar>
+                        
+                        <div class="comment-input-wrapper">
+                            <ion-textarea ref="commentInputRef" v-model="newComment"
+                                :placeholder="replyingToComment ? 'Escribe tu respuesta...' : 'Escribe un comentario...'"
+                                class="comment-input auto-expand" 
+                                auto-grow="true"
+                                rows="1"
+                                @keyup.enter.exact="submitComment"> </ion-textarea>
+                            <div class="comment-input-line"></div>
+                        </div>
+
+                        <ion-button 
+                            fill="solid" 
+                            shape="round" 
+                            size="small" 
+                            color="primary"
+                            @click="submitComment" 
+                            :disabled="!newComment || newComment.trim() === '' || isSubmitting" 
+                            class="send-comment-button">
+                            
+                            <ion-spinner v-if="isSubmitting" name="crescent" class="btn-spinner"></ion-spinner>
+                            <ion-icon v-else :icon="send"></ion-icon>
+                            
+                        </ion-button>
+                    </div>
                 </div>
             </div>
         </ion-footer>
@@ -279,6 +296,9 @@ import { getFullImageUrl } from '@/utils/imageUtils';
 import { useAmbientMode } from "@/utils/useAmbientMode";
 import FullScreenImageViewer from '@/components/FullScreenImageViewer.vue';
 
+import LiquidGlassBox from '@/components/LiquidGlassBox.vue';
+import { useGlassMode } from '@/utils/useGlassMode';
+
 const route = useRoute()
 const router = useRouter()
 
@@ -290,6 +310,9 @@ const commentInputRef = ref(null)
 const ionContentRef = ref(null)
 const currentUser = ref(null)
 const replyingToComment = ref(null)
+
+// NUEVA VARIABLE: Candado para evitar envíos dobles
+const isSubmitting = ref(false)
 
 // Variable para controlar qué mostrar en el header
 const showUserInHeader = ref(false);
@@ -311,6 +334,48 @@ const handleScroll = (event) => {
 const canSendComment = computed(() => (newComment.value ?? '').trim().length > 0)
 
 const { isAmbientMode } = useAmbientMode();
+const { isGlassMode } = useGlassMode();
+
+const commentBarRef = ref(null); // Ref para el div de la barra
+const dynamicBarHeight = ref(65); // Altura inicial
+
+let resizeObserver = null;
+
+const windowWidth = ref(window.innerWidth);
+
+// Función para detectar si giran el celular
+const updateWidth = () => {
+    windowWidth.value = window.innerWidth;
+};
+
+onMounted(async () => {
+    window.addEventListener('resize', updateWidth);
+    
+    // 2. Configuramos el observador para medir el crecimiento del texto
+    if (commentBarRef.value) {
+        resizeObserver = new ResizeObserver((entries) => {
+            for (let entry of entries) {
+                // Actualizamos la altura cada vez que el textarea hace crecer la barra
+                dynamicBarHeight.value = entry.contentRect.height;
+            }
+        });
+        resizeObserver.observe(commentBarRef.value);
+    }
+
+    currentUser.value = AuthService.getUser();
+    await loadPost();
+});
+
+onUnmounted(() => {
+    window.removeEventListener('resize', updateWidth);
+    // Limpiamos el observador
+    if (resizeObserver) resizeObserver.disconnect();
+});
+
+// El ancho de la barra: Pantalla menos 15px de cada lado = 30px
+const calculatedBarWidth = computed(() => {
+    return windowWidth.value - 30;
+});
 
 // ==========================================
 // LÓGICA DEL VISOR DE IMÁGENES Y GESTOS
@@ -534,7 +599,9 @@ const recursivelyAddReply = (commentsArray, parentId, newCommentObject) => {
 
 const submitComment = async () => {
     const comentarioTexto = (newComment.value ?? '').trim()
-    if (!comentarioTexto) return
+    
+    // Si está vacío o YA se está enviando un comentario, ignoramos el clic
+    if (!comentarioTexto || isSubmitting.value) return
 
     if (!AuthService.isAuthenticated()) {
         const toast = await toastController.create({
@@ -546,6 +613,9 @@ const submitComment = async () => {
         await toast.present()
         return
     }
+
+    // === ACTIVAMOS EL CANDADO ===
+    isSubmitting.value = true;
 
     try {
         const parentId = replyingToComment.value?.id || null
@@ -644,8 +714,12 @@ const submitComment = async () => {
             color: 'danger'
         })
         await toast.present()
+    } finally {
+        // === APAGAMOS EL CANDADO SIEMPRE (Pase lo que pase) ===
+        isSubmitting.value = false;
     }
 }
+
 
 const confirmDelete = async () => {
     const alert = await alertController.create({
@@ -1197,6 +1271,9 @@ ion-modal.image-viewer-modal ion-content {
 }
 
 /* La barra de comentarios en sí, con diseño tipo píldora flotante */
+/* ==========================================
+   1. ESTADO NORMAL (Tu diseño original)
+   ========================================== */
 .floating-comment-bar {
     position: relative;
     z-index: 2; 
@@ -1204,9 +1281,11 @@ ion-modal.image-viewer-modal ion-content {
     padding: 8px 15px;
     border-radius: 30px;
     
-    /* CAMBIO AQUÍ: Cambia 'height' fijo por 'min-height' y 'height: auto' */
     min-height: 65px;
     height: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
     
     border: 1px solid #b2b2b221;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
@@ -1214,10 +1293,57 @@ ion-modal.image-viewer-modal ion-content {
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px); 
     
-    /* Asegurarnos de que el contenido se alinee hacia abajo */
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
+    /* 🔥 CAMBIO VITAL: Debe ser hidden para cortar el cristal gigante */
+    overflow: hidden; 
+    
+    transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
+}
+
+
+/* ==========================================
+   2. ESTADO CRISTAL (Cuando se activa)
+   ========================================== */
+.floating-comment-bar.is-glass {
+    /* Apagamos tus fondos y sombras para dejar ver el SVG que está adentro */
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+/* El SVG de cristal líquido que pusimos en el fondo */
+.comment-glass-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0; /* Atrás de todo */
+    pointer-events: none;
+    border-radius: 30px;
+    background: transparent !important;
+
+    /* 1. Forzamos a que ocupe el tamaño físico correcto de inmediato */
+    height: 100% !important; 
+    
+    /* 2. ELIMINAMOS cualquier intento del navegador de animar el cambio del SVG */
+    transition: none !important;
+    animation: none !important;
+}
+
+/* Contenedor del contenido (Avatar, Input, Botón) */
+.comment-bar-content {
+    position: relative;
+    z-index: 1; /* Arriba del SVG */
+    width: 100%;
+}
+
+/* Ajustes finos para el indicador de respuesta en el cristal */
+.is-glass .replying-indicator {
+    background-color: rgba(var(--ion-color-light-rgb), 0.5);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255,255,255,0.1);
 }
 
 /* Limitamos cuánto puede crecer el textarea antes de hacer scroll interno */
@@ -1380,6 +1506,12 @@ ion-modal.image-viewer-modal ion-content {
 .slide-fade-leave-to {
     opacity: 0;
     transform: translateX(20px); /* Sale hacia la derecha */
+}
+
+.btn-spinner {
+    width: 20px;
+    height: 20px;
+    color: white;
 }
 </style>
 

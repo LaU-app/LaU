@@ -1,6 +1,7 @@
 <template>
     <ion-modal 
     :is-open="isOpen" 
+    @willPresent="handleWillPresent"
     @didDismiss="handleDismiss"
     @didPresent="initGesture" 
     class="image-viewer-modal"
@@ -29,7 +30,7 @@
 import { ref } from 'vue';
 import { IonModal, IonContent, IonButton, IonIcon, createGesture, createAnimation } from '@ionic/vue';
 import { closeOutline } from 'ionicons/icons';
-import { StatusBar } from '@capacitor/status-bar';
+import { StatusBar, Style } from '@capacitor/status-bar';
 import { Capacitor } from '@capacitor/core';
 
 // --- NUEVO: Animación de Entrada (Fade + Scale) ---
@@ -103,14 +104,34 @@ const toggleUI = async () => {
     }
 };
 
+// --- NUEVO: Forzar iconos blancos al abrir ---
+const handleWillPresent = async () => {
+    if (Capacitor.isNativePlatform()) {
+        try {
+            // Style.Dark hace que el texto y los iconos sean BLANCOS
+            await StatusBar.setStyle({ style: Style.Dark });
+        } catch (e) {
+            console.warn("Error al cambiar estilo de StatusBar", e);
+        }
+    }
+};
+
 const handleDismiss = async () => {
     emit('close'); // Avisamos al padre que cierre el modal
 
-    // MUY IMPORTANTE: Si el usuario cierra la imagen mientras la UI estaba oculta, 
-    // debemos restaurar la barra de estado para el resto de la app
-    if (Capacitor.isNativePlatform() && !showUI.value) {
-        await StatusBar.show();
-        showUI.value = true;
+    if (Capacitor.isNativePlatform()) {
+        try {
+            // 1. Restaurar visibilidad si estaba oculta
+            if (!showUI.value) {
+                await StatusBar.show();
+            }
+            
+            // 2. Restaurar el color al default del sistema/tema de tu app
+            // (Style.Default se adapta automáticamente si el celular está en modo claro u oscuro)
+            await StatusBar.setStyle({ style: Style.Default });
+        } catch (e) {
+            console.warn("StatusBar plugin no disponible", e);
+        }
     }
 
     if (gesture) {

@@ -3,7 +3,9 @@
         <AppHeader :isDarkMode="isDarkMode" :user="user" :isAuthenticated="isAuthenticated"
             @toggleDarkMode="toggleDarkMode" />
 
-        <ion-content>
+        <FloatingAudioPlayer />
+
+        <ion-content ref="contentRef" :scroll-events="true" @ionScroll="trackScroll">
             <!-- Pull to Refresh -->
             <ion-refresher slot="fixed" @ionRefresh="handleRefresh($event)">
                 <ion-refresher-content pulling-icon="chevron-down-circle-outline" pulling-text="Desliza para actualizar"
@@ -12,6 +14,10 @@
             </ion-refresher>
 
             <div class="container">
+                <div class="programmatic-refresher" :class="{ 'is-active': isProgrammaticRefreshing }">
+                    <ion-spinner name="crescent" color="primary"></ion-spinner>
+                </div>
+
                 <div v-if="loading && !isRefreshing" class="loading-container">
                     <ion-spinner name="crescent"></ion-spinner>
                     <ion-text>
@@ -82,6 +88,23 @@
             </template>
         </CustomBanner>
 
+        <CustomBanner 
+            :isOpen="showGlassFeatureBanner" 
+            title="¡Nuevo Efecto Cristal! ✨"
+            message="Hemos rediseñado LaU con un nuevo estilo flotante y cristalino. ¿Quieres probarlo? Puedes encenderlo o apagarlo cuando quieras desde Ajustes."
+            confirmText="¡Probar ahora!" 
+            cancelText="Quizás después" 
+            iconColor="primary" 
+            @confirm="activateGlassMode"
+            @cancel="dismissGlassBanner">
+            <template #icon>
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #4d8dff;">
+                    <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275l5.813 1.912l-5.813 1.912a2 2 0 0 0 -1.275 1.275l-1.912 5.813l-1.912 -5.813a2 2 0 0 0 -1.275 -1.275l-5.813 -1.912l5.813 -1.912a2 2 0 0 0 1.275 -1.275l1.912 -5.813z"></path>
+                    <path d="M5 5l-1.5 4.5l-4.5 1.5l4.5 1.5l1.5 4.5l1.5 -4.5l4.5 -1.5l-4.5 -1.5z"></path>
+                </svg>
+            </template>
+        </CustomBanner>
+
         <CustomBanner :isOpen="showServerBanner" :banner="serverBannerData" @confirm="handleServerBannerAction"
             @cancel="handleServerBannerDismiss" />
     </ion-page>
@@ -103,11 +126,14 @@ import { pushNotificationsService } from '@/services/pushNotificationsService';
 import { Capacitor } from '@capacitor/core';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import apiService from '@/services/api';
-import { App } from '@capacitor/app';
+import FloatingAudioPlayer from '@/components/FloatingAudioPlayer.vue';
+import { App as CapacitorApp } from '@capacitor/app';
+
+import { useGlassMode } from '@/utils/useGlassMode';
 
 export default {
     name: 'HomeView',
-    components: { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, AppHeader, CreatePostCard, PostCard, CustomBanner, FilterPosts },
+    components: { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, AppHeader, CreatePostCard, PostCard, CustomBanner, FilterPosts, FloatingAudioPlayer },
     data() {
         return {
             posts: [],
@@ -126,55 +152,74 @@ export default {
             showServerBanner: false,
             serverBannerData: null,
             noMoreBanners: false,
-            postFilters: {} // Filtros activos
+            postFilters: {}, // Filtros activos
+            currentScrollTop: 0,
+            isProgrammaticRefreshing: false,
         }
     },
     setup() {
-        // Función para buscar y descargar
-        const checkForUpdates = async () => {
-        if (!Capacitor.isNativePlatform()) return;
+        const { isGlassMode } = useGlassMode();
+        const showGlassFeatureBanner = ref(false);
 
-        try {
-            const response = await apiService.checkAppUpdate();
-            const data = response.data; 
-
-            const lastAttemptedVersion = localStorage.getItem('last_ota_version');
-
-            // Si hay actualización y no es la que ya intentamos descargar antes...
-            if (data.update_available && lastAttemptedVersion !== data.version) {
-            console.log('Descargando nueva versión en segundo plano...');
-            
-            // SOLO descargamos. El usuario no se entera de nada.
-            await CapacitorUpdater.download({
-                url: data.zip_url,
-                version: data.version
-            });
-
-            console.log('¡Descarga lista! Se aplicará la próxima vez que se abra la app.');
-            
-            // Guardamos la versión para no volver a descargarla en este ciclo
-            localStorage.setItem('last_ota_version', data.version);
+        onMounted(() => {
+            if (AuthService.isAuthenticated()) {
+                const hasSeenGlassBanner = localStorage.getItem('has_seen_glass_banner');
+                if (!hasSeenGlassBanner) {
+                    setTimeout(() => {
+                        showGlassFeatureBanner.value = true;
+                    }, 1000); 
+                }
             }
-        } catch (error) {
-            console.error('Error al buscar actualizaciones:', error);
-        }
+        });
+
+        const dismissGlassBanner = () => {
+            showGlassFeatureBanner.value = false;
+            localStorage.setItem('has_seen_glass_banner', 'true');
         };
 
-        // Usar composable de modo oscuro
+        const activateGlassMode = () => {
+            isGlassMode.value = true; 
+            dismissGlassBanner();
+        };
+
+        const checkForUpdates = async () => {
+            if (!Capacitor.isNativePlatform()) return;
+
+            try {
+                const appInfo = await CapacitorApp.getInfo();
+                const currentNativeVersion = appInfo.version; 
+
+                const response = await apiService.checkAppUpdate(currentNativeVersion);
+                const data = response.data; 
+
+                const lastAttemptedVersion = localStorage.getItem('last_ota_version');
+
+                if (data.update_available && lastAttemptedVersion !== data.version) {
+                console.log('Descargando OTA en segundo plano...');
+                
+                const newVersion = await CapacitorUpdater.download({
+                    url: data.zip_url,
+                    version: data.version
+                });
+                
+                localStorage.setItem('pending_update_id', newVersion.id);
+                localStorage.setItem('last_ota_version', data.version);
+                }
+            } catch (error) {
+                console.error('Error al buscar actualizaciones:', error);
+            }
+        };
+
         const { isDarkMode, toggleDarkMode } = useDarkMode()
         const showNotificationsPrompt = ref(false);
 
         onMounted(() => {
-            // 5. Ejecutamos al montar el componente
             checkForUpdates();
-            // 2. EL CANDADO: Si NO está autenticado, detenemos todo aquí mismo.
             if (!AuthService.isAuthenticated()) {
                 console.log("Usuario invitado. No se mostrará el banner de notificaciones.");
                 return;
             }
 
-            // Si pasa el candado, significa que SÍ hay sesión.
-            // 3. Revisamos si ya le preguntamos antes
             const hasAsked = localStorage.getItem('has_asked_notifications');
 
             if (!hasAsked) {
@@ -190,7 +235,6 @@ export default {
 
             if (pushNotificationsService.isAvailable()) {
                 try {
-                    // AQUÍ LE PASAMOS TRUE PARA QUE LANCE LA ALERTA DE ANDROID
                     await pushNotificationsService.initialize(true);
                     console.log("Notificaciones activadas exitosamente");
                     localStorage.setItem('notifications_granted', 'true');
@@ -207,67 +251,60 @@ export default {
 
         return {
             isDarkMode, toggleDarkMode, showNotificationsPrompt, activateNotifications,
-            closeNotificationsPrompt
+            closeNotificationsPrompt,
+            isGlassMode,
+            showGlassFeatureBanner,
+            dismissGlassBanner,
+            activateGlassMode
         }
     },
+    mounted() {
+        window.addEventListener('home-tab-clicked', this.onHomeTabDoubleClicked);
+    },
+    beforeUnmount() {
+        if (this.alertTimer) {
+            clearTimeout(this.alertTimer)
+            this.alertTimer = null
+        }
+        window.removeEventListener('home-tab-clicked', this.onHomeTabDoubleClicked);
+    },
     async created() {
-        // Verificar autenticación y actualizar estado
         this.isAuthenticated = AuthService.isAuthenticated()
 
-        // Cargar usuario solo si está autenticado
         if (this.isAuthenticated) {
             await this.loadCurrentUser();
             await this.checkServerBanner();
         } else {
-            // Usuario no autenticado, usar valores por defecto
             this.user = { imagen_url: null, name: 'Invitado', username: 'invitado' }
         }
 
         this.fetchPosts()
     },
     ionViewWillEnter() {
-        // Actualizar estado de autenticación cada vez que se entra a la vista
         this.isAuthenticated = AuthService.isAuthenticated()
 
-        // Verificar si se viene de crear un post (state en router)
         const postCreated = window.history.state?.postCreated
         const postDeleted = window.history.state?.postDeleted
 
-        // Si el usuario acaba de iniciar sesión, recargar datos
         if (this.isAuthenticated && this.user.username === 'invitado') {
             this.loadCurrentUser()
             this.fetchPosts()
         } else if (this.isAuthenticated && postCreated) {
-            // Si viene de crear un post, refrescar el feed
-            /* console.log('📝 Post creado - Actualizando feed...') */
             this.fetchPosts(1)
-            // Limpiar el state para evitar recargas múltiples
             window.history.replaceState({ ...window.history.state, postCreated: false }, '')
         } else if (postDeleted) {
-            // Si viene de eliminar un post, refrescar el feed
-            /* console.log('🗑️ Post eliminado - Actualizando feed...') */
             this.fetchPosts(1)
-            // Limpiar el state
             window.history.replaceState({ ...window.history.state, postDeleted: false }, '')
         }
 
-        // Programar el alert solo si NO está autenticado y no hay timer activo
         if (!this.isAuthenticated && !this.alertTimer) {
             this.alertTimer = setTimeout(() => {
                 this.showLoginAlert()
-            }, 8000) // 8 segundos
+            }, 8000) 
         }
 
     },
     ionViewWillLeave() {
-        // Cancelar el timer cuando el usuario salga de la vista (por ejemplo, al ir a login)
-        if (this.alertTimer) {
-            clearTimeout(this.alertTimer)
-            this.alertTimer = null
-        }
-    },
-    beforeUnmount() {
-        // Limpiar el timer si el componente se desmonta antes
         if (this.alertTimer) {
             clearTimeout(this.alertTimer)
             this.alertTimer = null
@@ -276,36 +313,29 @@ export default {
     methods: {
         async loadCurrentUser() {
             try {
-                // Primero intenta obtener el usuario del localStorage
                 const localUser = AuthService.getUser()
                 if (localUser) {
                     this.user = localUser
                 }
 
-                // Luego valida el token con la API y actualiza los datos (en background, sin bloquear)
                 try {
                     const apiUser = await AuthService.fetchProfile()
                     if (apiUser) {
                         this.user = apiUser
                     }
                 } catch (apiError) {
-                    // Si falla la validación con la API
                     console.warn('No se pudo validar el token con la API:', apiError)
 
-                    // Solo redirigimos al login si es un error 401 (token inválido)
                     if (apiError.response?.status === 401) {
                         AuthService.logout()
                         this.$router.replace('/login')
                     }
-                    // Si es otro tipo de error (red, servidor caído, etc.) y tenemos usuario local, continuamos
                     else if (!localUser) {
-                        // Solo redirigimos si no hay usuario local tampoco
                         this.$router.replace('/login')
                     }
                 }
             } catch (error) {
                 console.error('Error cargando usuario:', error)
-                // Solo redirige si es un error crítico
                 if (!AuthService.isAuthenticated()) {
                     this.$router.replace('/login')
                 }
@@ -315,10 +345,9 @@ export default {
             console.warn('Error al cargar imagen:', event.target?.src)
         },
         async fetchPosts(page = 1, filters = null) {
-            this.loading = page === 1
+            this.loading = page === 1 && !this.isProgrammaticRefreshing;
             this.error = null
 
-            // Unir filtros activos
             const params = { page };
             const activeFilters = filters || this.postFilters;
             if (activeFilters && (activeFilters.universidad_id || activeFilters.carrera_id)) {
@@ -340,26 +369,12 @@ export default {
                 this.totalPosts = result.pagination.total || 0
                 this.feedType = result.feedType || 'public'
 
-                // Log detallado para debugging de likes
-                /* console.log(`[HomeView] Feed cargado: ${this.feedType}`, {
-                    posts: result.data.length,
-                    total: this.totalPosts,
-                    page: this.currentPage,
-                    isAuthenticated: AuthService.isAuthenticated(),
-                    // Mostrar estado de likes de los primeros 3 posts
-                    likesStatus: result.data.slice(0, 3).map(p => ({
-                        id: p.id,
-                        user_has_liked: p.user_has_liked,
-                        likes_count: p.likes_count
-                    }))
-                }) */
             } else {
                 this.error = result.error
                 this.feedType = result.feedType || 'error'
 
                 if (page === 1) this.posts = []
 
-                // Si es error 401, redirigir al login
                 if (result.error.includes('Sesión expirada')) {
                     this.$router.replace('/login')
                 }
@@ -372,58 +387,33 @@ export default {
             this.fetchPosts(1, this.postFilters);
         },
         async handleLike(postId) {
-            // Encontrar el post antes de hacer la petición
             const postIndex = this.posts.findIndex(p => p.id === postId)
             if (postIndex === -1) return
 
-            // Guardar el estado anterior por si hay que revertir
             const previousLikedState = this.posts[postIndex].user_has_liked
             const previousLikesCount = this.posts[postIndex].likes_count || 0
 
-            console.log('[HomeView] Like click - Estado antes:', {
-                postId,
-                user_has_liked: previousLikedState,
-                likes_count: previousLikesCount
-            })
-
-            // Actualizar UI optimistamente
             this.posts[postIndex].user_has_liked = !previousLikedState
             this.posts[postIndex].likes_count = this.posts[postIndex].user_has_liked
                 ? previousLikesCount + 1
                 : Math.max(0, previousLikesCount - 1)
 
-            console.log('[HomeView] Like click - Estado optimista:', {
-                postId,
-                user_has_liked: this.posts[postIndex].user_has_liked,
-                likes_count: this.posts[postIndex].likes_count
-            })
-
-            // Hacer la petición al backend
             const result = await postsService.likePost(postId)
 
             if (result.success && result.data) {
-                // Actualizar con los datos reales del backend
                 this.posts[postIndex].user_has_liked = result.data.user_has_liked !== undefined
                     ? result.data.user_has_liked
                     : !previousLikedState
                 this.posts[postIndex].likes_count = result.data.likes_count !== undefined
                     ? result.data.likes_count
                     : this.posts[postIndex].likes_count
-
-                console.log('[HomeView] Like click - Estado final del backend:', {
-                    postId,
-                    user_has_liked: this.posts[postIndex].user_has_liked,
-                    likes_count: this.posts[postIndex].likes_count
-                })
             } else {
                 console.error('[HomeView] Like falló, revirtiendo:', result.error)
-                // Si falla, revertir al estado anterior
                 this.posts[postIndex].user_has_liked = previousLikedState
                 this.posts[postIndex].likes_count = previousLikesCount
             }
         },
         async handleComment(postId) {
-            // Navegar a la vista de detalle donde se pueden ver y agregar comentarios
             this.$router.push(`/tabs/post/${postId}`)
         },
         async handleShare(postId) {
@@ -437,9 +427,7 @@ export default {
             event.target.complete()
         },
         async handleRefresh(event) {
-            // Marcar que estamos refrescando para no mostrar el loading duplicado
             this.isRefreshing = true
-            // Recargar desde la primera página
             this.currentPage = 1
             await this.fetchPosts(1)
             this.isRefreshing = false
@@ -447,13 +435,11 @@ export default {
         },
         handlePostCreated(newPost) {
             console.log('Nuevo post creado:', newPost)
-            // Recargar los posts para mostrar el nuevo
             this.fetchPosts(1)
         },
         async showLoginAlert() {
             const currentRoute = this.$route.path;
             if (!this.isAuthenticated && currentRoute === '/tabs/tab1') {
-                // En lugar de llamar a alertController, simplemente mostramos nuestro banner
                 this.showLoginPrompt = true;
             }
         },
@@ -466,9 +452,7 @@ export default {
             this.showLoginPrompt = false;
         },
 
-        // 1. Buscar el banner
         async checkServerBanner() {
-            // 2. Si la bandera dice que ya no hay banners, cancelamos la petición para no molestar al servidor
             if (this.noMoreBanners) {
                 return;
             }
@@ -483,67 +467,55 @@ export default {
                     this.showServerBanner = true;
                 }, 500);
             } else {
-                // 3. Laravel respondió null. Eso significa que el usuario ya vio TODO.
-                // Activamos la bandera para que no vuelva a preguntar en toda la sesión.
                 this.noMoreBanners = true;
                 console.log("Todos los banners han sido vistos. No se preguntará más en esta sesión.");
             }
         },
 
-        // 2. Acción: Cuando le da al botón principal (Probar, Actualizar, etc.)
         async handleServerBannerAction(banner) {
             this.showServerBanner = false;
 
-            // Registramos en Laravel que ya lo vio
             await bannerService.markAsViewed(banner.id);
 
-            // Redirigimos a la URL de acción
             if (banner.action_url) {
                 if (banner.action_url.startsWith('http')) {
-                    // Abrir en el navegador (Ideal para enlaces externos)
                     window.open(banner.action_url, '_blank');
                 } else {
-                    // Navegación interna en Vue
                     this.$router.push(banner.action_url);
                 }
             }
         },
 
-        // 3. Acción: Cuando le da a "Enterado" o lo arrastra hacia abajo
         async handleServerBannerDismiss(banner) {
             this.showServerBanner = false;
 
-            // Registramos en Laravel que ya lo vio para que no vuelva a salir
             await bannerService.markAsViewed(banner.id);
-        }
+        },
 
-        // async showLoginAlert() {
-        //     // Solo mostrar si el usuario NO está autenticado Y está en la ruta del feed
-        //     const currentRoute = this.$route.path
-        //     if (!this.isAuthenticated && currentRoute === '/tabs/tab1') {
-        //         const alert = await alertController.create({
-        //             header: '¡Únete a LaU! 🎓',
-        //             message: 'Inicia sesión para seguir viendo el feed y aprovechar al máximo todas las funciones de LaU: conecta con estudiantes, comparte material y descubre eventos.',
-        //             buttons: [
-        //                 {
-        //                     text: 'Más tarde',
-        //                     role: 'cancel',
-        //                     cssClass: 'alert-button-cancel'
-        //                 },
-        //                 {
-        //                     text: 'Iniciar Sesión',
-        //                     cssClass: 'alert-button-confirm',
-        //                     handler: () => {
-        //                         this.$router.push('/login')
-        //                     }
-        //                 }
-        //             ],
-        //             cssClass: 'custom-alert'
-        //         })
+        trackScroll(event) {
+            this.currentScrollTop = event.detail.scrollTop;
+        },
 
-        //         await alert.present()
-        //     }
-        // }
+        async onHomeTabDoubleClicked() {
+            if (this.$route.path !== '/tabs/tab1') return;
+
+            if (this.currentScrollTop > 10) {
+                this.$refs.contentRef.$el.scrollToTop(500);
+                
+                setTimeout(async () => {
+                    this.isProgrammaticRefreshing = true;
+                    this.currentPage = 1;
+                    await this.fetchPosts(1);
+                    this.isProgrammaticRefreshing = false; 
+                }, 500);
+                
+            } else {
+                this.isProgrammaticRefreshing = true;
+                this.currentPage = 1;
+                await this.fetchPosts(1);
+                this.isProgrammaticRefreshing = false;
+            }
+        },
     }
 }
 </script>
@@ -621,5 +593,24 @@ export default {
 .container {
     width: 100% !important;
     max-width: 100% !important;
+}
+
+/* --- Refresher Programático --- */
+.programmatic-refresher {
+    height: 0;
+    opacity: 0;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Animación idéntica a la nativa de iOS/Android */
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); 
+}
+
+.programmatic-refresher.is-active {
+    height: 60px;
+    opacity: 1;
+    margin-top: 10px;
+    margin-bottom: 10px;
 }
 </style>
