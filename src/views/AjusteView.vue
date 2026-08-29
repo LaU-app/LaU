@@ -124,186 +124,180 @@
 </template>
 
 <script setup>
+import { ref, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { 
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent, 
-  IonList, IonItem, IonLabel, IonToggle, IonIcon, IonButtons, IonButton, IonSearchbar,
-  alertController
+  IonList, IonItem, IonLabel, IonToggle, IonIcon, IonButtons, 
+  IonButton, IonSearchbar, alertController 
 } from '@ionic/vue';
 import {
   globeOutline, keyOutline, moonOutline, notificationsOutline, mailOutline,
-  timeOutline, fingerPrintOutline, shieldCheckmarkOutline, logOutOutline, cloudDownloadOutline, colorWandOutline
+  timeOutline, fingerPrintOutline, shieldCheckmarkOutline, logOutOutline, 
+  cloudDownloadOutline, colorWandOutline, chevronBackOutline
 } from 'ionicons/icons';
-import { useRouter } from 'vue-router';
-import { chevronBackOutline } from 'ionicons/icons'; // Importamos el icono
-import { useDarkMode } from "@/utils/useDarkMode";
-import { AuthService } from "@/services/auth";
-import { ref, onMounted } from 'vue'; // Importamos onMounted
-import { App } from '@capacitor/app';
-import { useAmbientMode } from "@/utils/useAmbientMode";
 import { Blur } from '@boxicons/vue';
-import { pushNotificationsService } from '@/services/pushNotificationsService';
+
+// Plugins Nativos
+import { App as CapacitorApp, App } from '@capacitor/app';
 import { PushNotifications } from '@capacitor/push-notifications';
-import { Browser } from '@capacitor/browser';
-import { App as CapacitorApp } from '@capacitor/app';
+
+// Servicios y Utilidades
+import { AuthService } from "@/services/auth";
+import { pushNotificationsService } from '@/services/pushNotificationsService';
+import { useDarkMode } from "@/utils/useDarkMode";
+import { useAmbientMode } from "@/utils/useAmbientMode";
 import { useGlassMode } from "@/utils/useGlassMode";
 
-const appVersion = ref('0.0.0'); // Puedes poner la versión actual de tu build
+// ==========================================
+// 1. ESTADO Y RUTAS (UI State)
+// ==========================================
+const router = useRouter();
+const appVersion = ref('0.0.0');
 const appBuild = ref('0000000');
 const isPushEnabled = ref(false);
+let appStateListener = null;
+
+const { isDarkMode, toggleDarkMode } = useDarkMode();
+const { isAmbientMode, toggleAmbientMode } = useAmbientMode();
 const { isGlassMode, toggleGlassMode } = useGlassMode();
 
+// ==========================================
+// 2. CICLO DE VIDA (Mount & Unmount)
+// ==========================================
 onMounted(async () => {
-  // Solo intentará obtener info si Capacitor está disponible (entorno nativo)
+  await loadAppInfo();
+  await syncPushNotificationState();
+
+  // SRP: Extraemos la lógica pesada a una función externa
+  appStateListener = await App.addListener('appStateChange', async ({ isActive }) => {
+    if (isActive) await syncPushNotificationState();
+  });
+});
+
+onUnmounted(() => {
+  if (appStateListener) appStateListener.remove();
+});
+
+// ==========================================
+// 3. LÓGICA DE NEGOCIO Y SERVICIOS (El "Cómo")
+// ==========================================
+const loadAppInfo = async () => {
   try {
     const info = await App.getInfo();
     appVersion.value = info.version;
     appBuild.value = info.build;
   } catch (error) {
-    console.log("Modo navegador: Usando versión estática");
+    console.warn("Modo navegador: Usando versión estática");
   }
-  //leer si el usuario tenía activadas las notificaciones
-  const savedPushState = localStorage.getItem('lau_push_enabled');
-  if (savedPushState === 'true') {
-    isPushEnabled.value = true;
-  }
+};
 
-  // Preguntarle a Android si realmente tenemos permiso
-  const permStatus = await PushNotifications.checkPermissions();
-  const hasNativePermission = permStatus.receive === 'granted';
-  const hasLocalState = localStorage.getItem('lau_push_enabled') === 'true';
+const syncPushNotificationState = async () => {
+  try {
+    const permStatus = await PushNotifications.checkPermissions();
+    const hasNativePermission = permStatus.receive === 'granted';
+    const hasLocalState = localStorage.getItem('lau_push_enabled') === 'true';
 
-  // Solo si Android dice que sí Y nosotros lo guardamos como true
-  if (hasNativePermission && hasLocalState) {
-    isPushEnabled.value = true;
-  } else {
-    isPushEnabled.value = false;
-    // Forzamos a que esté apagado por si hubo un error de sincronización
-    localStorage.setItem('lau_push_enabled', 'false'); 
-  }
-  
-  //Escuchar cuando la app pasa al fondo o regresa al primer plano
-  App.addListener('appStateChange', async ({ isActive }) => {
-    if (isActive) {
-      // El usuario acaba de regresar a LaU. Revisemos si cambió algo en los ajustes nativos.
-      const permStatus = await PushNotifications.checkPermissions();
-      
-      if (permStatus.receive === 'granted' && !isPushEnabled.value) {
-        // Si nos dio permiso allá y nuestro toggle estaba apagado, lo encendemos e inicializamos
-        await pushNotificationsService.initialize(true);
-        isPushEnabled.value = true;
-      } 
-      else if (permStatus.receive !== 'granted' && isPushEnabled.value) {
-        // Si por el contrario, fue a ajustes a quitarnos el permiso, apagamos y limpiamos
-        await pushNotificationsService.unregister();
-        isPushEnabled.value = false;
-      }
+    if (hasNativePermission && hasLocalState) {
+      if (!isPushEnabled.value) await pushNotificationsService.initialize(true);
+      isPushEnabled.value = true;
+    } else {
+      if (isPushEnabled.value && !hasNativePermission) await pushNotificationsService.unregister();
+      isPushEnabled.value = false;
+      localStorage.setItem('lau_push_enabled', 'false'); 
     }
-  });
-});
+  } catch (error) {
+    console.error("Error sincronizando notificaciones:", error);
+  }
+};
 
-// lógica para manejar el cambio
+const performLogout = async () => {
+  try {
+    await AuthService.logout();
+    await new Promise((resolve) => setTimeout(resolve, 100)); // Espera segura
+  } catch (error) {
+    console.error("Error al cerrar sesión (Fallback activado):", error);
+    localStorage.clear();
+    sessionStorage.clear();
+  } finally {
+    // Redirección forzada garantizada (Se ejecuta falle o no falle el bloque try)
+    window.location.href = "/welcome";
+  }
+};
+
+// ==========================================
+// 4. CONTROLADORES DE INTERFAZ (El "Qué")
+// ==========================================
+const goBack = () => router.back();
+
+const handleToggleChange = (event) => {
+  if (event.detail.checked !== isDarkMode.value) toggleDarkMode();
+};
+
+const openDriveUpdates = async () => {
+  const driveUrl = 'https://drive.google.com/drive/folders/1pur2Gzg2vekayB0TLPNYZyA1zHzU2noN';
+  try {
+    await CapacitorApp.openUrl({ url: driveUrl });
+  } catch (error) {
+    window.open(driveUrl, '_system');
+  }
+};
+
 const handlePushToggle = async (event) => {
   const isChecked = event.detail.checked;
-  
-  // Evitar bucles infinitos si el estado no ha cambiado
   if (isChecked === isPushEnabled.value) return;
 
   try {
     if (isChecked) {
-      // === LÓGICA DE ACTIVACIÓN ===
-      
-      // Verificar estado actual en Android
       let permStatus = await PushNotifications.checkPermissions();
-      
       if (permStatus.receive === 'prompt') {
-        // Pedir permiso nativo si nunca se ha pedido
         permStatus = await PushNotifications.requestPermissions();
       }
 
       if (permStatus.receive !== 'granted') {
-        // Si lo denegó (denied) o desactivó y trata de activarlo, lo mandamos a los Ajustes de Android
         alert("Para recibir notificaciones, debes habilitarlas en los ajustes de tu teléfono.");
         await App.openAppSettings();
-        
-        // Regresamos el toggle a apagado
-        isPushEnabled.value = false;
         event.target.checked = false;
         return;
       }
 
-      // Si tiene permiso nativo, inicializamos
       await pushNotificationsService.initialize(true);
       isPushEnabled.value = true;
-
+      localStorage.setItem('lau_push_enabled', 'true');
     } else {
-      // === LÓGICA DE DESACTIVACIÓN CON CONFIRMACIÓN ===
-      
-      const alert = await alertController.create({
-        header: 'Desactivar Notificaciones',
-        message: '¿Estás seguro de que ya no quieres recibir notificaciones de LaU?',
-        buttons: [
-          {
-            text: 'Cancelar',
-            role: 'cancel',
-            handler: () => {
-              // Si el usuario cancela, devolvemos el toggle a "Encendido"
-              isPushEnabled.value = true;
-              event.target.checked = true;
-            }
-          },
-          {
-            text: 'Desactivar',
-            role: 'confirm',
-            handler: async () => {
-              // Si confirma, procedemos a destruir el token y limpiar todo
-              await pushNotificationsService.unregister();
-              isPushEnabled.value = false;
-            }
-          }
-        ]
-      });
-
-      await alert.present();
+      await presentPushDisableConfirm(event);
     }
   } catch (error) {
-    console.error("Error al procesar toggle:", error);
     isPushEnabled.value = false;
     event.target.checked = false;
   }
 };
 
-// ✨ LA FUNCIÓN DEL BOTÓN ✨
-const openDriveUpdates = async () => {
-  const driveUrl = 'https://drive.google.com/drive/folders/1pur2Gzg2vekayB0TLPNYZyA1zHzU2noN';
-  
-  try {
-    // Esto obliga a Android a abrir la app de Google Drive 
-    // (o el navegador de Chrome por fuera si no la tiene)
-    await CapacitorApp.openUrl({ url: driveUrl });
-  } catch (error) {
-    console.error('Error al abrir la app externa:', error);
-    // Plan de respaldo clásico
-    window.open(driveUrl, '_system');
-  }
-};
-
-const router = useRouter();
-const { isDarkMode, toggleDarkMode } = useDarkMode();
-const { isAmbientMode, toggleAmbientMode } = useAmbientMode();
-
-const goBack = () => {
-  // Aquí puedes agregar lógica extra antes de salir si quieres
-  console.log("Saliendo de ajustes...");
-
-  router.back(); // Esto regresa a la página anterior en el historial
-};
-
-const handleToggleChange = (event) => {
-  // Evitamos bucles infinitos: solo cambiamos si el toggle es diferente al estado actual
-  const isChecked = event.detail.checked;
-  if (isChecked !== isDarkMode.value) {
-    toggleDarkMode();
-  }
+// ==========================================
+// 5. ALERTAS Y MODALES (UI Feedback)
+// ==========================================
+const presentPushDisableConfirm = async (event) => {
+  const alert = await alertController.create({
+    header: 'Desactivar Notificaciones',
+    message: '¿Estás seguro de que ya no quieres recibir notificaciones de LaU?',
+    buttons: [
+      { 
+        text: 'Cancelar', 
+        role: 'cancel', 
+        handler: () => { event.target.checked = true; } 
+      },
+      {
+        text: 'Desactivar', 
+        role: 'confirm', 
+        handler: async () => {
+          await pushNotificationsService.unregister();
+          isPushEnabled.value = false;
+          localStorage.setItem('lau_push_enabled', 'false');
+        }
+      }
+    ]
+  });
+  await alert.present();
 };
 
 const presentLogoutAlert = async () => {
@@ -313,46 +307,11 @@ const presentLogoutAlert = async () => {
     mode: 'md',
     cssClass: 'my-rounded-alert',
     buttons: [
-      {
-        text: 'Cancelar',
-        role: 'cancel',
-        cssClass: 'secondary',
-      },
-      {
-        text: 'Sí, salir',
-        role: 'confirm',
-        handler: () => {
-          // Si el usuario dice "Sí", ejecutamos la lógica real
-          performLogout();
-        },
-      },
+      { text: 'Cancelar', role: 'cancel', cssClass: 'secondary' },
+      { text: 'Sí, salir', role: 'confirm', handler: () => performLogout() },
     ],
   });
-
   await alert.present();
-};
-
-// Paso 2: Ejecutar el cierre de sesión (Tu lógica original adaptada)
-const performLogout = async () => {
-  try {
-    // Intentamos cerrar sesión con el servicio
-    await AuthService.logout();
-
-    // Pequeña espera para asegurar que los procesos asíncronos terminen
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    // Redirección forzada al inicio
-    window.location.href = "/welcome";
-
-  } catch (error) {
-    console.error("Error al cerrar sesión:", error);
-
-    // Fallback: Limpieza forzada si falla el servicio
-    localStorage.clear();
-    sessionStorage.clear();
-
-    window.location.href = "/welcome";
-  }
 };
 </script>
 

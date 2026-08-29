@@ -1,35 +1,63 @@
 import { reactive } from 'vue';
 
+// ==========================================
+// 1. ESTADO GLOBAL (Single Source of Truth)
+// ==========================================
 export const globalAudioState = reactive({
-    post: null,           // Guarda los datos de la canción que está sonando
-    isPlaying: false,     // ¿Está en play?
-    isVisible: true,      // ¿El post original está en la pantalla?
+    post: null,
+    isPlaying: false,
+    isVisible: true,
     isDismissed: false,
-    progressPercent: 0,   // El progreso de la barra azul
-    audioElement: null,    // El control remoto del <audio> original
-    themeColorHex: '#113a82',      // Azul por defecto
-    themeColorRgb: '77, 141, 255'  // Azul por defecto
+    progressPercent: 0,
+    audioElement: null,
+    themeColorHex: '#113a82',
+    themeColorRgb: '77, 141, 255'
 });
 
-// Función para darle play/pausa desde la burbuja flotante
-export const toggleGlobalAudio = () => {
-    if (!globalAudioState.audioElement) return;
+// ==========================================
+// 2. MOTOR DE ANIMACIÓN CENTRAL
+// ==========================================
+let animationFrameId = null;
+
+export const startAudioAnimation = () => {
+    const update = () => {
+        if (globalAudioState.audioElement && globalAudioState.isPlaying) {
+            globalAudioState.progressPercent = 
+                (globalAudioState.audioElement.currentTime / globalAudioState.audioElement.duration) * 100 || 0;
+            animationFrameId = requestAnimationFrame(update);
+        }
+    };
     
-    if (globalAudioState.audioElement.paused) {
-        globalAudioState.audioElement.play();
-        globalAudioState.isPlaying = true;
-    } else {
-        globalAudioState.audioElement.pause();
-        globalAudioState.isPlaying = false;
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    animationFrameId = requestAnimationFrame(update);
+};
+
+export const stopAudioAnimation = () => {
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+};
+
+// ==========================================
+// 3. ACCIONES GLOBALES
+// ==========================================
+export const toggleGlobalAudio = () => {
+    if (globalAudioState.audioElement) {
+        if (globalAudioState.isPlaying) {
+            globalAudioState.audioElement.pause();
+            globalAudioState.isPlaying = false; // Mutación explícita
+            stopAudioAnimation(); 
+        } else {
+            globalAudioState.audioElement.play();
+            globalAudioState.isPlaying = true; // Mutación explícita
+            startAudioAnimation(); 
+        }
     }
 };
 
 export const dismissGlobalAudio = () => {
-    // 1. Si está sonando, la pausamos
-    if (globalAudioState.audioElement && !globalAudioState.audioElement.paused) {
+    if (globalAudioState.audioElement) {
         globalAudioState.audioElement.pause();
         globalAudioState.isPlaying = false;
+        stopAudioAnimation();
     }
-    // 2. Le decimos al cerebro que la oculte definitivamente
     globalAudioState.isDismissed = true;
 };
