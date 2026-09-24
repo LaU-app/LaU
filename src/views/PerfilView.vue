@@ -1508,43 +1508,10 @@ export default {
 
     async checkFollowStatus() {
       try {
-        /* console.log('[PerfilView] ===== VERIFICANDO ESTADO DE SEGUIMIENTO =====');
-        console.log('[PerfilView] Usuario objetivo:', {
-          id: this.user.id,
-          username: this.user.username,
-          is_following: this.user.is_following
-        });
-        console.log('[PerfilView] Usuario actual (viewer):', {
-          id: this.user_viewer?.id,
-          username: this.user_viewer?.username
-        }); */
-
-        // Opción 1: Verificar si el backend envía is_following directamente
-        if (this.user.is_following !== undefined && this.user.is_following !== null) {
-          this.isFollowing = Boolean(this.user.is_following);
-          /* console.log('[PerfilView] ✅ Estado desde user.is_following:', this.isFollowing); */
-          return;
-        }
-
-        // Opción 2: Verificar en la lista de seguidores cargada (más confiable)
-        if (this.seguidores && this.seguidores.length > 0 && this.user_viewer?.id) {
-          this.isFollowing = this.seguidores.some(follower => {
-            const followerId = follower.follower_id || follower.user_id || follower.id;
-            return followerId === this.user_viewer.id;
-          });
-          /* console.log('[PerfilView] ✅ Estado desde lista de seguidores:', this.isFollowing);
-          console.log('[PerfilView] Total seguidores:', this.seguidores.length); */
-          return;
-        }
-
-        // Opción 3: Consultar la lista de usuarios que sigo
-        const followingIds = await followersService.getFollowingIds();
-        this.isFollowing = followingIds.includes(this.user.id);
-        /* console.log('[PerfilView] ✅ Estado desde followingIds:', this.isFollowing);
-        console.log('[PerfilView] followingIds:', followingIds); */
+        const result = await followersService.checkFollowStatus(this.user.id);
+        if (result.success) this.isFollowing = Boolean(result.data.is_following);
       } catch (error) {
-        console.error('[PerfilView] ❌ Error al verificar estado de seguimiento:', error);
-        this.isFollowing = false;
+        console.error('[PerfilView] Error al verificar estado de seguimiento:', error);
       }
     }, handleFollowUpdate(event) {
       /* console.log('[PerfilView] Follow actualizado:', event); */

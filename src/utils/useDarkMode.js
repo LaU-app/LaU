@@ -4,6 +4,7 @@
  */
 import { ref, watch, onMounted } from 'vue'
 import { StatusBar, Style } from '@capacitor/status-bar'
+import { Capacitor } from '@capacitor/core'
 
 const isDarkMode = ref(false)
 const isInitialized = ref(false)
@@ -37,7 +38,7 @@ export function useDarkMode() {
 
     if (dark) {
       try {
-        await StatusBar.setStyle({ style: Style.Dark }) // Pone íconos BLANCOS
+        if (Capacitor.isNativePlatform()) await StatusBar.setStyle({ style: Style.Dark })
         // await StatusBar.setBackgroundColor({ color: '#121212' })
       } catch (e) {
         console.log('StatusBar no disponible (estás en web)')
@@ -87,7 +88,7 @@ export function useDarkMode() {
       root.style.setProperty('--ion-background-hover', '#2A2A2A')
     } else {
       try {
-        await StatusBar.setStyle({ style: Style.Light }) // Pone íconos NEGROS
+        if (Capacitor.isNativePlatform()) await StatusBar.setStyle({ style: Style.Light })
         // await StatusBar.setBackgroundColor({ color: '#F3F4F6' })
       } catch (e) {
         console.log('StatusBar no disponible')

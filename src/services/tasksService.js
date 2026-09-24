@@ -1,235 +1,93 @@
-import { api } from "./api";
-import localforage from "localforage";
+﻿import { api } from './api';
+import localforage from 'localforage';
 
-// Configurar localforage para tareas
-const tasksStorage = localforage.createInstance({
-  name: "SivarSocial",
-  storeName: "tasks",
-});
-
-const syncQueueStorage = localforage.createInstance({
-  name: "SivarSocial",
-  storeName: "sync_queue",
-});
-
+// V2 deliberately keeps old unowned caches intact without exposing them to another account.
+const storage = localforage.createInstance({ name: 'LaU', storeName: 'tasks_v2' });
+let pending = Promise.resolve();
+function owner() {
+  if (!(localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token'))) return null;
+  try { return JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || 'null')?.id ?? null; } catch { return null; }
+}
+function requireOwner() { const id = owner(); if (!id) throw new Error('Inicia sesión para gestionar tus tareas.'); return id; }
+const retryable = error => !error.response || error.response.status >= 500;
+function serialize(work) { const result = pending.then(work); pending = result.catch(() => {}); return result; }
+async function cachedRead(path, params, key) {
+  const id = requireOwner();
+  const cacheKey = `${id}:${key}:${JSON.stringify(params || {})}`;
+  try {
+    const response = (await api.get(path, { params })).data;
+    if (owner() !== id) throw new Error('La cuenta cambió.');
+    await storage.setItem(cacheKey, response);
+    return response;
+  } catch (error) {
+    if (!retryable(error) || owner() !== id) throw error;
+    const cached = await storage.getItem(cacheKey);
+    if (cached) return { ...cached, offline: true };
+    throw error;
+  }
+}
+async function enqueue(id, action, payload) {
+  const key = `${id}:queue`;
+  const queue = (await storage.getItem(key)) || [];
+  queue.push({ action, payload });
+  await storage.setItem(key, queue);
+}
 export default {
-  /**
-   * Obtener todas las tareas con filtros
-   */
-  async getTasks({
-    status = null,
-    priority = null,
-    search = null,
-    sortBy = "created_at",
-    sortOrder = "desc",
-    overdue = false,
-    page = null,
-  } = {}) {
-    try {
-      const params = {};
-      if (status) params.status = status;
-      if (priority) params.priority = priority;
-      if (search) params.search = search;
-      if (overdue) params.overdue = true;
-      params.sort_by = sortBy;
-      params.sort_order = sortOrder;
-      if (page) params.page = page;
-
-      const response = await api.get("/tasks", { params });
-
-      // Guardar en cache local
-      await tasksStorage.setItem("tasks_cache", response.data.data);
-
-      return response.data;
-    } catch (error) {
-      console.error("[TasksService] Error al obtener tareas:", error);
-
-      // Si falla, intentar obtener del cache local
-      const cachedTasks = await tasksStorage.getItem("tasks_cache");
-      if (cachedTasks) {
-        return { success: true, data: cachedTasks };
+  async getTasks({ status = null, priority = null, search = null, sortBy = 'created_at', sortOrder = 'desc', overdue = false, page = 1 } = {}) {
+    const params = { sort_by: sortBy, sort_order: sortOrder, page };
+    if (status) params.status = status;
+    if (priority) params.priority = priority;
+    if (search) params.search = search;
+    if (overdue) params.overdue = true;
+    return cachedRead('/tasks', params, 'list');
+  },
+  async getTaskById(taskId) { return cachedRead(`/tasks/${taskId}`, {}, `task:${taskId}`); },
+  async getTasksStats() { return cachedRead('/tasks-stats', {}, 'stats'); },
+  createTask(taskData) {
+    return serialize(async () => {
+      const id = requireOwner();
+      const payload = { ...taskData, uuid_cliente: crypto.randomUUID() };
+      try { return (await api.post('/tasks', payload)).data; }
+      catch (error) {
+        if (!retryable(error) || owner() !== id) throw error;
+        await enqueue(id, 'create', payload);
+        return { success: true, data: { ...payload, status: 'pending', completed_pomodoros: 0 }, offline: true, message: 'Tarea guardada en este dispositivo. Se sincronizará al recuperar conexión.' };
       }
-
-      throw error;
-    }
-  },
-
-  /**
-   * Obtener una tarea específica por ID
-   */
-  async getTaskById(taskId) {
-    try {
-      const response = await api.get(`/tasks/${taskId}`);
-      return response.data;
-    } catch (error) {
-      console.error("[TasksService] Error al obtener tarea:", error);
-      throw error;
-    }
-  },
-
-  /**
-   * Crear una nueva tarea
-   */
-  async createTask(taskData) {
-    const uuid = crypto.randomUUID();
-    const localTask = {
-      uuid_cliente: uuid,
-      title: taskData.title,
-      description: taskData.description || null,
-      priority: taskData.priority || "medium",
-      due_date: taskData.due_date || null,
-      estimated_pomodoros: taskData.estimated_pomodoros || null,
-      status: "pending",
-      created_at: new Date().toISOString(),
-      synced: false,
-    };
-
-    // Guardar localmente primero
-    await tasksStorage.setItem(`task:${uuid}`, localTask);
-
-    try {
-      const response = await api.post("/tasks", {
-        ...taskData,
-        uuid_cliente: uuid,
-      });
-
-      // Actualizar con datos del servidor
-      await tasksStorage.setItem(`task:${uuid}`, {
-        ...response.data.data,
-        synced: true,
-      });
-
-      return response.data;
-    } catch (error) {
-      console.error(
-        "[TasksService] Error al crear tarea, agregando a cola de sync:",
-        error
-      );
-
-      // Agregar a cola de sincronización
-      const queue = (await syncQueueStorage.getItem("queue")) || [];
-      queue.push({
-        action: "task_create",
-        payload: localTask,
-        timestamp: new Date().toISOString(),
-      });
-      await syncQueueStorage.setItem("queue", queue);
-
-      return {
-        success: true,
-        data: localTask,
-        offline: true,
-        message:
-          "Tarea guardada localmente. Se sincronizará cuando haya conexión.",
-      };
-    }
-  },
-
-  /**
-   * Actualizar una tarea existente
-   */
-  async updateTask(taskId, taskData) {
-    try {
-      const response = await api.put(`/tasks/${taskId}`, taskData);
-      return response.data;
-    } catch (error) {
-      console.error("[TasksService] Error al actualizar tarea:", error);
-
-      // Agregar a cola de sincronización
-      const queue = (await syncQueueStorage.getItem("queue")) || [];
-      queue.push({
-        action: "task_update",
-        payload: { id: taskId, ...taskData },
-        timestamp: new Date().toISOString(),
-      });
-      await syncQueueStorage.setItem("queue", queue);
-
-      throw error;
-    }
-  },
-
-  /**
-   * Eliminar una tarea
-   */
-  async deleteTask(taskId) {
-    try {
-      const response = await api.delete(`/tasks/${taskId}`);
-      return response.data;
-    } catch (error) {
-      console.error("[TasksService] Error al eliminar tarea:", error);
-      throw error;
-    }
-  },
-
-  /**
-   * Obtener estadísticas de tareas
-   */
-  async getTasksStats() {
-    try {
-      const response = await api.get("/tasks-stats");
-
-      // Guardar en cache
-      await tasksStorage.setItem("stats_cache", response.data.data);
-
-      return response.data;
-    } catch (error) {
-      console.error("[TasksService] Error al obtener estadísticas:", error);
-
-      // Intentar obtener del cache
-      const cachedStats = await tasksStorage.getItem("stats_cache");
-      if (cachedStats) {
-        return { success: true, data: cachedStats };
-      }
-
-      throw error;
-    }
-  },
-
-  /**
-   * Marcar tarea como completada
-   */
-  async completeTask(taskId) {
-    return this.updateTask(taskId, {
-      status: "completed",
-      completed_at: new Date().toISOString(),
     });
   },
-
-  /**
-   * Sincronizar cola de tareas pendientes
-   */
-  async flushSyncQueue() {
-    const queue = (await syncQueueStorage.getItem("queue")) || [];
-    const failedItems = [];
-
-    for (const item of queue) {
-      try {
-        if (item.action === "task_create") {
-          await api.post("/tasks", item.payload);
-        } else if (item.action === "task_update") {
-          const { id, ...data } = item.payload;
-          await api.put(`/tasks/${id}`, data);
-        }
-      } catch (error) {
-        console.error("[TasksService] Error al sincronizar item:", error);
-        failedItems.push(item);
+  updateTask(taskId, taskData) {
+    return serialize(async () => {
+      const id = requireOwner();
+      try { return (await api.put(`/tasks/${taskId}`, taskData)).data; }
+      catch (error) {
+        if (retryable(error) && owner() === id) await enqueue(id, 'update', { id: taskId, data: taskData });
+        throw error;
       }
-    }
-
-    // Guardar solo los items que fallaron
-    await syncQueueStorage.setItem("queue", failedItems);
-
-    return {
-      synced: queue.length - failedItems.length,
-      failed: failedItems.length,
-    };
+    });
   },
-
-  /**
-   * Limpiar cache local
-   */
+  async deleteTask(taskId) { requireOwner(); return (await api.delete(`/tasks/${taskId}`)).data; },
+  completeTask(taskId) { return this.updateTask(taskId, { status: 'completed' }); },
+  flushSyncQueue() {
+    return serialize(async () => {
+      const id = owner();
+      if (!id) return { synced: 0, failed: 0 };
+      const key = `${id}:queue`, queue = (await storage.getItem(key)) || [];
+      let synced = 0;
+      while (queue.length && owner() === id) {
+        const item = queue[0];
+        try {
+          if (item.action === 'create') await api.post('/tasks', item.payload);
+          else if (item.action === 'update') await api.put(`/tasks/${item.payload.id}`, item.payload.data);
+          else break;
+          queue.shift(); synced++;
+          await storage.setItem(key, queue);
+        } catch { break; }
+      }
+      return { synced, failed: queue.length };
+    });
+  },
   async clearCache() {
-    await tasksStorage.clear();
-    await syncQueueStorage.clear();
+    const id = requireOwner();
+    for (const key of await storage.keys()) if (key.startsWith(`${id}:`) && key !== `${id}:queue`) await storage.removeItem(key);
   },
 };
