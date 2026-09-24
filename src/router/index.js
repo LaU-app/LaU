@@ -64,6 +64,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/study",
+    name: "Study",
+    component: () => import("@/views/StudyView.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/tabs/",
     component: TabsPage,
     children: [

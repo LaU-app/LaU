@@ -1,5 +1,6 @@
 import { api } from "./api";
 import { pushNotificationsService } from "./pushNotificationsService";
+import { study } from "@/utils/useStudy";
 
 const TOKEN_KEY = "auth_token";
 const USER_KEY = "user";
@@ -74,6 +75,7 @@ export const AuthService = {
     if (rememberMe) {
       localStorage.setItem(USER_KEY, JSON.stringify(user));
     }
+    window.dispatchEvent(new Event('study-account-changed'));
   },
 
   async register(data) {
@@ -100,6 +102,7 @@ export const AuthService = {
   },
 
   async logout() {
+    await study.pause();
     try {
       // Desregistrar notificaciones push antes del logout
       if (pushNotificationsService.isAvailable()) {
@@ -123,6 +126,7 @@ export const AuthService = {
     sessionStorage.removeItem(USER_KEY);
     sessionStorage.removeItem(REMEMBER_KEY);
     sessionStorage.removeItem(TOKEN_EXPIRY_KEY);
+    window.dispatchEvent(new Event('study-account-changed'));
   },
 
   getToken() {

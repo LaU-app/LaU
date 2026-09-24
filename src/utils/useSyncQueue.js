@@ -1,6 +1,5 @@
 import { ref, onMounted, onUnmounted } from "vue";
 import tasksService from "@/services/tasksService";
-import pomodoroService from "@/services/pomodoroService";
 
 export function useSyncQueue() {
   const isSyncing = ref(false);
@@ -16,11 +15,9 @@ export function useSyncQueue() {
       // Sincronizar tareas
       const tasksResult = await tasksService.flushSyncQueue();
 
-      // Sincronizar sesiones de pomodoro
-      const pomodoroResult = await pomodoroService.flushSyncQueue();
-
-      const totalSynced = tasksResult.synced + pomodoroResult.synced;
-      const totalFailed = tasksResult.failed + pomodoroResult.failed;
+      // Study owns an independent, account-scoped durable session snapshot.
+      const totalSynced = tasksResult.synced;
+      const totalFailed = tasksResult.failed;
 
       return {
         success: true,
@@ -39,6 +36,7 @@ export function useSyncQueue() {
   };
 
   const startAutoSync = () => {
+    if (syncInterval.value) return;
     // Sincronizar inmediatamente
     syncAll();
 

@@ -1,22 +1,26 @@
 <template>
   <ion-app>
     <ion-router-outlet />
+    <StudyFloatingIndicator />
   </ion-app>
 </template>
 
 <script setup>
 import { IonApp, IonRouterOutlet, useBackButton, useIonRouter } from '@ionic/vue';
-import { onMounted } from 'vue';
+import { onMounted, onUnmounted } from 'vue';
+import { startStudyRuntime, stopStudyRuntime } from '@/utils/useStudy';
 import { useDarkMode } from '@/utils/useDarkMode';
 import { useSyncQueue } from '@/utils/useSyncQueue';
 import { AuthService } from '@/services/auth';
+import StudyFloatingIndicator from '@/components/study/StudyFloatingIndicator.vue';
 import { App } from '@capacitor/app';
 import { useRoute, useRouter } from 'vue-router';
 import { StatusBar } from '@capacitor/status-bar';
 import { Keyboard, KeyboardResize } from '@capacitor/keyboard';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
+import { Capacitor } from '@capacitor/core';
 
-StatusBar.setOverlaysWebView({ overlay: true });
+if (Capacitor.isNativePlatform()) StatusBar.setOverlaysWebView({ overlay: true });
 
 const ionRouter = useIonRouter();
 const route = useRoute();
@@ -71,14 +75,13 @@ useBackButton(10, (processNextHandler) => {
 const { initDarkMode } = useDarkMode();
 
 // Inicializar sincronización automática
-const { startAutoSync } = useSyncQueue();
+useSyncQueue();
+onUnmounted(stopStudyRuntime);
 
 onMounted(() => {
   initDarkMode();
   
-  if (AuthService.isAuthenticated()) {
-    startAutoSync();
-  }
+  startStudyRuntime();
 
   // ✨ NUEVO: CONFIGURACIÓN DEL TECLADO ✨
   if (window.Capacitor?.isNativePlatform()) {
