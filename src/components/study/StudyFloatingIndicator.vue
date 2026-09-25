@@ -1,6 +1,6 @@
 <template>
     <transition name="slide-down">
-        <div v-if="visible" class="floating-player-wrapper">
+        <div v-if="visible" class="floating-player-wrapper" :class="{ 'on-study-screen': onStudyScreen }">
             <div class="floating-pill" ref="pillRef" :class="{ 'is-glass': isGlassMode }" @click="goToFocus">
                 <LiquidGlassBox
                   v-if="isGlassMode"
@@ -43,6 +43,7 @@ const calculatedPillWidth = computed(() => Math.min(windowWidth.value - 32, 400)
 
 // Ocultarlo cuando ya se ve el temporizador completo en la pantalla de Enfoque.
 const onFocusScreen = computed(() => route.path === '/study' && (!route.query.tab || route.query.tab === 'focus'))
+const onStudyScreen = computed(() => route.path === '/study')
 const visible = computed(() => study.focusActive.value && !onFocusScreen.value)
 const clock = computed(() => String(Math.floor(remaining.value / 60)).padStart(2, '0') + ':' + String(remaining.value % 60).padStart(2, '0'))
 const progressPercent = computed(() => timer.duration ? Math.min(100, Math.max(0, (1 - remaining.value / timer.duration) * 100)) : 0)
@@ -64,6 +65,10 @@ function togglePause() {
     justify-content: center;
     padding: 0 16px;
     pointer-events: none;
+}
+
+.floating-player-wrapper.on-study-screen {
+    top: calc(env(safe-area-inset-top) + 12px);
 }
 
 .floating-pill {
