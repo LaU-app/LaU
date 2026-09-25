@@ -1,7 +1,7 @@
 <template>
   <main ref="shell" class="study-shell">
     <div class="study-body">
-      <p v-if="error" class="study-error" role="alert">No pudimos guardar el último cambio. Tu tiempo sigue a salvo. <button class="study-link" :disabled="busy" @click="study.retry()">Reintentar</button></p>
+      <p v-if="error" class="study-error" role="alert">{{ error }} <button class="study-link" :disabled="busy" @click="study.retry()">Reintentar</button></p>
       <p v-else-if="timer.pending && !busy" class="study-notice" role="status">Tu tiempo está a salvo. Lo guardaremos cuando vuelva la conexión.</p>
       <p v-else-if="notice && timer.status !== 'recovery'" class="study-notice" role="status">{{ notice }}<button aria-label="Cerrar aviso" @click="notice = ''">×</button></p>
       <StudySettings v-if="settings && ready" @close="settings = false"/>

@@ -108,6 +108,25 @@ async function syncPending() {
     await persist();
     revision.value++;
 }
+async function syncActiveSession() {
+    const active = await studyService.active();
+    if (owner !== userId()) return;
+    if (active) {
+        if (timer.session?.uuid_cliente === active.uuid_cliente) return;
+        Object.assign(timer, {
+            session: active, status: 'recovery', phase: 'focus', taskId: active.task_id,
+            activity: active.activity || active.task?.title || '', startUuid: null,
+            deadline: null, segmentStart: null, intervals: [], pending: null,
+            duration: active.target_seconds, remaining: active.target_seconds,
+        });
+        notice.value = '';
+    } else if (timer.session || timer.status === 'recovery' || timer.startUuid) {
+        Object.assign(timer, initialTimer());
+        timer.duration = timer.remaining = preferences.focus_minutes * 60;
+        notice.value = 'No hay una sesión activa en el servidor. Puedes comenzar un nuevo enfoque.';
+    }
+    await persist();
+}
 async function ensureAccount() {
     const id = userId();
     if (id === owner && ready.value)
@@ -134,27 +153,17 @@ async function ensureAccount() {
         Object.assign(preferences, saved.preferences);
     }
     ready.value = true;
+    let failure: unknown = null;
     try {
         const p = await studyService.preferences();
-        if (id !== userId())
-            return;
+        if (id !== userId()) return;
         Object.assign(preferences, p);
-        await syncPending();
-        if (!timer.session && !timer.startUuid) {
-            const active = await studyService.active();
-            if (active && id === userId()) {
-                timer.session = active;
-                timer.status = 'recovery';
-                timer.phase = 'focus';
-                timer.taskId = active.task_id;
-                timer.activity = active.activity || active.task?.title || '';
-                notice.value = '';
-            }
-        }
+    } catch (e) { failure = e; }
+    try { await syncPending(); } catch (e) { failure ??= e; }
+    if (!timer.pending) {
+        try { await syncActiveSession(); } catch (e) { failure ??= e; }
     }
-    catch (e) {
-        error.value = message(e);
-    }
+    error.value = failure ? message(failure) : '';
     if (timer.status === 'idle' && timer.phase === 'focus')
         timer.duration = timer.remaining = preferences.focus_minutes * 60;
     await persist();
@@ -352,42 +361,33 @@ export const study = {
         }
     }),
     retry: () => serial(async () => {
-        await syncPending();
-        if (timer.startUuid)
-            await startFocus();
-        else if (timer.status === 'idle') {
-            Object.assign(preferences, await studyService.preferences());
-            error.value = '';
+        let failure: unknown = null;
+        try { await syncPending(); } catch (e) { failure = e; }
+        try { Object.assign(preferences, await studyService.preferences()); } catch (e) { failure ??= e; }
+        if (!timer.pending) {
+            try { await syncActiveSession(); } catch (e) { failure ??= e; }
         }
+        if (timer.startUuid && !failure) await startFocus();
         await reconcile(false);
+        if (failure) throw failure;
+        error.value = '';
     }),
     refreshRemote: (areas: string[] = []) => serial(async () => {
         await ensureAccount();
+        let failure: unknown = null;
         if (areas.includes('preferences')) {
-            Object.assign(preferences, await studyService.preferences());
-            if (timer.status === 'idle' && timer.phase === 'focus')
-                timer.duration = timer.remaining = preferences.focus_minutes * 60;
+            try {
+                Object.assign(preferences, await studyService.preferences());
+                if (timer.status === 'idle' && timer.phase === 'focus')
+                    timer.duration = timer.remaining = preferences.focus_minutes * 60;
+            } catch (e) { failure = e; }
         }
-        if (areas.includes('timer') && !timer.pending && !timer.startUuid && !['running', 'paused'].includes(timer.status)) {
-            const active = await studyService.active();
-            if (active) {
-                timer.session = active;
-                timer.status = 'recovery';
-                timer.phase = 'focus';
-                timer.taskId = active.task_id;
-                timer.activity = active.activity || active.task?.title || '';
-                notice.value = '';
-            }
-            else if (timer.status === 'recovery') {
-                timer.session = null;
-                timer.status = 'idle';
-                timer.deadline = null;
-                timer.duration = timer.remaining = preferences.focus_minutes * 60;
-                notice.value = 'Tu sesión ya terminó.';
-            }
-            await persist();
+        if (areas.includes('timer') && !timer.pending) {
+            try { await syncActiveSession(); } catch (e) { failure ??= e; }
         }
         revision.value++;
+        if (failure) throw failure;
+        error.value = '';
     }),
     savePreferences: (data: Partial<StudyPreferences>) => serial(async () => {
         const p = await studyService.savePreferences(data);
