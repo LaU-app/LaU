@@ -43,8 +43,8 @@
             <!-- Título y/o Descripción o Texto (Dinámico) -->
             <ion-text v-if="post.titulo || post.descripcion || post.texto">
                 <h2 v-if="post.titulo" class="post-title">{{ post.titulo }}</h2>
-                <p v-if="post.descripcion" class="post-text" v-html="formatTextWithLinks(post.descripcion)" @click="handleLinkClick"></p>
-                <p v-if="post.texto && !post.descripcion" class="post-text post-text-only" v-html="formatTextWithLinks(post.texto)" @click="handleLinkClick"></p>
+                <p v-if="post.descripcion" class="post-text"><MentionTextRenderer :text="post.descripcion" /></p>
+                <p v-if="post.texto && !post.descripcion" class="post-text post-text-only"><MentionTextRenderer :text="post.texto" /></p>
             </ion-text>
 
             <!-- Imagen Post -->
@@ -175,10 +175,10 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 import { CapacitorHttp } from '@capacitor/core';
 import { Capacitor } from '@capacitor/core';
-import { Browser } from '@capacitor/browser';
 import { openNativeFile } from '@/services/FileService';
 import { getFullImageUrl } from '@/utils/imageUtils';
 import FullScreenImageViewer from './FullScreenImageViewer.vue';
+import MentionTextRenderer from './MentionTextRenderer.vue';
 import { BASE_URL } from '../services/api.js'; 
 
 
@@ -197,7 +197,8 @@ export default {
         MusicPlayer,
         PostActions,
         IonModal,
-        FullScreenImageViewer
+        FullScreenImageViewer,
+        MentionTextRenderer
     },
     props: {
         post: {
@@ -443,31 +444,6 @@ export default {
         };
         // ==========================================
 
-        // --- LÓGICA DE DETECCIÓN DE LINKS ---
-        const formatTextWithLinks = (text) => {
-            if (!text) return '';
-            const urlRegex = /(https?:\/\/[^\s]+)/g;
-
-            return text.replace(urlRegex, (url) => {
-                return `<a href="${url}" class="post-link">${url}</a>`;
-            });
-        };
-
-        const handleLinkClick = async (event) => {
-            const link = event.target.closest('a');
-
-            if (link && link.classList.contains('post-link')) {
-                event.preventDefault();
-                event.stopPropagation();
-
-                try {
-                    await Browser.open({ url: link.href });
-                } catch (error) {
-                    console.error('Error al abrir el enlace:', error);
-                }
-            }
-        };
-
         return {
             personCircle,
             documentAttach,
@@ -485,9 +461,6 @@ export default {
             ambientGradient,
             isAmbientMode,
             getFullImageUrl,
-            formatTextWithLinks,
-            handleLinkClick,
-
             closeOutline,
             isImageModalOpen,
             openImageModal,
