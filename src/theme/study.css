@@ -26,6 +26,7 @@
 .study-page .study-shell>.study-body{padding:0}
 .study-page .study-shell{padding:0 20px 32px}
 .study-page ion-content,.tasks-page ion-content,.task-form-page ion-content,.task-detail-page ion-content{--padding-top:max(20px, env(safe-area-inset-top,0px))}
+.study-page.study-focus-active:not(.study-destination-focus) ion-content{--padding-top:calc(max(20px, env(safe-area-inset-top,0px)) + 72px)}
 .study-avatar{display:grid;place-items:center;position:relative;flex-shrink:0;width:40px;height:40px;border-radius:50%;border:1px solid var(--study-border);background:var(--study-surface);color:var(--study-purple);font-size:16px;font-weight:700;overflow:hidden}
 .study-avatar img{width:100%;height:100%;object-fit:cover}
 .study-icon-button,.round-arrow{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:40px;height:40px;border:1px solid var(--study-border);border-radius:50%;background:var(--study-surface);color:var(--study-text);font-size:20px;box-shadow:var(--study-shadow)}
