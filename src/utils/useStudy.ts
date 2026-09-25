@@ -93,7 +93,20 @@ async function syncPending() {
     if (!timer.pending || !owner || owner !== userId())
         return;
     const account = owner;
-    const session = await studyService.finish(timer.pending);
+    let session;
+    try {
+        session = await studyService.finish(timer.pending);
+    } catch (failure) {
+        const status = (failure as { response?: { status?: number } }).response?.status;
+        if (status !== 404) throw failure;
+        // A previous deployment may have created this session in the legacy table.
+        // Keep the local record until the student explicitly decides to discard it.
+        const active = await studyService.active();
+        if (account !== userId()) return;
+        if (!active || active.uuid_cliente !== timer.pending?.session_uuid)
+            throw new Error('El bloque pendiente no existe en el registro actual. Puedes descartarlo para iniciar otro enfoque.');
+        throw failure;
+    }
     if (account !== userId())
         return;
     timer.pending = null;
@@ -360,6 +373,20 @@ export const study = {
             await syncPending();
         }
     }),
+    discardPending: () => serial(async () => {
+        if (!timer.pending || !owner || owner !== userId()) return;
+        const pending = timer.pending;
+        const active = await studyService.active();
+        if (active?.uuid_cliente === pending.session_uuid) {
+            await studyService.finish({ session_uuid: pending.session_uuid, status: 'cancelled', intervals: [] });
+        }
+        timer.pending = null;
+        await persist();
+        await syncActiveSession();
+        error.value = '';
+        notice.value = 'Se descartó el bloque pendiente. Ya puedes iniciar otro enfoque.';
+        revision.value++;
+    }),
     retry: () => serial(async () => {
         let failure: unknown = null;
         try { await syncPending(); } catch (e) { failure = e; }
@@ -370,7 +397,7 @@ export const study = {
         if (timer.startUuid && !failure) await startFocus();
         await reconcile(false);
         if (failure) throw failure;
-        error.value = '';
+        if (!timer.pending) error.value = '';
     }),
     refreshRemote: (areas: string[] = []) => serial(async () => {
         await ensureAccount();
@@ -387,7 +414,7 @@ export const study = {
         }
         revision.value++;
         if (failure) throw failure;
-        error.value = '';
+        if (!timer.pending) error.value = '';
     }),
     savePreferences: (data: Partial<StudyPreferences>) => serial(async () => {
         const p = await studyService.savePreferences(data);

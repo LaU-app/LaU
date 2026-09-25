@@ -1,8 +1,8 @@
 <template>
   <main ref="shell" class="study-shell">
     <div class="study-body">
-      <p v-if="error" class="study-error" role="alert">{{ error }} <button class="study-link" :disabled="busy" @click="study.retry()">Reintentar</button></p>
-      <p v-else-if="timer.pending && !busy" class="study-notice" role="status">Tu tiempo está a salvo. Lo guardaremos cuando vuelva la conexión.</p>
+      <p v-if="error" class="study-error" role="alert">{{ error }} <button class="study-link" :disabled="busy" @click="study.retry()">Reintentar</button><button v-if="timer.pending" class="study-link" :disabled="busy" @click="confirmDiscard">Descartar bloque pendiente</button></p>
+      <p v-else-if="timer.pending && !busy" class="study-notice" role="status">Hay un bloque pendiente de sincronizar. <button class="study-link" @click="study.retry()">Reintentar</button><button class="study-link" @click="confirmDiscard">Descartar bloque pendiente</button></p>
       <p v-else-if="notice && timer.status !== 'recovery'" class="study-notice" role="status">{{ notice }}<button aria-label="Cerrar aviso" @click="notice = ''">×</button></p>
       <StudySettings v-if="settings && ready" @close="settings = false"/>
       <p v-if="!ready" class="study-empty" role="status">Preparando tu espacio…</p>
@@ -17,7 +17,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { onIonViewWillEnter } from '@ionic/vue'
+import { onIonViewWillEnter, alertController } from '@ionic/vue'
 import { study } from '@/utils/useStudy'
 import { useStudyScreen } from '@/utils/useStudyScreen'
 import tasksService from '@/services/tasksService'
@@ -31,6 +31,17 @@ const { timer, ready, busy, error, notice, accountId } = study
 const selected = ref(['focus','progress','ranking'].includes(String(route.query.tab)) ? String(route.query.tab) : 'focus')
 const settings = ref(false)
 const shell = ref<HTMLElement | null>(null)
+async function confirmDiscard() {
+  const alert = await alertController.create({
+    header: '¿Descartar el bloque pendiente?',
+    message: 'Se intentará cerrar la sesión en el servidor. Si el tiempo aún no se guardó, no se podrá recuperar.',
+    buttons: [
+      { text: 'Conservar', role: 'cancel' },
+      { text: 'Descartar', role: 'destructive', handler: () => { void study.discardPending() } },
+    ],
+  })
+  await alert.present()
+}
 watch(selected, tab => { notice.value = ''; void shell.value?.closest('ion-content')?.scrollToTop(0); void router.replace({ path: '/study', query: { ...route.query, tab } }) })
 watch(() => route.query.tab, tab => { if (route.path === '/study' && ['focus','progress','ranking'].includes(String(tab))) selected.value = String(tab) })
 async function selectRouteTask() {
