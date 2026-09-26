@@ -1,36 +1,39 @@
 <template>
     <ion-page>
-        <ion-header class="ion-no-border">
-            <ion-toolbar class="chatify-toolbar">
-                <ion-buttons slot="start">
-                    <ion-back-button default-href="/tabs/chat" text=""
-                        :color="isDarkMode ? 'light' : 'dark'"></ion-back-button>
-                </ion-buttons>
+        <ion-header class="ion-no-border transparent-header pt-safe-top">
 
-                <ion-title @click="toggleInfoPanel(true)" class="chat-header-title">
-                    <div class="header-content">
-                        <ion-avatar class="header-avatar">
-                            <img v-if="chatUserAvatar" :src="chatUserAvatar" />
-                            <ion-icon v-else :icon="personCircle" class="header-avatar-icon"></ion-icon>
-                        </ion-avatar>
-                        <div class="header-text">
-                            <span class="user-name">{{ chatUserName }}</span>
-                            <div v-if="isPeerTyping" class="typing-status">Escribiendo...</div>
-                        </div>
+            <div class="header-gradient-mask"></div>
+
+            <div class="floating-header-container" :class="{ 'is-glass-header': isGlassMode }">
+
+                <!-- Burbuja: Botón de volver circular -->
+                <button class="header-bubble action-bubble" @click="router.push('/tabs/chat')" aria-label="Volver">
+                    <ion-icon :icon="arrowBack"></ion-icon>
+                </button>
+
+                <!-- Burbuja: Info del contacto (avatar + nombre + estado) -->
+                <div class="header-bubble info-bubble" @click="toggleInfoPanel(true)">
+                    <ion-avatar class="header-avatar">
+                        <img v-if="chatUserAvatar" :src="chatUserAvatar" />
+                        <ion-icon v-else :icon="personCircle" class="header-avatar-icon"></ion-icon>
+                    </ion-avatar>
+                    <div class="header-user-text">
+                        <span class="header-name">{{ chatUserName }}</span>
+                        <span v-if="isPeerTyping" class="header-username typing-status">Escribiendo...</span>
                     </div>
-                </ion-title>
+                </div>
 
-                <ion-buttons slot="end">
-                    <ion-button @click="toggleInfoPanel(true)" color="medium">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="16" x2="12" y2="12"></line>
-                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                        </svg>
-                    </ion-button>
-                </ion-buttons>
-            </ion-toolbar>
+                <!-- Burbuja: Botón de información circular -->
+                <button class="header-bubble action-bubble" @click="toggleInfoPanel(true)" aria-label="Información">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                </button>
+
+            </div>
         </ion-header>
 
         <ion-content class="chat-content" ref="contentRef" :scroll-events="true">
@@ -149,8 +152,15 @@
                         </ion-button>
                         <input type="file" ref="fileInput" @change="handleFileChange" hidden accept="image/*" />
 
-                        <input v-model="newMessage" placeholder="Escribe un mensaje..." @keyup.enter="sendMessage"
-                            @input="handleTyping" class="native-input" />
+                        <textarea
+                            v-model="newMessage"
+                            ref="textareaRef"
+                            placeholder="Escribe un mensaje..."
+                            @keydown.enter.exact.prevent="sendMessage"
+                            @input="handleTyping(); autoGrowTextarea()"
+                            rows="1"
+                            class="native-input auto-expand"
+                        ></textarea>
 
                         <ion-button @click="sendMessage" fill="clear" class="send-btn">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -227,9 +237,9 @@ import chatService from '@/services/chatService';
 import { AuthService } from '@/services/auth';
 import { BASE_URL } from '@/services/api';
 import api from '@/services/api';
-import { IonPage, IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonContent, IonFooter, IonButton, IonModal, IonAvatar, IonIcon, IonSpinner } from '@ionic/vue';
-import { personCircle } from 'ionicons/icons';
+import { IonPage, IonHeader, IonContent, IonFooter, IonButton, IonModal, IonAvatar, IonIcon, IonSpinner } from '@ionic/vue';
 import { useDarkMode } from '@/utils/useDarkMode';
+import { personCircle, arrowBack } from 'ionicons/icons'; 
 
 import LiquidGlassBox from '@/components/LiquidGlassBox.vue';
 import { useGlassMode } from '@/utils/useGlassMode';
@@ -312,6 +322,7 @@ const chatUserAvatar = ref(null);
 const showInfo = ref(false);
 const isFavorite = ref(false);
 const sharedPhotos = ref([]);
+const textareaRef = ref(null); 
 
 const { isPeerTyping, subscribe, unsubscribe } = useChat(userId, myId, messages);
 
@@ -370,6 +381,11 @@ const sendMessage = async () => {
     newMessage.value = '';
     fileToUpload.value = null;
     filePreview.value = null;
+
+    nextTick(() => { // 👈 NUEVO: resetea altura del textarea
+        if (textareaRef.value) textareaRef.value.style.height = 'auto';
+    });
+
     try {
         const tempMsg = { id: Date.now(), body: textToSend, from_id: myId.value, seen: 0, created_at: new Date().toISOString(), localImage: localPreviewUrl };
         messages.value.push(tempMsg);
@@ -390,6 +406,16 @@ let lastTypingTime = 0;
 const handleTyping = () => { const now = Date.now(); if (now - lastTypingTime > 1500) { api.post('/chat/typing', { id: userId }); lastTypingTime = now; } };
 const isMe = (fromId) => String(fromId) === String(myId.value);
 const formatDate = (d) => d ? new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+// Auto-crecimiento del textarea, con techo de altura antes de hacer scroll interno
+const autoGrowTextarea = () => {
+    nextTick(() => {
+        const el = textareaRef.value;
+        if (!el) return;
+        el.style.height = 'auto'; // reset para medir el scrollHeight real
+        el.style.height = Math.min(el.scrollHeight, 120) + 'px'; // techo de 120px
+    });
+};
 
 onMounted(async () => { 
   const user = AuthService.getUser(); 
@@ -433,13 +459,10 @@ const handlePushNotification = (event) => {
     width: 100%;
 }
 
-
-
 .messages-container {
     padding: 15px;
-    
-    /* NUEVO: Espacio en blanco al final para que los mensajes no se escondan detrás de la barra */
-    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); 
+    padding-top: calc(4.5rem + env(safe-area-inset-top, 0px)); /* 👈 NUEVO: espacio para el header flotante */
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
     
     display: flex;
     flex-direction: column;
@@ -447,7 +470,6 @@ const handlePushNotification = (event) => {
     opacity: 0;
     transition: opacity 0.2s ease-in;
 }
-
 .messages-container.visible {
     opacity: 1;
 }
@@ -465,6 +487,152 @@ const handlePushNotification = (event) => {
 .chat-header-title {
     padding: 0 8px;
 }
+
+/* ==================================================
+   HEADER FLOTANTE TIPO TELEGRAM (glass)
+   ================================================== */
+.transparent-header {
+    background: transparent !important;
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+}
+
+ion-header.transparent-header::after {
+    display: none !important;
+}
+
+.floating-header-container {
+    padding-top: calc(10px + env(safe-area-inset-top, 0px));
+    padding-bottom: 10px;
+    padding-left: 15px;
+    padding-right: 15px;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.header-bubble {
+    background: var(--ion-card-background);
+    border: 1px solid rgba(178, 178, 178, 0.15);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+
+    pointer-events: auto;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s ease, border 0.3s ease;
+}
+
+.is-glass-header .header-bubble {
+    background: rgba(var(--ion-color-light-rgb), 0.5);
+    border: 0.5px solid rgba(255, 255, 255, 0.2);
+}
+
+.action-bubble {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    padding: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+    border: none;
+    outline: none;
+    color: var(--ion-color-dark);
+}
+
+.action-bubble ion-icon,
+.action-bubble svg {
+    font-size: 22px;
+    color: inherit;
+}
+
+.action-bubble:active {
+    transform: scale(0.95);
+    opacity: 0.8;
+}
+
+.info-bubble {
+    flex: 1;
+    min-height: 44px;
+    border-radius: 30px;
+    padding: 4px 16px 4px 6px;
+    justify-content: flex-start;
+    overflow: hidden;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.header-avatar {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+}
+
+.header-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.header-avatar-icon {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 34px !important;
+    color: var(--ion-color-medium);
+}
+
+.header-user-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: left;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.header-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--ion-color-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.header-username.typing-status {
+    font-size: 0.75rem;
+    color: #2180f3;
+    line-height: 1.1;
+}
+
+.header-gradient-mask {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(75px + env(safe-area-inset-top, 0px));
+
+    background: linear-gradient(
+        to bottom,
+        var(--ion-background-color) 0%,
+        rgba(var(--ion-background-color-rgb), 0.7) 40%,
+        rgba(var(--ion-background-color-rgb), 0.3) 70%,
+        transparent 100%
+    );
+
+    pointer-events: none;
+    z-index: -1;
+}
+
 
 .header-content {
     display: flex;
@@ -631,7 +799,9 @@ ion-footer.transparent-footer {
     z-index: 1; 
 }
 
-/* 1. MODO NORMAL (Apagado) */
+/* ==========================================
+   1. ESTADO NORMAL (sin cristal)
+   ========================================== */
 .floating-chat-input {
     position: relative;
     z-index: 2;
@@ -641,29 +811,30 @@ ion-footer.transparent-footer {
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    
-    background: var(--ion-card-background);
+
     border: 1px solid #b2b2b221;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-    
-    overflow: hidden; /* Corta el cristal para que no se salga */
+    background: var(--ion-card-background);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+
+    overflow: hidden;
     transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* 2. MODO CRISTAL (Encendido) */
+/* ==========================================
+   2. ESTADO CRISTAL (Cuando se activa)
+   ========================================== */
 .floating-chat-input.is-glass {
-    /* #191919 equivale a rgb(25, 25, 25). 
-       El 0.6 es la transparencia. (Puedes subirlo a 0.8 si lo quieres más sólido) */
-    background: rgba(var(--ion-background-color-rgb), 0.10) !important;
-    
+    /* Igual que .floating-comment-bar.is-glass: apagamos TODO para dejar ver el SVG */
+    background: transparent;
     border: none;
     box-shadow: none;
-    
-    /* Opcional pero recomendado: un bordecito sutil le da el toque "Apple" al cristal oscuro */
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 }
 
-/* Cristal en el fondo (anclado abajo) */
+/* El SVG de cristal líquido en el fondo */
 .chat-glass-bg {
     position: absolute;
     top: 0;
@@ -674,11 +845,12 @@ ion-footer.transparent-footer {
     pointer-events: none;
     border-radius: 30px;
     background: transparent !important;
-    height: 200px !important; /* Estático para evitar parpadeos negros */
+
+    height: 100% !important; /* 👈 antes: 200px fijo — ahora ocupa el contenedor real */
+
     transition: none !important;
     animation: none !important;
 }
-
 
 /* Contenido por encima del cristal */
 .chat-input-content {
@@ -689,24 +861,14 @@ ion-footer.transparent-footer {
 
 .input-area {
     display: flex;
-    align-items: center;
+    align-items: flex-end; /* 👈 antes: no estaba definido (default: center), ahora ancla abajo */
     gap: 8px;
     padding: 8px 15px;
 }
 
-/* El input ahora es transparente para dejar ver la pastilla de atrás */
-.native-input {
-    flex: 1;
-    border: none;
-    background: transparent; 
-    color: var(--ion-text-color);
-    padding: 10px 0;
-    outline: none;
-    font-size: 15px;
-}
-
-.native-input::placeholder {
-    color: var(--ion-text-color-secondary);
+.icon-btn,
+.send-btn {
+    padding-bottom: 4px; /* pequeño ajuste para que no queden pegados al borde inferior */
 }
 
 .icon-btn {
@@ -721,6 +883,116 @@ ion-footer.transparent-footer {
     --padding-end: 5px;
     color: #2180f3;
     margin: 0;
+}
+
+/* El input ahora es transparente para dejar ver la pastilla de atrás */
+.native-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--ion-text-color);
+    padding: 10px 0;
+    outline: none;
+    font-size: 15px;
+
+    /* 👇 NUEVO: necesario para que se comporte como textarea multilinea */
+    resize: none;
+    overflow-y: hidden; /* el JS cambia esto a auto cuando llega al techo */
+    max-height: 120px;
+    line-height: 1.3;
+    font-family: inherit;
+}
+
+.native-input.auto-expand {
+    overflow-y: auto; /* permite scroll interno una vez que supera 120px */
+}
+
+.native-input::placeholder {
+    color: var(--ion-text-color-secondary);
+}
+
+
+
+/* ==================================================
+   ✨ BORDE DE DESTELLO (Edge Glint) PARA EL CRISTAL ✨
+   Mismo patrón que TabsPage/PostDetail: diagonal arriba-izq / abajo-der
+   ================================================== */
+.floating-chat-input.is-glass::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 30px;
+    padding: 2.4px;
+    pointer-events: none;
+    z-index: 2;
+
+    background: conic-gradient(
+        from -45deg,
+        rgba(0, 0, 0, 0.35) 0deg,
+        rgba(0, 0, 0, 0.03) 60deg,
+        rgba(0, 0, 0, 0.03) 150deg,
+        rgba(0, 0, 0, 0.22) 180deg,
+        rgba(0, 0, 0, 0.03) 210deg,
+        rgba(0, 0, 0, 0.03) 300deg,
+        rgba(0, 0, 0, 0.35) 360deg
+    );
+
+    -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+}
+
+.floating-chat-input.is-glass {
+    box-shadow:
+        inset 0 0 10px rgba(0, 0, 0, 0.08),
+        0 0 14px rgba(0, 0, 0, 0.06);
+}
+
+.ion-palette-dark .floating-chat-input.is-glass::after {
+    background: conic-gradient(
+        from -45deg,
+        rgba(255, 255, 255, 0.5) 0deg,
+        rgba(255, 255, 255, 0.02) 60deg,
+        rgba(255, 255, 255, 0.02) 150deg,
+        rgba(180, 200, 255, 0.4) 180deg,
+        rgba(255, 255, 255, 0.02) 210deg,
+        rgba(255, 255, 255, 0.02) 300deg,
+        rgba(255, 255, 255, 0.5) 360deg
+    );
+}
+
+.ion-palette-dark .floating-chat-input.is-glass {
+    box-shadow:
+        inset 0 0 10px rgba(255, 255, 255, 0.1),
+        0 0 16px rgba(120, 160, 255, 0.12);
+}
+
+/* Colores del input/íconos sobre el cristal, mismo patrón que floating-comment-bar */
+.floating-chat-input.is-glass .native-input {
+    color: #1c1c1e;
+}
+.floating-chat-input.is-glass .native-input::placeholder {
+    color: rgba(28, 28, 30, 0.5);
+}
+.floating-chat-input.is-glass .icon-btn {
+    color: #3a3a3a;
+}
+
+.ion-palette-dark .floating-chat-input.is-glass .native-input {
+    color: #ffffff;
+}
+.ion-palette-dark .floating-chat-input.is-glass .native-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+.ion-palette-dark .floating-chat-input.is-glass .icon-btn {
+    color: #9ca3af;
+}
+
+/* send-btn siempre mantiene su color azul, con o sin cristal */
+.floating-chat-input.is-glass .send-btn {
+    color: #2180f3;
 }
 
 /* Barra de vista previa de imagen acoplada a la cápsula */

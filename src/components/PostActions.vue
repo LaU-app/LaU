@@ -1,43 +1,37 @@
 <template>
-  <div class="post-stats">
-    <ion-button
-      fill="clear"
-      size="small"
-      :color="post.user_has_liked ? 'danger' : ''"
-      class="action-button"
+  <div class="actions-group">
+    <!-- Botón Me Gusta -->
+    <button
+      class="action-btn-custom"
       @click.stop="handleLike"
       :disabled="isLiking"
     >
       <ion-icon
         :icon="post.user_has_liked ? heart : heartOutline"
-        class="post-action-icon"
+        :class="{ 'liked-active': post.user_has_liked }"
       ></ion-icon>
-      <ion-label>{{ post.likes_count || 0 }}</ion-label>
-    </ion-button>
-    <ion-button
-      fill="clear"
-      size="small"
-      class="action-button"
-      @click.stop="handleComment"
-    >
-      <ion-icon :icon="chatbubbleOutline" class="post-action-icon"></ion-icon>
-      <ion-label>{{
-        post.comentarios?.length || post.comentarios_count || 0
-      }}</ion-label>
-    </ion-button>
-    <ion-button
-      fill="clear"
-      size="small"
-      class="action-button"
+      <span class="action-count">{{ getLikes() }}</span>
+    </button>
+
+    <!-- Botón Comentar -->
+    <button class="action-btn-custom" @click.stop="handleComment">
+      <ion-icon :icon="chatbubbleOutline"></ion-icon>
+      <span class="action-count">{{ getComments() }}</span>
+    </button>
+
+    <!-- Botón Compartir -->
+    <button
+      class="action-btn-custom"
       @click.stop="handleShare"
+      :disabled="isSharing"
     >
-      <ion-icon :icon="shareOutline" class="post-action-icon"></ion-icon>
-    </ion-button>
+      <ion-icon :icon="shareOutline"></ion-icon>
+    </button>
   </div>
 </template>
 
 <script>
-import { IonButton, IonLabel, IonIcon } from "@ionic/vue";
+import { IonIcon } from "@ionic/vue";
 import {
   heart,
   heartOutline,
@@ -50,8 +44,6 @@ import { Share } from "@capacitor/share";
 export default {
   name: "PostActions",
   components: {
-    IonButton,
-    IonLabel,
     IonIcon,
   },
   props: {
@@ -63,7 +55,22 @@ export default {
   emits: ["like", "comment", "share"],
   setup(props, { emit }) {
     const isLiking = ref(false);
-    const isSharing = ref(false); // <-- agregado
+    const isSharing = ref(false);
+
+    // Funciones seguras para evitar que se imprima "[]"
+    const getLikes = () => {
+      if (typeof props.post.likes_count === 'number') return props.post.likes_count;
+      if (Array.isArray(props.post.likes)) return props.post.likes.length;
+      if (typeof props.post.likes === 'number') return props.post.likes;
+      return 0;
+    };
+
+    const getComments = () => {
+      if (typeof props.post.comentarios_count === 'number') return props.post.comentarios_count;
+      if (Array.isArray(props.post.comentarios)) return props.post.comentarios.length;
+      if (typeof props.post.comentarios === 'number') return props.post.comentarios;
+      return 0;
+    };
 
     const handleLike = async () => {
       if (isLiking.value) return;
@@ -72,7 +79,6 @@ export default {
       try {
         emit("like", props.post.id);
       } finally {
-        // Pequeño delay para evitar clicks múltiples
         setTimeout(() => {
           isLiking.value = false;
         }, 500);
@@ -88,11 +94,8 @@ export default {
       isSharing.value = true;
 
       try {
-        // const postUrl = `${window.location.origin}/tabs/post/${props.post.id}`;
-
         const postUrl = `https://lauapp.es/tabs/post/${props.post.id}`;
 
-        // Intentar usar Capacitor Share
         await Share.share({
           title: props.post.titulo || "Publicación",
           text: props.post.texto || "Mira esta publicación",
@@ -130,12 +133,56 @@ export default {
       handleLike,
       handleComment,
       handleShare,
+      getLikes,
+      getComments
     };
   },
 };
 </script>
 
 <style scoped>
-@import "../theme/colors.css";
-@import "../theme/home.css";
+/* Agrupación flex para reemplazar el div que tenías */
+.actions-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* El diseño exacto de los botones integrados */
+.action-btn-custom {
+  background: transparent;
+  border: none;
+  color: inherit; /* Magia: Hereda el color blanco o negro que le manda PostCard.vue */
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.action-btn-custom ion-icon {
+  font-size: 22px;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Animación del corazón */
+@keyframes likePop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+.action-btn-custom .liked-active {
+  color: #ff4757 !important;
+  animation: likePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.action-count {
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-top: 0;
+  display: inline-block;
+}
 </style>

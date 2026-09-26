@@ -325,4 +325,62 @@ const initGesture = () => {
 
 .slide-down-enter-active, .slide-down-leave-active { transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
 .slide-down-enter-from, .slide-down-leave-to { opacity: 0; transform: translateY(-20px) scale(0.95); }
+/* ==================================================
+   ✨ BORDE DE DESTELLO (Edge Glint) PARA EL CRISTAL ✨
+   Diagonal: pico fuerte arriba-izq, pico suave abajo-der
+   ================================================== */
+.floating-pill.is-glass::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 30px; /* mismo radio que .floating-pill */
+    padding: 2.4px;
+    pointer-events: none;
+    z-index: 2; /* por encima de .pill-content (z-index:1) */
+
+    /* 🌞 TEMA CLARO (default) → destello NEGRO */
+    background: conic-gradient(
+        from -45deg,
+        rgba(0, 0, 0, 0.35) 0deg,
+        rgba(0, 0, 0, 0.03) 60deg,
+        rgba(0, 0, 0, 0.03) 150deg,
+        rgba(0, 0, 0, 0.22) 180deg,
+        rgba(0, 0, 0, 0.03) 210deg,
+        rgba(0, 0, 0, 0.03) 300deg,
+        rgba(0, 0, 0, 0.35) 360deg
+    );
+
+    -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+}
+
+/* Halo sutil del tema claro */
+.floating-pill.is-glass {
+    box-shadow:
+        inset 0 0 10px rgba(0, 0, 0, 0.08),
+        0 0 14px rgba(0, 0, 0, 0.06);
+}
+
+/* 🌙 TEMA OSCURO → destello BLANCO */
+.ion-palette-dark .floating-pill.is-glass::after {
+    background: conic-gradient(
+        from -45deg,
+        rgba(255, 255, 255, 0.5) 0deg,
+        rgba(255, 255, 255, 0.02) 60deg,
+        rgba(255, 255, 255, 0.02) 150deg,
+        rgba(180, 200, 255, 0.4) 180deg,
+        rgba(255, 255, 255, 0.02) 210deg,
+        rgba(255, 255, 255, 0.02) 300deg,
+        rgba(255, 255, 255, 0.5) 360deg
+    );
+}
+
+.ion-palette-dark .floating-pill.is-glass {
+    box-shadow:
+        inset 0 0 10px rgba(255, 255, 255, 0.1),
+        0 0 16px rgba(120, 160, 255, 0.12);
+}
 </style>

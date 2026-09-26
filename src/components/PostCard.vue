@@ -1,80 +1,41 @@
 <template>
-    <ion-card 
-        class="post-card" 
-        :class="{ 
-            'card-image-style': post.tipo === 'imagen' && isAmbientMode, 
-            'is-dark-bg': post.tipo === 'imagen' && isAmbientMode && !isDarkImage, 
-            'normal-card': !isAmbientMode || post.tipo !== 'imagen'
-        }" 
-        :style="isAmbientMode ? { '--ambient-gradient': ambientGradient } : {}"
-        @click="goToPostDetail"
-    >
+    <div class="post-wrapper" @click="goToPostDetail">
        
-        <div 
-            v-if="post.tipo === 'imagen' && (post.imagen_mini_url || post.imagen_url) && isAmbientMode" 
-            class="card-main-blur" 
-            :style="{ backgroundImage: `url(${getFullImageUrl(post.imagen_mini_url || post.imagen_url)})` }"
-        ></div>
-       
-        <!-- Post Header -->
-        <ion-card-header class="relative-content">
-            <div class="post-header">
-                <ion-avatar class="post-avatar">
-                    <img v-if="post.user?.imagen_url" :src="getFullImageUrl(post.user.imagen_url)" :alt="post.user?.name || 'Usuario'"
-                        loading="lazy" @error="handleImageError" />
-                    <ion-icon v-else :icon="personCircle" size="large"></ion-icon>
-                </ion-avatar>
-                <div class="post-user-info" v-memo="[post.user?.name, post.user?.username]">
-                    <ion-text>
+        <!-- ========================================== -->
+        <!-- 1. BURBUJA PRINCIPAL (Header + Imagen/Música)-->
+        <!-- ========================================== -->
+        <div class="post-main-bubble">
+            
+            <!-- ENCABEZADO -->
+            <div class="post-header-redesign">
+                <div class="post-user-left" @click.stop="goToProfile(post.user?.id)">
+                    <ion-avatar class="post-avatar-small">
+                        <img v-if="post.user?.imagen_url" :src="getFullImageUrl(post.user.imagen_url)" :alt="post.user?.name || 'Usuario'" loading="lazy" @error="handleImageError" />
+                        <ion-icon v-else :icon="personCircle" size="large"></ion-icon>
+                    </ion-avatar>
+                    <div class="post-user-info" v-memo="[post.user?.name, post.user?.username]">
                         <h3>{{ post.user?.name || 'Usuario' }}</h3>
-                    </ion-text>
-                    <ion-text>
-                        <!-- <p class="post-meta">{{ post.user?.username || 'username' }} • Hace {{
-                            timeAgo(post.created_at) }}</p> -->
-                        
-                        <p class="post-meta">{{ post.user?.username || 'username' }} • {{ formatTimeRelative(post.created_at) }}</p>
-                    </ion-text>
+                        <p class="post-meta">{{ formatTimeRelative(post.created_at) }}</p>
+                    </div>
+                </div>
+                
+                <div class="post-actions-right">
+                    <!-- Botón Seguir -->
+                    <!-- <ion-button fill="solid" class="btn-follow" @click.stop="handleFollow">
+                        FOLLOW
+                    </ion-button> -->
+                    <!-- Menú de 3 puntos -->
+                    <!-- <ion-button fill="clear" class="btn-more-options" @click.stop="handleOptions">
+                        <ion-icon :icon="ellipsisVertical"></ion-icon>
+                    </ion-button> -->
                 </div>
             </div>
-        </ion-card-header>
 
-        <!-- Post Content -->
-        <ion-card-content class="relative-content">
-            <!-- Título y/o Descripción o Texto (Dinámico) -->
-            <ion-text v-if="post.titulo || post.descripcion || post.texto">
-                <h2 v-if="post.titulo" class="post-title">{{ post.titulo }}</h2>
-                <p v-if="post.descripcion" class="post-text" v-html="formatTextWithLinks(post.descripcion)" @click="handleLinkClick"></p>
-                <p v-if="post.texto && !post.descripcion" class="post-text post-text-only" v-html="formatTextWithLinks(post.texto)" @click="handleLinkClick"></p>
-            </ion-text>
+            <!-- ========================================== -->
+            <!-- MEDIOS DEL POST (FOTO, MUSICA O ARCHIVO)   -->
+            <!-- ========================================== -->
 
-            <!-- Imagen Post -->
-            <!-- <div v-if="post.tipo === 'imagen' && post.imagen_url" class="post-media" @click.stop="openImageModal">
-                <ion-img :src="getFullImageUrl(post.imagen_url)" :alt="post.titulo || 'Post'" @ionError="handleImageError" class="post-media">
-                    <div slot="image" style="position: relative; padding-top: 75%; background: var(--ion-color-light);">
-                        <ion-spinner name="crescent" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></ion-spinner>
-                    </div>
-                </ion-img>
-            </div> -->
-
-            <!-- <div v-if="post.tipo === 'imagen' && post.imagen_url" 
-                 class="post-media-container" 
-                 :class="{ 'is-loaded': post.imageLoaded }" 
-                 @click.stop="openImageModal">
-                
-                <div class="image-placeholder" :class="{ 'is-hidden': post.imageLoaded }">
-                    <ion-spinner name="crescent"></ion-spinner>
-                </div>
-
-                <ion-img 
-                    :src="getFullImageUrl(post.imagen_mini_url || post.imagen_url)" 
-                    alt="" 
-                    @ionImgDidLoad="post.imageLoaded = true" 
-                    @ionError="handleImageError" 
-                    class="post-media"
-                    :class="{ 'is-visible': post.imageLoaded }">
-                </ion-img>
-            </div> -->
-
+            <!-- CASO 1: FOTOGRAFÍA -->
             <div v-if="post.tipo === 'imagen' && post.imagen_url" 
                  class="post-media-container" 
                  :class="{ 'is-loaded': isImageLoaded }" 
@@ -83,15 +44,6 @@
                 <div class="image-placeholder" :class="{ 'is-hidden': isImageLoaded }">
                     <ion-spinner name="crescent"></ion-spinner>
                 </div>
-
-                <!-- <ion-img 
-                    :src="getFullImageUrl(post.imagen_mini_url || post.imagen_url)" 
-                    alt="" 
-                    @ionImgDidLoad="isImageLoaded = true" 
-                    @ionError="handleImageError" 
-                    class="post-media"
-                    :class="{ 'is-visible': isImageLoaded }">
-                </ion-img> -->
 
                 <img 
                     :src="getFullImageUrl(post.imagen_mini_url || post.imagen_url)" 
@@ -102,102 +54,140 @@
                     class="post-media"
                     :class="{ 'is-visible': isImageLoaded }"
                 />
-            </div>
 
-            <!-- Música Post -->
-            <div v-else-if="post.tipo === 'musica'" class="music-player">
-                <MusicPlayer :post="post" @imageError="handleImageError" />
-            </div>
-
-            <!-- Archivo Post -->
-            <div v-else-if="post.tipo === 'archivo' && post.archivo_url" class="file-attachment">
-                <div class="file-info">
-                    <!-- Ícono dinámico según tipo de archivo -->
-                    <div class="file-icon-container">
-                        <ion-icon :icon="documentAttach" size="large" :color="getFileColor(post.archivo)"></ion-icon>
+                <!-- Acciones superpuestas en la imagen -->
+                <div class="overlaid-actions-container">
+                    <div class="overlaid-actions-pill custom-pill text-white">
+                        <PostActions :post="post" @like="handleLike" @comment="handleComment" @share="handleShare" />
                     </div>
-                    <div class="file-details">
-                        <h4>{{ getFileName(post.archivo) }}</h4>
-                        <p>{{ getFileExtension(post.archivo) }}</p>
-                    </div>
+                    
+                    <!-- <div class="overlaid-save-pill" @click.stop="handleSave">
+                        <ion-icon :icon="bookmarkOutline"></ion-icon>
+                    </div> -->
                 </div>
-                <ion-button fill="clear" size="small" @click.stop="downloadFile(post.archivo_url, post.archivo)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                        <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" />
-                        <path d="M7 11l5 5l5 -5" />
-                        <path d="M12 4l0 12" />
-                    </svg>
-                </ion-button>
             </div>
-        </ion-card-content>
-        <br>
-        <!-- Post Actions -->
-        <ion-card-content class="post-footer relative-content">
-            <PostActions :post="post" @like="handleLike" @comment="handleComment" />
-        </ion-card-content>
 
+            <!-- CASO 2: MÚSICA -->
+            <div v-else-if="post.tipo === 'musica'" class="full-width-media">
+                
+                <div class="music-player-wrapper">
+                    <MusicPlayer :post="post" @imageError="handleImageError" class="seamless-player" />
+                </div>
+                
+                <!-- Acciones en la parte inferior de la burbuja -->
+                <div class="bottom-actions-container">
+                    <div class="overlaid-actions-pill custom-pill">
+                        <PostActions :post="post" @like="handleLike" @comment="handleComment" @share="handleShare" />
+                    </div>
+                    
+                    <!-- <div class="overlaid-save-pill solid-pill" @click.stop="handleSave">
+                        <ion-icon :icon="bookmarkOutline" class="adapt-color-icon"></ion-icon>
+                    </div> -->
+                </div>
+            </div>
+
+            <!-- CASO 3: ARCHIVO -->
+            <div v-else-if="post.tipo === 'archivo' && post.archivo_url" class="full-width-media">
+                <div class="file-attachment-seamless">
+                    <div class="file-info">
+                        <div class="file-icon-container">
+                            <ion-icon :icon="documentAttach" size="large" :color="getFileColor(post.archivo)"></ion-icon>
+                        </div>
+                        <div class="file-details">
+                            <h4>{{ getFileName(post.archivo) }}</h4>
+                            <p>{{ getFileExtension(post.archivo) }}</p>
+                        </div>
+                    </div>
+                    <ion-button fill="clear" size="small" @click.stop="downloadFile(post.archivo_url, post.archivo)">
+                        <ion-icon :icon="downloadOutline"></ion-icon>
+                    </ion-button>
+                </div>
+                
+                <div class="bottom-actions-container">
+                    <div class="overlaid-actions-pill custom-pill">
+                        <PostActions :post="post" @like="handleLike" @comment="handleComment" @share="handleShare" />
+                    </div>
+                    
+                    <!-- <div class="overlaid-save-pill solid-pill" @click.stop="handleSave">
+                        <ion-icon :icon="bookmarkOutline" class="adapt-color-icon"></ion-icon>
+                    </div> -->
+                </div>
+            </div>
+
+        </div> <!-- Cierra Burbuja Principal -->
+
+        <!-- ========================================== -->
+        <!-- 2. BURBUJA DE DESCRIPCIÓN INDEPENDIENTE    -->
+        <!-- ========================================== -->
+        <div class="post-caption-bubble" v-if="post.titulo || post.descripcion || post.texto">
+            <h2 v-if="post.titulo" class="post-title">{{ post.titulo }}</h2>
+            
+            <p v-if="post.descripcion" class="post-text">
+                <strong v-if="post.user?.username" class="caption-username">{{ post.user.username }} </strong>
+                <span v-html="formatTextWithLinks(post.descripcion)" @click="handleLinkClick"></span>
+            </p>
+            
+            <p v-if="post.texto && !post.descripcion" class="post-text">
+                <strong v-if="post.user?.username" class="caption-username">{{ post.user.username }} </strong>
+                <span v-html="formatTextWithLinks(post.texto)" @click="handleLinkClick"></span>
+            </p>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- 3. BURBUJA DE COMENTARIO Y LÍNEA           -->
+        <!-- ========================================== -->
+        <!-- <div class="post-comment-container" v-if="post.latest_comment || (post.comentarios && post.comentarios.length > 0)">
+            
+            <div class="thread-line"></div>
+            
+            <div class="post-comment-bubble" @click.stop="handleComment(post.id)">
+                <div class="comment-left">
+                    <img class="comment-avatar" :src="post.latest_comment?.user?.imagen_url || (post.comentarios && post.comentarios[0]?.user?.imagen_url) ? getFullImageUrl(post.latest_comment?.user?.imagen_url || post.comentarios[0]?.user?.imagen_url) : 'https://ionicframework.com/docs/img/demos/avatar.svg'" />
+                    <p class="comment-text-preview">
+                        <strong>{{ post.latest_comment?.user?.username || (post.comentarios && post.comentarios[0]?.user?.username) || 'Usuario' }}</strong> 
+                        {{ post.latest_comment?.texto || (post.comentarios && post.comentarios[0]?.texto) || 'Ver comentarios...' }}
+                    </p>
+                </div>
+                <div class="comment-right" @click.stop="console.log('Like a comentario')">
+                    <ion-icon :icon="heartOutline"></ion-icon>
+                    <span>{{ Array.isArray(post.latest_comment?.likes) ? post.latest_comment.likes.length : (post.latest_comment?.likes || 0) }}</span>
+                </div>
+            </div>
+        </div> -->
+
+        <!-- Visor de Pantalla Completa -->
         <FullScreenImageViewer 
             v-if="post" 
             :is-open="isImageModalOpen"
             :image-url="getFullImageUrl(post.imagen_url)"
-            :is-ambient-mode="isAmbientMode"
             @close="isImageModalOpen = false"
         />
-
-    </ion-card>
+    </div>
 </template>
 
 <script>
 import {
-    IonCard,
-    IonCardHeader,
-    IonCardContent,
     IonAvatar,
-    IonText,
     IonIcon,
-    IonImg,
     IonButton,
     IonSpinner,
-    IonModal,
-    createGesture
 } from '@ionic/vue'
-import { personCircle, documentAttach, downloadOutline, closeOutline } from 'ionicons/icons'
+import { personCircle, documentAttach, downloadOutline, ellipsisVertical, heart, heartOutline, bookmarkOutline, chatbubbleOutline, shareOutline } from 'ionicons/icons'
 import MusicPlayer from './MusicPlayer.vue'
-import PostActions from './PostActions.vue'
-import { timeAgo } from '@/utils/timeUtils'
 import { useRouter } from 'vue-router'
-import { ref, onMounted } from 'vue';
-import * as VibrantNamespace from 'node-vibrant';
-import { useAmbientMode } from "@/utils/useAmbientMode";
-import { Filesystem, Directory } from '@capacitor/filesystem';
-import { FileOpener } from '@capacitor-community/file-opener';
-import { CapacitorHttp } from '@capacitor/core';
-import { Capacitor } from '@capacitor/core';
+import { Share } from '@capacitor/share';
+import PostActions from './PostActions.vue'
+import { ref } from 'vue';
 import { Browser } from '@capacitor/browser';
 import { openNativeFile } from '@/services/FileService';
 import { getFullImageUrl } from '@/utils/imageUtils';
 import FullScreenImageViewer from './FullScreenImageViewer.vue';
-import { BASE_URL } from '../services/api.js'; 
-
 
 export default {
     name: 'PostCard',
     components: {
-        IonCard,
-        IonCardHeader,
-        IonCardContent,
-        IonAvatar,
-        IonText,
-        IonIcon,
-        IonImg,
-        IonButton,
-        IonSpinner,
-        MusicPlayer,
-        PostActions,
-        IonModal,
-        FullScreenImageViewer
+        IonAvatar, IonIcon, IonButton, IonSpinner,
+        MusicPlayer, FullScreenImageViewer, PostActions
     },
     props: {
         post: {
@@ -208,246 +198,84 @@ export default {
     emits: ['like', 'comment', 'share', 'imageError'],
     setup(props, { emit }) {
         const isImageLoaded = ref(false);
-        
         const router = useRouter()
-        const { isAmbientMode } = useAmbientMode();
 
-        const goToPostDetail = () => {
-            router.push(`/tabs/post/${props.post.id}`)
-        }
-
-        const handleLike = (postId) => {
-            emit('like', postId)
-        }
-
-        const handleComment = (postId) => {
-            emit('comment', postId)
-        }
-
+        const goToPostDetail = () => { router.push(`/tabs/post/${props.post.id}`) }
+        
+        const handleLike = (postId) => { emit('like', postId) }
+        const handleComment = (postId) => { emit('comment', postId) }
         const handleShare = (event) => {
             event.stopPropagation() // Evitar navegación al compartir
             emit('share', props.post.id)
         }
+        
+        const handleImageError = (event) => { emit('imageError', event) }
+        
+        const handleFollow = () => { console.log("Seguir a", props.post.user?.username); }
+        const handleOptions = () => { console.log("Abrir menú de opciones"); }
+        const handleSave = () => { console.log("Guardar post"); }
+        const goToProfile = (userId) => { console.log("Ir al perfil", userId); }
 
-        const handleImageError = (event) => {
-            emit('imageError', event)
-        }
+        // ==========================================
+        // NUEVAS FUNCIONES PARA EVITAR EL "[]"
+        // ==========================================
+        const getLikes = (post) => {
+            if (typeof post.likes_count === 'number') return post.likes_count;
+            if (Array.isArray(post.likes)) return post.likes.length;
+            if (typeof post.likes === 'number') return post.likes;
+            return 0;
+        };
 
-        // Agrega esta función en tu <script setup> o en tus utilidades
+        const getComments = (post) => {
+            if (typeof post.comentarios_count === 'number') return post.comentarios_count;
+            if (Array.isArray(post.comentarios)) return post.comentarios.length;
+            if (typeof post.comentarios === 'number') return post.comentarios;
+            return 0;
+        };
+        // ==========================================
+
         const formatTimeRelative = (dateString) => {
-            if (!dateString) return '';
-
+            if (!dateString) return 'today';
             const date = new Date(dateString);
             const now = new Date();
             const secondsDiff = Math.floor((now - date) / 1000);
 
-            // Menos de un minuto
-            if (secondsDiff < 60) {
-                return 'Hace un momento';
-            }
-
-            // Menos de una hora
+            if (secondsDiff < 60) return 'Hace un momento';
             const minutesDiff = Math.floor(secondsDiff / 60);
-            if (minutesDiff < 60) {
-                return `Hace ${minutesDiff}m`; // o 'Hace 5 minutos'
-            }
-
-            // Menos de un día (24 horas)
+            if (minutesDiff < 60) return `Hace ${minutesDiff}m`;
             const hoursDiff = Math.floor(minutesDiff / 60);
-            if (hoursDiff < 24) {
-                return `Hace ${hoursDiff}h`; // o 'Hace 3 horas'
-            }
-
-            // Menos de una semana (7 días)
+            if (hoursDiff < 24) return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
             const daysDiff = Math.floor(hoursDiff / 24);
-            if (daysDiff < 7) {
-                return daysDiff === 1 ? 'Ayer' : `Hace ${daysDiff} d`; // o 'Hace 2 días'
-            }
+            if (daysDiff < 7) return daysDiff === 1 ? 'Ayer' : `Hace ${daysDiff}d`;
 
-            // --- Si pasaron más de 7 días, mostramos la fecha estática (Sin el "Hace") ---
-
-            const options = { month: 'short', day: 'numeric' }; // Ej: "21 feb"
-
-            // Si es de un año anterior, le agregamos el año a la etiqueta
-            if (date.getFullYear() !== now.getFullYear()) {
-                options.year = 'numeric'; // Ej: "21 feb 2025"
-            }
-
-            // Usamos el API nativa de Javascript para traducir los meses al español (es-ES o es-SV)
-            return date.toLocaleDateString('es-SV', options);
+            return date.toLocaleDateString('es-SV', { month: 'short', day: 'numeric' });
         }
 
         const getFileName = (filePath) => {
             if (!filePath) return 'Archivo'
-            const parts = filePath.split('/')
-            const fileName = parts[parts.length - 1]
-            // Remover timestamp del nombre
-            return fileName.replace(/^\d+_/, '')
+            return filePath.split('/').pop().replace(/^\d+_/, '')
         }
 
         const getFileExtension = (filePath) => {
             if (!filePath) return ''
-            const extension = filePath.split('.').pop().toUpperCase()
-            return `Archivo ${extension}`
+            return `Archivo ${filePath.split('.').pop().toUpperCase()}`
         }
 
-        const downloadFile = (urlArchivo, nombreArchivo) => {
-             // Si nombreArchivo viene con la ruta entera, puedes limpiarlo aquí antes
-             // const nombreLimpio = getFileName(nombreArchivo);
-             openNativeFile(urlArchivo, nombreArchivo);
-        };
+        const downloadFile = (urlArchivo, nombreArchivo) => { openNativeFile(urlArchivo, nombreArchivo); };
 
         const getFileColor = (filePath) => {
             if (!filePath) return 'medium'
             const extension = filePath.split('.').pop().toLowerCase()
-            const colors = {
-                'pdf': 'danger',
-                'doc': 'primary',
-                'docx': 'primary',
-                'zip': 'warning',
-                'rar': 'warning',
-                'txt': 'medium',
-                'xlsx': 'success',
-                'xls': 'success'
-            }
+            const colors = { 'pdf': 'danger', 'doc': 'primary', 'docx': 'primary', 'zip': 'warning', 'rar': 'warning', 'txt': 'medium', 'xlsx': 'success', 'xls': 'success' }
             return colors[extension] || 'medium'
         }
 
-        const isDarkImage = ref(false);
-
-        const ambientGradient = ref('linear-gradient(135deg, rgba(0,0,0,0.1), rgba(0,0,0,0.1))');
-
-        // const extractColors = async (imageUrl) => {
-        //     if (!imageUrl) return;
-
-        //     try {
-        //         const VibrantClass = VibrantNamespace.Vibrant || VibrantNamespace.default || VibrantNamespace;
-                
-        //         // 1. Limpiamos la URL (lo que ya hacías y te funcionaba)
-        //         const relativePath = imageUrl.replace(/^.*\/\/[^\/]+/, '').replace(/^\//, '');
-
-        //         // 2. Definimos la URL final
-        //         // En local usará el proxy (/uploads) y en el APK usará el dominio completo
-        //         const isLocal = window.location.host.includes('localhost:8100');
-
-        //         const finalUrl = isLocal ? `/${relativePath}` : `${BASE_URL}/${relativePath}`;
-                
-        //         const urlWithCache = `${finalUrl}?t=${Date.now()}`;
-
-        //         // 3. CARGA DE IMAGEN (El método más compatible)
-        //         const img = new Image();
-                
-        //         // Solo pedimos crossOrigin si vamos al dominio real
-        //         if (!isLocal) {
-        //             img.crossOrigin = "anonymous";
-        //         }
-
-        //         const imagePromise = new Promise((resolve, reject) => {
-        //             img.onload = () => resolve(img);
-        //             img.onerror = () => reject(new Error("Error de red en el servidor"));
-        //             img.src = urlWithCache;
-        //         });
-
-        //         const loadedImg = await imagePromise;
-        //         const palette = await VibrantClass.from(loadedImg).getPalette();
-
-        //         if (palette.Vibrant) {
-        //             const rgb = palette.Vibrant.getRgb();
-        //             const brightness = (rgb[0] * 0.299 + rgb[1] * 0.557 + rgb[2] * 0.114);
-        //             const vPop = palette.Vibrant.getPopulation();
-        //             const dvPop = palette.DarkVibrant ? palette.DarkVibrant.getPopulation() : 0;
-
-        //             // isDarkImage.value = (brightness < 150) || (dvPop > vPop * 2);
-        //             isDarkImage.value = (brightness < 165) || (dvPop > vPop * 2);
-        //             ambientGradient.value = `linear-gradient(135deg, rgba(${rgb.join(',')}, 0.9), rgba(0,0,0,0.4))`;
-
-        //             // LOG NIVEL INGENIERO PARA SIVARSOCIAL
-        //             // console.log(
-        //             //     `%c[SivarSocial] ${Capacitor.getPlatform().toUpperCase()} %c
-        //             //     🎨 Modo UI: ${isDarkImage.value ? 'OSCURO (Texto Blanco)' : 'CLARO (Texto Negro)'}
-        //             //     ✨ Brillo detectado: ${brightness.toFixed(2)} / 255
-        //             //     🔗 URL: ${finalUrl}`,
-        //             //     `color: ${isDarkImage.value ? '#3498db' : '#f39c12'}; font-weight: bold; font-size: 12px;`,
-        //             //     "color: inherit; font-family: monospace;"
-        //             // );
-                    
-        //             // console.log("✅ Color actualizado usando el dominio");
-        //         }
-        //     } catch (e) {
-        //         // console.error("❌ Sigue fallando el servidor:", e.message);
-        //         isDarkImage.value = false;
-        //     }
-        // };
-
-        // --- LÓGICA DEL VISOR DE IMÁGENES Y GESTOS ---
-        // ==========================================
-        // LÓGICA DEL VISOR DE IMÁGENES Y GESTOS
-        // ==========================================
         const isImageModalOpen = ref(false);
-        const draggableImage = ref(null); 
-        let gesture = null;
-
-        const openImageModal = () => {
-            isImageModalOpen.value = true;
-        };
-
-        const closeImageModal = () => {
-            isImageModalOpen.value = false;
-            
-            if (gesture) {
-                gesture.destroy();
-                gesture = null;
-            }
-
-            setTimeout(() => {
-                if (draggableImage.value) {
-                    draggableImage.value.style.transform = `translateY(0px)`;
-                    draggableImage.value.style.transition = 'none';
-                }
-            }, 300);
-        };
-
-        const initGesture = () => {
-            if (!draggableImage.value) return;
-
-            gesture = createGesture({
-                el: draggableImage.value,
-                gestureName: 'swipe-to-close',
-                direction: 'y',
-                
-                onStart: () => {
-                    draggableImage.value.style.transition = 'none';
-                },
-                
-                onMove: (detail) => {
-                    draggableImage.value.style.transform = `translateY(${detail.deltaY}px)`;
-                },
-                
-                onEnd: (detail) => {
-                    draggableImage.value.style.transition = 'transform 0.3s ease-out';
-                    
-                    if (Math.abs(detail.deltaY) > 150) {
-                        const direccion = detail.deltaY > 0 ? 1 : -1;
-                        draggableImage.value.style.transform = `translateY(${direccion * 100}vh)`;
-                        
-                        setTimeout(() => {
-                            closeImageModal();
-                        }, 200); 
-                    } else {
-                        draggableImage.value.style.transform = `translateY(0px)`;
-                    }
-                }
-            });
-            
-            gesture.enable(true);
-        };
-        // ==========================================
-
-        // --- LÓGICA DE DETECCIÓN DE LINKS ---
+        const openImageModal = () => { isImageModalOpen.value = true; };
+        
         const formatTextWithLinks = (text) => {
             if (!text) return '';
             const urlRegex = /(https?:\/\/[^\s]+)/g;
-
             return text.replace(urlRegex, (url) => {
                 return `<a href="${url}" class="post-link">${url}</a>`;
             });
@@ -455,11 +283,9 @@ export default {
 
         const handleLinkClick = async (event) => {
             const link = event.target.closest('a');
-
             if (link && link.classList.contains('post-link')) {
                 event.preventDefault();
                 event.stopPropagation();
-
                 try {
                     await Browser.open({ url: link.href });
                 } catch (error) {
@@ -469,112 +295,215 @@ export default {
         };
 
         return {
-            personCircle,
-            documentAttach,
-            downloadOutline,
-            goToPostDetail,
-            handleLike,
-            handleComment,
-            handleShare,
-            handleImageError,
-            getFileName,
-            getFileExtension,
-            downloadFile,
-            getFileColor,
-            timeAgo,
-            ambientGradient,
-            isAmbientMode,
-            getFullImageUrl,
-            formatTextWithLinks,
-            handleLinkClick,
-
-            closeOutline,
-            isImageModalOpen,
-            openImageModal,
-            closeImageModal,
-            draggableImage,
-            initGesture,
-            isImageLoaded,
-            formatTimeRelative
+            personCircle, documentAttach, downloadOutline, ellipsisVertical, heart, heartOutline, bookmarkOutline, chatbubbleOutline, shareOutline,
+            goToPostDetail, handleLike, handleComment, handleShare, handleImageError, handleFollow, handleOptions, handleSave, goToProfile,
+            getFileName, getFileExtension, downloadFile, getFileColor,
+            getFullImageUrl, formatTextWithLinks, handleLinkClick,
+            isImageModalOpen, openImageModal, isImageLoaded, formatTimeRelative,
+            getLikes, getComments // <- Importante agregarlas aquí
         }
     }
 }
 </script>
 
 <style scoped>
-@import '../theme/colors.css';
-@import '../theme/home.css';
-
-.post-card {
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    margin-bottom: 1rem;
+/* ==================================================
+   CONTENEDOR GLOBAL DEL POST
+   ================================================== */
+.post-wrapper {
+  margin-bottom: 24px;
+  position: relative;
 }
 
-.post-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+/* Variables de color de las burbujas */
+.post-main-bubble,
+.post-caption-bubble,
+.post-comment-bubble {
+    background:#ffffff; 
+
+    box-shadow: 0 4px 15px rgba(0,0,0,0.04);
 }
 
-.post-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--ion-color-dark);
+/* Modo oscuro nativo */
+.ion-palette-dark .post-main-bubble,
+.ion-palette-dark .post-caption-bubble,
+.ion-palette-dark .post-comment-bubble {
+    background-color: #1E1E1E  ; 
+    border: 1px solid rgba(255, 255, 255, 0.08) ;
+    box-shadow: none ;
 }
 
-.post-text {
-    font-size: 0.95rem;
-    line-height: 1.5;
-    color: var(--ion-color-step-600);
+
+/* ==================================================
+   1. BURBUJA PRINCIPAL (Header + Imagen/Música)
+   ================================================== */
+.post-main-bubble {
+    border-radius: 28px;
+    overflow: hidden; 
 }
 
-.post-text-only {
-    font-weight: 600;
-    font-size: 1rem;
-    color: var(--ion-color-dark);
+/* --- ENCABEZADO --- */
+.post-header-redesign {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
 }
 
-.comments-preview {
-    padding-top: 0.5rem;
-    padding-bottom: 0.75rem;
-    border-top: 1px solid var(--ion-color-light-shade);
+.post-user-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
-.comments-count {
-    font-size: 0.9rem;
+.post-avatar-small {
+    width: 36px;
+    height: 36px;
+}
+
+.post-avatar-small img {
+    border-radius: 50%;
+    object-fit: cover;
+    width: 100%;
+    height: 100%;
+}
+
+.post-user-info h3 {
     margin: 0;
-    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--ion-color-dark, #333);
 }
 
-.comments-count:hover {
-    text-decoration: underline;
+.post-user-info .post-meta {
+    margin: 2px 0 0 0;
+    font-size: 0.75rem;
+    color: var(--ion-color-medium, #888);
 }
 
-.file-attachment {
+.post-actions-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-follow {
+    --background: var(--ion-color-primary, #10b981); 
+    --color: #ffffff;
+    --border-radius: 20px;
+    --box-shadow: none;
+    font-size: 0.65rem;
+    font-weight: 700;
+    height: 28px;
+    margin: 0;
+    letter-spacing: 0.5px;
+}
+
+.btn-more-options {
+    --color: var(--ion-color-medium, #888);
+    margin: 0;
+    --padding-start: 4px;
+    --padding-end: 0px;
+}
+
+/* ==================================================
+   MEDIOS: IMAGEN
+   ================================================== */
+.post-media-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1; /* <- OBLIGA A QUE SEA UN CUADRADO PERFECTO */
+    background-color: var(--ion-color-step-100, #111);
+    overflow: hidden;
+}
+
+/* Ya no necesitamos el min-height fijo porque el aspect-ratio hace el trabajo */
+.post-media-container:not(.is-loaded) {
+    /* Mantenemos el fondo oscuro mientras carga */
+    background-color: var(--ion-color-step-100, #111);
+}
+
+.post-media {
+    opacity: 0;
+    transition: opacity 0.4s ease-in-out;
+    width: 100%;
+    height: 100%; /* <- OBLIGA A QUE LLENE EL CUADRADO */
+    display: block; 
+    object-fit: cover; /* <- RELLENA SIN DEFORMAR (Corta los bordes) */
+}
+
+.post-media.is-visible {
+    opacity: 1;
+}
+
+.image-placeholder {
+    position: absolute;
+    top: 50%; 
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+    width: 32px;
+    height: 32px;
+    transition: opacity 0.3s ease;
+}
+
+.image-placeholder.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+/* ==================================================
+   MEDIOS: MÚSICA Y ARCHIVO
+   ================================================== */
+.full-width-media {
+    width: 100%;
+    position: relative;
+    overflow: hidden; 
+}
+
+.music-player-wrapper {
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block;
+    box-sizing: border-box;
+}
+
+.seamless-player {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block;
+}
+
+:deep(.seamless-player > *),
+:deep(.seamless-player ion-card) {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    box-sizing: border-box !important;
+}
+
+.file-attachment-seamless {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem;
-    background: var(--ion-color-light);
-    border-radius: 12px;
-    border: 1px solid var(--ion-color-light-shade);
-    margin-top: 0.75rem;
+    padding: 16px;
+    background: rgba(128, 128, 128, 0.05); 
+    border-top: 1px solid rgba(128, 128, 128, 0.1);
+    border-bottom: 1px solid rgba(128, 128, 128, 0.1);
 }
 
 .file-info {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 12px;
     flex: 1;
-}
-
-.file-icon-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 40px;
-    height: 40px;
 }
 
 .file-details h4 {
@@ -582,7 +511,6 @@ export default {
     font-size: 0.95rem;
     font-weight: 600;
     color: var(--ion-color-dark);
-    word-break: break-word;
 }
 
 .file-details p {
@@ -591,272 +519,246 @@ export default {
     color: var(--ion-color-medium);
 }
 
-/* Configuración base de la card */
-.post-card {
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s ease;
+/* ==================================================
+   BOTONES DE ACCIONES Y CONTADORES
+   ================================================== */
+@keyframes likePop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.35); }
+    100% { transform: scale(1); }
 }
 
-/* La capa de fondo con Blur */
-.card-main-blur {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-size: cover;
-  background-position: center;
-  /* En modo claro: un poco vibrante */
-  filter: blur(20px) saturate(1.4) brightness(0.8);
-  transform: scale(1.05);
-  z-index: 0;
-
-  transform: translateZ(0);
-  will-change: transform, filter;
-  backface-visibility: hidden;
-}
-
-/* Capa de oscuridad para que el texto blanco/negro se lea bien */
-.card-image-style::before {
-  content: "";
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: transparent !important; /* Ajusta este valor para oscurecer el fondo */
-  z-index: 1;
-}
-
-/* Asegura que el contenido esté por encima del fondo */
-.relative-content {
-  position: relative;
-  z-index: 2;
-}
-
-/* --- DINÁMICA DE COLORES --- */
-
-.is-dark-bg :deep(h2),
-.is-dark-bg :deep(h3),
-.is-dark-bg :deep(p),
-.is-dark-bg :deep(ion-text),
-.is-dark-bg :deep(.post-meta),
-.is-dark-bg :deep(ion-icon),
-.is-dark-bg :deep(.action-button ion-icon),
-.is-dark-bg :deep(.action-button ion-label) {
-    color: #ffffff !important;
-    --color: #ffffff !important; /* Variable interna de Ionic */
-    text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important;
-}
-
-.is-dark-bg :deep(.action-button ion-icon),
-.is-dark-bg :deep(.action-button ion-label) {
-    color: #ffffff !important;
-}
-
-/* Transparencia para contenedores internos */
-.card-image-style ion-card-header,
-.card-image-style ion-card-content,
-.card-image-style .post-footer {
-    --background: transparent;
-    background: transparent !important;
-}
-
-.post-card.card-image-style {
-    /* Usamos la variable inyectada desde el :style */
-    box-shadow: 0 15px 50px -15px var(--ambient-gradient) !important;
-    transition: all 0.6s ease-in-out;
-    border: none !important;
-}
-
-/* --- ESTILOS PARA EVITAR QUE LA IMAGEN SE CORTE --- */
-.post-media {
-    width: 100% !important;
-    display: flex !important;
-    justify-content: center !important;
+.overlaid-actions-container {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
     align-items: center;
+}
+
+.bottom-actions-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px 16px 16px; 
+}
+
+.custom-pill {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 24px;
+    padding: 6px 14px;
+    display: flex;
+    align-items: center;
+    gap: 16px; 
+    border: 1px solid rgb(0 0 0 / 15%);
+}
+.ion-palette-dark .custom-pill {
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.action-btn-custom {
     background: transparent;
-    /* max-height: calc(80vw * 16 / 9) !important; */
-}
-
-/* Apuntamos directamente a la imagen nativa dentro de ion-img */
-/* ion-img.post-media::part(image) {
-    object-fit: contain !important;
-    width: 100%;
-    height: 100%;
-    border-radius: 8px; 
-} */
-
-
- /* fondo imagen total - imagen completa sin cortes - borde redondeado suave */
- /* --- VISOR DE IMAGEN A PANTALLA COMPLETA --- */
-ion-modal.image-viewer-modal {
-    --background: rgba(0, 0, 0, 0.95); /* Fondo casi negro */
-}
-
-ion-modal.image-viewer-modal ion-content {
-    --background: #000 !important;
-}
-
-.modal-image-container {
+    border: none;
+    color: #ffffff; 
     display: flex;
-    justify-content: center;
     align-items: center;
-    width: 100%;
-    height: 100%;
-    position: relative;
-}
-
-.fullscreen-img {
-    max-width: 100vw;
-    max-height: 100vh;
-    object-fit: contain; /* Evita que se recorte, igual que en el feed */
-    user-select: none;
-}
-
-.close-image-btn:hover {
-    opacity: 1;
-}
-
-.close-image-btn {
-    position: absolute;
-    top: calc(20px + env(safe-area-inset-top)); /* Respeta el notch del iPhone/Android */
-    right: 15px;
-    z-index: 100;
-
-    /* Diseño del botón redondo gris */
-    --background: rgba(100, 100, 100, 0.6); 
-    --border-radius: 50%; 
-    --padding-start: 0;
-    --padding-end: 0;
-    --border-color: 0.5px solid rgba(255, 255, 255, 0.3);
-    
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
-    min-height: 32px;
+    gap: 4px; 
+    padding: 0;
     margin: 0;
-    transition: background 0.2s ease;
+    cursor: pointer;
+    line-height: 1; 
 }
 
-.close-image-btn ion-icon {
-    color: #ffffff !important; 
-    font-size: 20px !important;
+.action-btn-custom ion-icon {
+    font-size: 22px;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-/* Efecto al tocarlo o pasar el mouse */
-.close-image-btn:hover,
-.close-image-btn:active {
-    --background: rgba(100, 100, 100, 0.9);
+.action-btn-custom .liked-active {
+    color: #ff4757 !important;
+    animation: likePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
-/* --- FONDO BLUR DEL MODAL --- */
-.modal-blur-bg {
-    position: absolute;
-    top: 0; 
-    left: 0; 
-    right: 0; 
-    bottom: 0;
-    background-size: cover;
-    background-position: center;
-    filter: blur(30px) saturate(1.5) brightness(0.5); 
-    transform: scale(1.1);
-    z-index: 0;
+.action-count {
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-top: 0; 
+    display: inline-block;
 }
 
-/* --- AJUSTES DEL CONTENEDOR PARA EL BLUR --- */
-.modal-image-container {
+.overlaid-save-pill {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
     display: flex;
-    justify-content: center;
     align-items: center;
-    width: 100%;
-    height: 100%;
-    position: relative;
-    overflow: hidden; 
+    justify-content: center;
+    border: 1px solid rgb(0 0 0 / 15%);
 }
 
-/* Aseguramos que la foto nítida esté por encima del fondo blur */
-.fullscreen-img {
-    max-width: 100vw;
-    max-height: 100vh;
-    object-fit: contain;
-    user-select: none;
-    z-index: 2; 
-    position: relative;
+.ion-palette-dark .overlaid-save-pill {
+    border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-/* IMPORTANTE: El modal debe ser completamente transparente para ver el blur */
-ion-modal.image-viewer-modal {
-    --background: transparent;
+.overlaid-save-pill ion-icon {
+    color: #ffffff;
+    font-size: 20px;
 }
 
-ion-modal.image-viewer-modal ion-content {
-    --background: transparent;
+.adapt-color, .adapt-color-icon {
+    color: var(--ion-color-dark, #333) !important;
+}
+.adapt-color ion-icon {
+    color: var(--ion-color-dark, #333) !important;
+}
+.adapt-color .liked-active {
+    color: #ff4757 !important; 
 }
 
-/* --- ESTILOS PARA LOS LINKS EN EL TEXTO --- */
+:global(body.dark) .solid-pill,
+:global(.ion-palette-dark) .solid-pill {
+    background: rgba(255, 255, 255, 0.1);
+}
+:global(body.dark) .adapt-color,
+:global(body.dark) .adapt-color ion-icon,
+:global(body.dark) .adapt-color-icon,
+:global(.ion-palette-dark) .adapt-color,
+:global(.ion-palette-dark) .adapt-color ion-icon,
+:global(.ion-palette-dark) .adapt-color-icon {
+    color: #ffffff !important;
+}
+
+/* ==================================================
+   2. BURBUJA DE DESCRIPCIÓN
+   ================================================== */
+.post-caption-bubble {
+    border-radius: 20px;
+    padding: 12px 16px;
+    margin-top: 6px; 
+}
+
+.post-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-top: 0;
+    margin-bottom: 4px;
+    color: var(--ion-color-dark, #333);
+}
+
+.post-text {
+    font-size: 0.95rem;
+    line-height: 1.4;
+    color: var(--ion-color-dark, #333);
+    margin: 0;
+}
+
 :deep(.post-link) {
     color: var(--ion-color-primary);
     text-decoration: none;
     font-weight: 500;
-    word-break: break-all;
 }
 
-:deep(.post-link:hover),
-:deep(.post-link:active) {
-    text-decoration: underline;
-    opacity: 0.8;
-}
-
-.card-image-style.is-dark-bg :deep(.post-link) {
-    color: #82b1ff !important;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important;
-}
-
-/* --- Estilos para los post --- */
-/* Contenedor principal de la imagen */
-.post-media-container {
+/* ==================================================
+   3. BURBUJA DE COMENTARIO Y LÍNEA CONECTORA
+   ================================================== */
+.post-comment-container {
     position: relative;
-    width: 100%;
-    background-color: var(--ion-color-light);
-    overflow: hidden;
-    border-radius: 8px;
-    /* Eliminamos el min-height fijo de aquí */
+    margin-top: 6px;
+    padding-left: 36px; 
+}
+
+.post-comment-bubble {
+    border-radius: 20px;
+    padding: 10px 14px;
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
+    gap: 12px;
 }
 
-/* Solo aplicamos los 250px como esqueleto MIENTRAS carga el spinner */
-.post-media-container:not(.is-loaded) {
-    min-height: 250px;
-}
-
-/* El fondo con el spinner */
-.image-placeholder {
+.thread-line {
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: opacity 0.3s ease;
+    left: 32px; 
+    top: -12px; 
+    bottom: 50%; 
+    width: 14px; 
+    border-left: 2px solid var(--ion-color-step-300, #999);
+    border-bottom: 2px solid var(--ion-color-step-300, #999);
+    border-bottom-left-radius: 12px;
     z-index: 1;
 }
 
-/* Ocultar el spinner cuando carga */
-.image-placeholder.is-hidden {
-    opacity: 0;
-    pointer-events: none;
+.comment-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    overflow: hidden;
 }
 
-/* La imagen de Ionic */
-.post-media {
-    opacity: 0; /* Empieza invisible para tapar el alt text */
-    transition: opacity 0.4s ease-in-out; /* Animación de aparición suave */
-    width: 100%;
-    height: 100%;
+.comment-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
     object-fit: cover;
-    display: block; /* Elimina un pequeño margen blanco fantasma nativo de html */
 }
 
-/* Clase que se activa con el @ionImgDidLoad */
-.post-media.is-visible {
-    opacity: 1;
+.comment-text-preview {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--ion-color-medium, #555);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
+.comment-text-preview strong {
+    color: var(--ion-color-dark, #333);
+    font-weight: 600;
+    margin-right: 4px;
+}
+
+.comment-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--ion-color-dark, #333);
+}
+
+.comment-right ion-icon {
+    font-size: 16px;
+}
+
+.comment-right span {
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* ==================================================
+   BLINDAJE MODO OSCURO (TEXTOS)
+   ================================================== */
+:global(body.dark) .post-text,
+:global(body.dark) .post-title,
+:global(body.dark) .caption-username,
+:global(body.dark) .post-user-info h3,
+:global(body.dark) .comment-text-preview strong,
+:global(body.dark) .comment-right,
+:global(.ion-palette-dark) .post-text,
+:global(.ion-palette-dark) .post-title,
+:global(.ion-palette-dark) .caption-username,
+:global(.ion-palette-dark) .post-user-info h3,
+:global(.ion-palette-dark) .comment-text-preview strong,
+:global(.ion-palette-dark) .comment-right {
+    color: #ffffff !important;
+}
+
+:global(body.dark) .comment-text-preview,
+:global(.ion-palette-dark) .comment-text-preview {
+    color: #aaaaaa !important;
+}
 </style>

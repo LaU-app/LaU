@@ -110,7 +110,10 @@
                     </ion-card-content>
                     <br>
                     <ion-card-content class="post-footer">
-                        <PostActions :post="post" @like="handleLike" @comment="focusCommentInput" />
+                        <div class="overlaid-actions-pill custom-pill ">
+                            <PostActions :post="post" @like="handleLike" @comment="handleComment" @share="handleShare" />
+                        </div>
+
                     </ion-card-content>
                 </ion-card>
 
@@ -240,11 +243,38 @@
                 </div>
             </div>
         </ion-footer>
+
+        <!-- ========== MODAL PERSONALIZADO: ELIMINAR PUBLICACIÓN ========== -->
+        <transition name="delete-fade">
+        <div v-if="showDeleteModal" class="delete-overlay" @click.self="closeDeleteModal">
+            <transition name="delete-scale">
+            <div v-if="showDeleteModal" class="delete-modal">
+                <div class="delete-modal-icon">
+                    <ion-icon :icon="trashOutline"></ion-icon>
+                </div>
+
+                <h3 class="delete-modal-title">¿Eliminar publicación?</h3>
+                <p class="delete-modal-message">Esta acción no se puede deshacer.</p>
+
+                <div class="delete-modal-actions">
+                <button class="delete-modal-btn delete-modal-cancel" @click="closeDeleteModal" type="button">
+                    Cancelar
+                </button>
+                <button class="delete-modal-btn delete-modal-confirm" @click="confirmDeleteAction" type="button">
+                    Eliminar
+                </button>
+                </div>
+            </div>
+            </transition>
+        </div>
+        </transition>
+
+
     </ion-page>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
     IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, 
@@ -292,6 +322,7 @@ const { isGlassMode } = useGlassMode();
 const ionContentRef = ref(null);
 const showUserInHeader = ref(false);
 const isImageModalOpen = ref(false);
+const showDeleteModal = ref(false);
 
 // Comentarios
 const newComment = ref('');
@@ -360,7 +391,7 @@ const showToast = async (message, color = 'dark') => {
 // ==========================================
 const toggleGlobalTabs = (show) => {
     requestAnimationFrame(() => {
-        const tabBar = document.querySelector('ion-tab-bar.floating-tabs');
+        const tabBar = document.querySelector('ion-tab-bar.floating-tabs-redesign'); // 👈 corregido
         const tabGradient = document.querySelector('.tabs-gradient-mask');
         if (tabBar) show ? tabBar.classList.remove('hide-tabs-animated') : tabBar.classList.add('hide-tabs-animated');
         if (tabGradient) show ? tabGradient.classList.remove('hide-tabs-animated') : tabGradient.classList.add('hide-tabs-animated');
@@ -431,31 +462,30 @@ const handleLike = async () => {
     }
 };
 
-const confirmDelete = async () => {
-    const alert = await alertController.create({
-        header: '¿Eliminar publicación?',
-        message: 'Esta acción no se puede deshacer.',
-        cssClass: 'custom-alert-delete',
-        buttons: [
-            { text: 'Cancelar', role: 'cancel', cssClass: 'alert-button-cancel' },
-            { 
-                text: 'Eliminar', 
-                cssClass: 'alert-button-danger', 
-                handler: async () => {
-                    try {
-                        const result = await postsService.deletePost(post.value.id);
-                        if (result.success) {
-                            showToast('Publicación eliminada', 'success');
-                            setTimeout(() => router.push({ path: '/tabs/tab1', state: { postDeleted: true } }), 500);
-                        } else throw new Error(result.error);
-                    } catch (err) {
-                        showToast('Error al eliminar', 'danger');
-                    }
-                } 
-            }
-        ]
-    });
-    await alert.present();
+// ==========================================
+// 5. MODAL PERSONALIZADO: ELIMINAR PUBLICACIÓN
+// ==========================================
+const confirmDelete = () => {
+    showDeleteModal.value = true;
+};
+
+const closeDeleteModal = () => {
+    showDeleteModal.value = false;
+};
+
+const confirmDeleteAction = async () => {
+    showDeleteModal.value = false;
+    try {
+        const result = await postsService.deletePost(post.value.id);
+        if (result.success) {
+            showToast('Publicación eliminada', 'success');
+            setTimeout(() => router.push({ path: '/tabs/tab1', state: { postDeleted: true } }), 500);
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (err) {
+        showToast('Error al eliminar', 'danger');
+    }
 };
 
 // ==========================================
@@ -563,6 +593,15 @@ onMounted(async () => {
 onUnmounted(() => {
     window.removeEventListener('resize', updateWidth);
     if (resizeObserver) resizeObserver.disconnect();
+});
+
+// ==========================================
+// BLOQUEO DE SCROLL MIENTRAS EL MODAL ESTÁ ABIERTO
+// ==========================================
+watch(showDeleteModal, (isOpen) => {
+    if (ionContentRef.value?.$el) {
+        ionContentRef.value.$el.scrollY = !isOpen; // false = bloquea scroll, true = lo permite
+    }
 });
 </script>
 
@@ -1065,7 +1104,7 @@ ion-modal.image-viewer-modal ion-content {
 .floating-comment-bar {
     position: relative;
     z-index: 2; 
-    margin: 0 15px calc(10px + env(safe-area-inset-bottom)) 15px;
+    margin: 0 15px max(10px , env(safe-area-inset-bottom)) 15px;
     padding: 8px 15px;
     border-radius: 30px;
     
@@ -1404,7 +1443,7 @@ ion-header.transparent-header::after {
     left: 0;
     right: 0;
     /* Altura suficiente para cubrir el notch del teléfono y las burbujas */
-    height: calc(85px + env(safe-area-inset-top)); 
+    height: calc(75px + env(safe-area-inset-top)); 
     
     /* Degradado lineal de arriba (sólido) hacia abajo (transparente) */
     background: linear-gradient(
@@ -1445,6 +1484,197 @@ ion-header.transparent-header::after {
     height: 20px;
     color: white;
 }
+
+
+
+/* ==================================================
+   ✨ BORDE DE DESTELLO (Edge Glint) PARA EL CRISTAL ✨
+   Mismo patrón que en TabsPage: diagonal arriba-izq / abajo-der
+   ================================================== */
+
+/* --- BARRA DE COMENTARIOS --- */
+.floating-comment-bar.is-glass::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 30px; /* mismo radio que .floating-comment-bar */
+    padding: 2.4px;
+    pointer-events: none;
+    z-index: 2; /* por encima de .comment-bar-content (z-index:1) */
+
+    /* 🌞 TEMA CLARO (default) → destello NEGRO */
+    background: conic-gradient(
+        from -45deg,
+        rgba(0, 0, 0, 0.35) 0deg,
+        rgba(0, 0, 0, 0.03) 60deg,
+        rgba(0, 0, 0, 0.03) 150deg,
+        rgba(0, 0, 0, 0.22) 180deg,
+        rgba(0, 0, 0, 0.03) 210deg,
+        rgba(0, 0, 0, 0.03) 300deg,
+        rgba(0, 0, 0, 0.35) 360deg
+    );
+
+    -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+}
+
+.floating-comment-bar.is-glass {
+    box-shadow:
+        inset 0 0 10px rgba(0, 0, 0, 0.08),
+        0 0 14px rgba(0, 0, 0, 0.06);
+}
+
+.ion-palette-dark .floating-comment-bar.is-glass::after {
+    background: conic-gradient(
+        from -45deg,
+        rgba(255, 255, 255, 0.5) 0deg,
+        rgba(255, 255, 255, 0.02) 60deg,
+        rgba(255, 255, 255, 0.02) 150deg,
+        rgba(180, 200, 255, 0.4) 180deg,
+        rgba(255, 255, 255, 0.02) 210deg,
+        rgba(255, 255, 255, 0.02) 300deg,
+        rgba(255, 255, 255, 0.5) 360deg
+    );
+}
+
+.ion-palette-dark .floating-comment-bar.is-glass {
+    box-shadow:
+        inset 0 0 10px rgba(255, 255, 255, 0.1),
+        0 0 16px rgba(120, 160, 255, 0.12);
+}
+
+.delete-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    touch-action: none; /* 👈 NUEVO: bloquea gestos táctiles sobre el overlay */
+}
+
+/* ==================================================
+   BOTONES DE ACCIONES Y CONTADORES
+   ================================================== */
+@keyframes likePop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.35); }
+    100% { transform: scale(1); }
+}
+
+.overlaid-actions-container {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bottom-actions-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px 16px 16px; 
+}
+
+.custom-pill {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 24px;
+    padding: 6px 14px;
+    display: flex;
+    align-items: center;
+    gap: 16px; 
+    border: 1px solid rgb(0 0 0 / 15%);
+}
+.ion-palette-dark .custom-pill {
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.action-btn-custom {
+    background: transparent;
+    border: none;
+    color: #ffffff; 
+    display: flex;
+    align-items: center;
+    gap: 4px; 
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    line-height: 1; 
+}
+
+.action-btn-custom ion-icon {
+    font-size: 22px;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.action-btn-custom .liked-active {
+    color: #ff4757 !important;
+    animation: likePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.action-count {
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-top: 0; 
+    display: inline-block;
+}
+
+.overlaid-save-pill {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgb(0 0 0 / 15%);
+}
+
+.ion-palette-dark .overlaid-save-pill {
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.overlaid-save-pill ion-icon {
+    color: #ffffff;
+    font-size: 20px;
+}
+
+.adapt-color, .adapt-color-icon {
+    color: var(--ion-color-dark, #333) !important;
+}
+.adapt-color ion-icon {
+    color: var(--ion-color-dark, #333) !important;
+}
+.adapt-color .liked-active {
+    color: #ff4757 !important; 
+}
+
+:global(body.dark) .solid-pill,
+:global(.ion-palette-dark) .solid-pill {
+    background: rgba(255, 255, 255, 0.1);
+}
+:global(body.dark) .adapt-color,
+:global(body.dark) .adapt-color ion-icon,
+:global(body.dark) .adapt-color-icon,
+:global(.ion-palette-dark) .adapt-color,
+:global(.ion-palette-dark) .adapt-color ion-icon,
+:global(.ion-palette-dark) .adapt-color-icon {
+    color: #ffffff !important;
+}
+
 </style>
 
 <style>
@@ -1479,5 +1709,131 @@ ion-header.transparent-header::after {
 
 :global(.alert-button-cancel) {
     color: var(--ion-color-medium) !important;
+}
+
+/* ========== MODAL PERSONALIZADO: ELIMINAR PUBLICACIÓN ========== */
+.delete-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.delete-modal {
+    width: 100%;
+    max-width: 320px;
+    padding: 28px 24px 20px 24px;
+    border-radius: 24px;
+    text-align: center;
+
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+
+    backdrop-filter: blur(20px) saturate(1.5);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+}
+
+.ion-palette-dark .delete-modal {
+    background: rgba(28, 28, 30, 0.9);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.delete-modal-icon {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 14px auto;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+}
+
+.delete-modal-icon ion-icon {
+    font-size: 26px;
+    color: #ef4444;
+}
+
+.delete-modal-title {
+    margin: 0 0 6px 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--ion-color-dark, #1c1c1e);
+}
+
+.delete-modal-message {
+    margin: 0 0 22px 0;
+    font-size: 13.5px;
+    line-height: 1.4;
+    color: var(--ion-color-medium, #6b7280);
+}
+
+.delete-modal-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.delete-modal-btn {
+    flex: 1;
+    height: 46px;
+    border-radius: 14px;
+    border: none;
+    font-size: 14.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.delete-modal-cancel {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--ion-color-dark, #1c1c1e);
+}
+
+.ion-palette-dark .delete-modal-cancel {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+}
+
+.delete-modal-confirm {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+/* ========== ANIMACIONES DEL MODAL ========== */
+.delete-fade-enter-active,
+.delete-fade-leave-active {
+    transition: opacity 0.25s ease;
+}
+
+.delete-fade-enter-from,
+.delete-fade-leave-to {
+    opacity: 0;
+}
+
+.delete-scale-enter-active {
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+}
+
+.delete-scale-leave-active {
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.delete-scale-enter-from {
+    transform: scale(0.85);
+    opacity: 0;
+}
+
+.delete-scale-leave-to {
+    transform: scale(0.9);
+    opacity: 0;
 }
 </style>
