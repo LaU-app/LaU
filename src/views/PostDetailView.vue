@@ -78,9 +78,8 @@
                     <ion-card-content>
                         <ion-text v-if="post.titulo || post.descripcion || post.texto">
                             <h2 v-if="post.titulo" class="post-title">{{ post.titulo }}</h2>
-                            <p v-if="post.descripcion" class="post-description">{{ post.descripcion }}</p>
-                            <p v-if="post.texto && !post.descripcion" class="post-description post-text-only">{{
-                                post.texto }}</p>
+                            <p v-if="post.descripcion" class="post-description"><MentionTextRenderer :text="post.descripcion" /></p>
+                            <p v-if="post.texto && !post.descripcion" class="post-description post-text-only"><MentionTextRenderer :text="post.texto" /></p>
                         </ion-text>
 
                         <div v-if="post.tipo === 'imagen' && post.imagen_url" class="post-media"
@@ -217,12 +216,16 @@
                         </ion-avatar>
                         
                         <div class="comment-input-wrapper">
-                            <ion-textarea ref="commentInputRef" v-model="newComment"
+                            <MentionInput ref="commentInputRef" v-model="newComment"
                                 :placeholder="replyingToComment ? 'Escribe tu respuesta...' : 'Escribe un comentario...'"
-                                class="comment-input auto-expand" 
-                                auto-grow="true"
+                                class="comment-mention-input"
+                                input-class="comment-input auto-expand"
+                                :disabled="isSubmitting"
+                                auto-grow
+                                multiline
                                 rows="1"
-                                @keyup.enter.exact="submitComment"> </ion-textarea>
+                                @enter="submitComment"
+                            />
                             <div class="comment-input-line"></div>
                         </div>
 

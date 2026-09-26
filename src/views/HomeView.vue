@@ -35,6 +35,8 @@
                     <!-- Card para crear post (solo para autenticados) -->
                     <CreatePostCard v-if="isAuthenticated" :user="user" @post-created="handlePostCreated" />
 
+                    <FilterPosts @filter="handleFilterPosts" />
+
                     <!-- Lista de posts -->
                     <div class="posts-list">
                         <PostCard v-for="post in posts" :key="post.id" :post="post"
@@ -133,6 +135,7 @@ import { CapacitorUpdater } from '@capgo/capacitor-updater';
 // Componentes
 import AppHeader from '@/components/AppHeader.vue';
 import CreatePostCard from '@/components/CreatePostCard.vue';
+import FilterPosts from '@/components/FilterPosts.vue';
 import PostCard from '@/components/PostCard.vue';
 import CustomBanner from '@/components/CustomBanner.vue';
 import FloatingAudioPlayer from '@/components/FloatingAudioPlayer.vue';

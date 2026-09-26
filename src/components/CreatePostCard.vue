@@ -7,9 +7,7 @@
                     <ion-icon v-else :icon="personCircle" size="large"></ion-icon>
                 </ion-avatar>
                 <div class="input-container">
-                    <ion-input v-model="postText" placeholder="¿Qué estás pensando?" class="post-input"
-                        @ionInput="onTextInput" :disabled="isPosting">
-                    </ion-input>
+                    <MentionInput v-model="postText" placeholder="¿Qué estás pensando?" :disabled="isPosting" />
                     <div class="input-icon-wrapper">
                         <transition name="fade-slide">
                             <ion-button v-if="hasText" key="button" fill="solid" shape="round" size="small"
@@ -96,9 +94,10 @@
 </template>
 
 <script>
-import { IonCard, IonCardContent, IonAvatar, IonInput, IonGrid, IonRow, IonCol, IonButton, IonLabel, IonIcon, IonSpinner, toastController } from '@ionic/vue'
+import { IonCard, IonCardContent, IonAvatar, IonGrid, IonRow, IonCol, IonButton, IonLabel, IonIcon, IonSpinner, toastController } from '@ionic/vue'
 import { personCircle, send } from 'ionicons/icons'
 import PostsService from '../services/postsService'
+import MentionInput from './MentionInput.vue'
 
 export default {
     name: 'CreatePostCard',
@@ -106,7 +105,7 @@ export default {
         IonCard,
         IonCardContent,
         IonAvatar,
-        IonInput,
+        MentionInput,
         IonGrid,
         IonRow,
         IonCol,
@@ -135,9 +134,6 @@ export default {
         }
     },
     methods: {
-        onTextInput(event) {
-            // Input handler para eventos futuros si es necesario
-        },
         async handlePublishText() {
             if (!this.postText || this.postText.trim() === '') {
                 return

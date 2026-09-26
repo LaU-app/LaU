@@ -9,7 +9,9 @@
             <div class="comment-content">
                 <div class="comment-bubble">
                     <h4 class="comment-user">{{ comment.user?.name || 'Usuario' }}</h4>
-                    <p class="comment-text">{{ comment.comentario }}</p>
+                    <p class="comment-text">
+                        <MentionTextRenderer :text="comment.comentario" />
+                    </p>
                 </div>
 
                 <div class="comment-actions">
@@ -40,6 +42,7 @@ import { IonAvatar, IonIcon, IonButton } from '@ionic/vue'
 import { personCircle } from 'ionicons/icons'
 import { timeAgo } from '@/utils/timeUtils';
 import { getFullImageUrl } from '@/utils/imageUtils';
+import MentionTextRenderer from './MentionTextRenderer.vue';
 // Importación recursiva para poder usar el componente dentro de sí mismo
 import CommentItem from './CommentItem.vue';
 
