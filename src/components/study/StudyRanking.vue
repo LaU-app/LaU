@@ -1,5 +1,5 @@
 <template><section class="study-ranking">
-  <div class="ranking-intro"><span class="eyebrow"><b>CRECEMOS JUNTOS</b><i class="dot-orange"/></span><h1>Ranking de estudio</h1><p class="study-muted">Un poco de inspiración para seguir a tu propio ritmo.</p></div>
+  <div class="ranking-intro"><h1>Ranking de estudio</h1><p class="study-muted">Un poco de inspiración para seguir a tu propio ritmo.</p></div>
   <div class="ranking-filters"><div class="period-selector" role="group" aria-label="Período"><button :aria-pressed="period==='week'" :class="{selected:period==='week'}" @click="period='week'">Semana</button><button :aria-pressed="period==='month'" :class="{selected:period==='month'}" @click="period='month'">Mes</button></div><label class="community-filter"><ion-icon :icon="businessOutline"/><span class="sr-only">Comunidad</span><select v-model="scope"><option value="global">Toda LaU</option><option v-if="scopes.includes('university')" value="university">Mi universidad</option><option v-if="scopes.includes('career')" value="career">Mi carrera</option></select></label></div>
   <p v-if="loading && !ranking" class="study-empty" role="status">Buscando a tu comunidad…</p><p v-if="error" class="study-error" role="alert">{{ error }} <button class="study-link" @click="load">Reintentar</button></p>
   <template v-if="ranking">
