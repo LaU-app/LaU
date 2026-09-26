@@ -1,6 +1,6 @@
 <template>
     <transition name="slide-down">
-        <div v-if="visible" class="floating-player-wrapper" :class="{ 'on-study-screen': onStudyScreen }">
+        <div v-if="visible" class="floating-player-wrapper" :class="{ 'on-study-screen': onStudyScreen || onTasksScreen }">
             <div class="floating-pill" ref="pillRef" :class="{ 'is-glass': isGlassMode }" @click="goToFocus">
                 <LiquidGlassBox
                   v-if="isGlassMode"
@@ -44,6 +44,8 @@ const calculatedPillWidth = computed(() => Math.min(windowWidth.value - 32, 400)
 // Ocultarlo cuando ya se ve el temporizador completo en la pantalla de Enfoque.
 const onFocusScreen = computed(() => route.path === '/study' && (!route.query.tab || route.query.tab === 'focus'))
 const onStudyScreen = computed(() => route.path === '/study')
+// El desplazamiento por defecto libera el AppHeader del feed; /tasks no tiene header propio, así que la píldora sube como en /study.
+const onTasksScreen = computed(() => route.path === '/tasks')
 const visible = computed(() => study.focusActive.value && !onFocusScreen.value)
 const clock = computed(() => String(Math.floor(remaining.value / 60)).padStart(2, '0') + ':' + String(remaining.value % 60).padStart(2, '0'))
 const progressPercent = computed(() => timer.duration ? Math.min(100, Math.max(0, (1 - remaining.value / timer.duration) * 100)) : 0)

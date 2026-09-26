@@ -1,8 +1,8 @@
 <template>
-  <ion-page class="study-ui tasks-page"><ion-content>
+  <ion-page class="study-ui tasks-page" :class="{'study-focus-active':study.focusActive.value}"><ion-content>
     <main class="study-shell">
       <div class="study-body">
-        <div class="tasks-welcome"><span class="eyebrow"><i/>{{ route.query.choose ? 'ELIGE TU PRÓXIMO ENFOQUE' : 'UNA COSA A LA VEZ' }}</span><div class="tasks-welcome-row"><DynamicTaskHeading/><button class="study-button compact-button" aria-label="Crear una tarea" @click="openCreate"><ion-icon :icon="addOutline"/>Crear tarea</button></div></div>
+        <div class="tasks-welcome"><span class="eyebrow"><i/>{{ route.query.choose ? 'ELIGE TU PRÓXIMO ENFOQUE' : 'TU PLAN...' }}</span><div class="tasks-welcome-row"><DynamicTaskHeading/><button class="study-button compact-button" aria-label="Crear una tarea" @click="openCreate"><ion-icon :icon="addOutline"/>Crear tarea</button></div></div>
         <div v-if="stats" class="task-stats" aria-label="Resumen de tareas">
           <div><b><i class="dot-green"/>{{ stats.completed }}</b><span>Completadas</span></div><div><b><i class="dot-purple"/>{{ stats.in_progress }}</b><span>En curso</span></div><div><b><i/>{{ stats.pending }}</b><span>Pendientes</span></div><div><b><i class="dot-orange"/>{{ stats.pomodoros_today }}</b><span>Pomos hoy</span></div>
         </div>
@@ -22,6 +22,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { IonPage, IonContent, IonIcon, modalController } from '@ionic/vue'
 import { addOutline, bookOutline } from 'ionicons/icons'
 import tasksService from '@/services/tasksService'
+import { study } from '@/utils/useStudy'
 import { useStudyScreen } from '@/utils/useStudyScreen'
 import StudyBottomNav from '@/components/study/StudyBottomNav.vue'
 import DynamicTaskHeading from '@/components/tasks/DynamicTaskHeading.vue'
