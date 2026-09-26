@@ -18,7 +18,7 @@
         <ion-content>
             <!-- Selector de tipo -->
             <ion-segment :value="tipo" @ionChange="handleSegmentChange" class="segmento-personalizado">
-                <ion-segment-button value="foto">
+                <ion-segment-button value="foto" aria-label="Foto" title="Foto">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                         class="custom-icon">
@@ -27,9 +27,8 @@
                             d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2" />
                         <path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
                     </svg>
-                    <ion-label>Foto</ion-label>
                 </ion-segment-button>
-                <ion-segment-button value="musica">
+                <ion-segment-button value="musica" aria-label="Música" title="Música">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                         class="custom-icon">
@@ -40,9 +39,8 @@
                         <path d="M19 22v-6" />
                         <path d="M22 19l-3 -3l-3 3" />
                     </svg>
-                    <ion-label>Música</ion-label>
                 </ion-segment-button>
-                <ion-segment-button value="archivo">
+                <ion-segment-button value="archivo" aria-label="Archivo" title="Archivo">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                         class="custom-icon">
@@ -51,7 +49,16 @@
                         <path
                             d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2zm-7 -7h.01m3.99 0h.01m-4.01 3h4" />
                     </svg>
-                    <ion-label>Archivo</ion-label>
+                </ion-segment-button>
+                <ion-segment-button value="encuesta" aria-label="Encuesta" title="Encuesta">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="custom-icon">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M3 12m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v7a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" />
+                        <path d="M15 8m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v11a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" />
+                        <path d="M9 3m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v15a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" />
+                    </svg>
                 </ion-segment-button>
             </ion-segment>
 
@@ -169,10 +176,17 @@
                             @change="handleFileUpload" />
                     </div>
                 </div>
+
+                <!-- Sección de Encuesta -->
+                <div v-if="tipo === 'encuesta'" class="seccion-contenido seccion-encuesta" data-seccion="encuesta">
+                    <div class="contenido-interno">
+                        <PollForm />
+                    </div>
+                </div>
             </div>
 
-            <!-- Título y descripción (común para todos) -->
-            <div class="seccion-formulario">
+            <!-- Título y descripción (común para todos, excepto encuesta) -->
+            <div v-if="tipo !== 'encuesta'" class="seccion-formulario">
                 <ion-item>
                     <ion-label position="stacked">
                         {{ tipo === 'musica' ? 'Título (Opcional)' : 'Título' }}
@@ -187,7 +201,7 @@
             </div>
 
             <!-- Visibilidad -->
-            <div class="seccion-formulario">
+            <div v-if="tipo !== 'encuesta'" class="seccion-formulario">
                 <ion-label class="etiqueta-seccion">¿Quién puede ver esta publicación?</ion-label>
                 <ion-radio-group v-model="visibilidad">
                     <ion-item>
@@ -209,12 +223,12 @@
             </div>
 
             <!-- Botón Publicar -->
-            <ion-button expand="block" :disabled="!puedePublicar" class="boton-publicar" @click="publicar">
+            <ion-button v-if="tipo !== 'encuesta'" expand="block" :disabled="!puedePublicar" class="boton-publicar" @click="publicar">
                 Publicar
             </ion-button>
 
             <!-- Mensajes de ayuda -->
-            <p v-if="!puedePublicar" class="texto-ayuda">
+            <p v-if="tipo !== 'encuesta' && !puedePublicar" class="texto-ayuda">
                 <span v-if="tipo === 'musica' && !selectedTrack">Busca una canción para continuar</span>
                 <span v-else-if="tipo === 'foto' && !imagenPreview">Selecciona una foto para continuar</span>
                 <span v-else-if="tipo === 'archivo' && !archivo">Selecciona un archivo para continuar</span>
@@ -265,6 +279,7 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import AppHeader from '@/components/AppHeader.vue'
 import MusicSearchModal from '@/components/MusicSearchModal.vue'
 import MusicTrackPreview from '@/components/MusicTrackPreview.vue'
+import PollForm from '@/components/PollForm.vue'
 import musicService from '@/services/musicService'
 import api from '../services/api'
 import { AuthService } from '../services/auth'
@@ -335,7 +350,7 @@ const loadCurrentUser = async () => {
 onMounted(async () => {
     // Establecer el tipo ANTES de cargar el usuario para evitar animación
     const tipoParam = route.params.tipo
-    if (tipoParam && ['foto', 'musica', 'archivo'].includes(tipoParam)) {
+    if (tipoParam && ['foto', 'musica', 'archivo', 'encuesta'].includes(tipoParam)) {
         tipo.value = tipoParam
     } else {
         tipo.value = 'foto'
@@ -916,11 +931,7 @@ ion-content {
     flex: 1;
     max-width: none;
     min-width: 0;
-}
-
-.segmento-personalizado ion-label {
-    margin-top: 4px;
-    font-size: 12px;
+    min-height: 48px;
 }
 
 /* Contenedor de las secciones con animación */

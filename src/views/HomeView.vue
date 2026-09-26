@@ -35,6 +35,12 @@
                     <!-- Card para crear post (solo para autenticados) -->
                     <CreatePostCard v-if="isAuthenticated" :user="user" @post-created="handlePostCreated" />
 
+                    <!-- Encuestas activas -->
+                    <div v-if="polls.length > 0" class="polls-list">
+                        <PollCard v-for="poll in polls" :key="poll.id" :poll="poll"
+                            @vote="handlePollVote" @delete="handlePollDelete" />
+                    </div>
+
                     <!-- Lista de posts -->
                     <div class="posts-list">
                         <PostCard v-for="post in posts" :key="post.id" :post="post"
@@ -109,11 +115,13 @@
 </template>
 
 <script>
-import { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, alertController } from '@ionic/vue';
+import { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, alertController, toastController } from '@ionic/vue';
 import AppHeader from '@/components/AppHeader.vue';
 import CreatePostCard from '@/components/CreatePostCard.vue';
 import PostCard from '@/components/PostCard.vue';
+import PollCard from '@/components/PollCard.vue';
 import postsService from '@/services/postsService';
+import pollsService from '@/services/pollsService';
 import { AuthService } from '@/services/auth';
 import { useDarkMode } from '@/utils/useDarkMode';
 import CustomBanner from '@/components/CustomBanner.vue';
@@ -131,10 +139,11 @@ import { useGlassMode } from '@/utils/useGlassMode';
 
 export default {
     name: 'HomeView',
-    components: { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, AppHeader, CreatePostCard, PostCard, CustomBanner, FloatingAudioPlayer },
+    components: { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, AppHeader, CreatePostCard, PostCard, PollCard, CustomBanner, FloatingAudioPlayer },
     data() {
         return {
             posts: [],
+            polls: [],
             loading: false,
             error: null,
             currentPage: 1,
@@ -299,6 +308,7 @@ export default {
         }
 
         this.fetchPosts()
+        this.fetchPolls()
     },
     ionViewWillEnter() {
         // Actualizar estado de autenticación cada vez que se entra a la vista
@@ -307,11 +317,13 @@ export default {
         // Verificar si se viene de crear un post (state en router)
         const postCreated = window.history.state?.postCreated
         const postDeleted = window.history.state?.postDeleted
+        const pollCreated = window.history.state?.pollCreated
 
         // Si el usuario acaba de iniciar sesión, recargar datos
         if (this.isAuthenticated && this.user.username === 'invitado') {
             this.loadCurrentUser()
             this.fetchPosts()
+            this.fetchPolls()
         } else if (this.isAuthenticated && postCreated) {
             // Si viene de crear un post, refrescar el feed
             /* console.log('📝 Post creado - Actualizando feed...') */
@@ -324,6 +336,12 @@ export default {
             this.fetchPosts(1)
             // Limpiar el state
             window.history.replaceState({ ...window.history.state, postDeleted: false }, '')
+        }
+
+        if (pollCreated) {
+            // Si viene de crear una encuesta, refrescar las encuestas
+            this.fetchPolls()
+            window.history.replaceState({ ...window.history.state, pollCreated: false }, '')
         }
 
         // Programar el alert solo si NO está autenticado y no hay timer activo
@@ -506,8 +524,56 @@ export default {
             // Recargar desde la primera página
             this.currentPage = 1
             await this.fetchPosts(1)
+            await this.fetchPolls()
             this.isRefreshing = false
             event.target.complete()
+        },
+        async fetchPolls() {
+            const result = await pollsService.getPolls(1)
+            if (result.success) {
+                this.polls = result.data
+            }
+        },
+        async handlePollVote({ pollId, optionId }) {
+            const pollIndex = this.polls.findIndex(p => p.id === pollId)
+            if (pollIndex === -1) return
+
+            const result = await pollsService.voteOnPoll(pollId, optionId)
+
+            if (result.success && result.data) {
+                this.polls[pollIndex].options = result.data.options
+                this.polls[pollIndex].user_has_voted = true
+            } else {
+                const toast = await toastController.create({
+                    message: result.error || 'Error al votar',
+                    duration: 3000,
+                    color: 'danger',
+                    position: 'top'
+                })
+                await toast.present()
+            }
+        },
+        async handlePollDelete(pollId) {
+            const result = await pollsService.deletePoll(pollId)
+
+            if (result.success) {
+                this.polls = this.polls.filter(p => p.id !== pollId)
+                const toast = await toastController.create({
+                    message: result.message || 'Encuesta eliminada',
+                    duration: 2000,
+                    color: 'success',
+                    position: 'top'
+                })
+                await toast.present()
+            } else {
+                const toast = await toastController.create({
+                    message: result.error || 'Error al eliminar la encuesta',
+                    duration: 3000,
+                    color: 'danger',
+                    position: 'top'
+                })
+                await toast.present()
+            }
         },
         handlePostCreated(newPost) {
             console.log('Nuevo post creado:', newPost)
@@ -668,6 +734,14 @@ export default {
     display: flex;
     flex-direction: column;
     gap: 0;
+}
+
+.polls-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 0 16px;
+    margin-bottom: 8px;
 }
 
 /* Estilos personalizados para el alert */
