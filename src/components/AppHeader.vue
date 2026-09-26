@@ -19,6 +19,14 @@
           </svg>
         </ion-button>
 
+        <ion-button v-if="isAuthenticated" @click="goToMarketplace" aria-label="Ir a Marketplace" fill="clear"
+          class="tasks-header-btn market-button-wrapper" :class="{ 'is-active': onMarketplace }">
+          <img src="/marketplace.png" alt="" aria-hidden="true" class="header-market-logo" />
+          <ion-badge v-if="cartCount > 0" color="danger" class="header-chat-badge">
+            {{ cartCount > 99 ? "99+" : cartCount }}
+          </ion-badge>
+        </ion-button>
+
         <!-- Botón NOTIFICACIONES (Ahora está aquí en el Header) -->
         <ion-button v-if="isAuthenticated" @click="openNotifications" aria-label="Ir a Notificaciones" fill="clear" class="tasks-header-btn chat-button-wrapper">
           <ion-icon :icon="notificationsSharp" class="header-icon"></ion-icon>
@@ -35,9 +43,10 @@
 <script setup>
 import { IonHeader, IonToolbar, IonButtons, IonButton, IonIcon, IonBadge } from "@ionic/vue";
 import { logIn, notificationsSharp } from "ionicons/icons";
-import { ref, watch, onUnmounted } from "vue";
-import { useRouter } from "vue-router";
+import { computed, ref, watch, onUnmounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { notificationsService } from "@/services/notificationsService"; // Ahora usamos notificaciones
+import { cart } from "@/utils/useCart";
 
 const props = defineProps({
   isDarkMode: { type: Boolean, required: true },
@@ -47,6 +56,9 @@ const props = defineProps({
 
 defineEmits(["toggleDarkMode"]);
 const router = useRouter();
+const route = useRoute();
+const onMarketplace = computed(() => route.path.startsWith("/marketplace"));
+const cartCount = computed(() => cart.count.value);
 
 // Estado del contador de Notificaciones
 const unreadCount = ref(0);
@@ -94,6 +106,7 @@ watch(() => props.isAuthenticated, (newValue) => {
 
 const goToLogin = () => router.push("/login");
 const goToTasks = () => router.push('/tasks');
+const goToMarketplace = () => router.push('/marketplace');
 const openNotifications = () => router.push("/notifications");
 </script>
 
@@ -124,6 +137,22 @@ const openNotifications = () => router.push("/notifications");
 
 .chat-button-wrapper {
   position: relative;
+}
+
+.market-button-wrapper {
+  position: relative;
+}
+
+.header-market-logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  filter: grayscale(1) brightness(1.42);
+  transition: filter 0.2s ease;
+}
+
+.market-button-wrapper.is-active .header-market-logo {
+  filter: none;
 }
 
 .header-chat-badge {

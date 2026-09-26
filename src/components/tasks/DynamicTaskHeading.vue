@@ -31,17 +31,21 @@ import {
   ref
 } from 'vue'
 
-// Solo cambia la parte variable:
-// "LaU" es el ancla fija del encabezado.
+// Solo cambia la parte variable: "LaU" es el ancla fija del encabezado.
+// Voseo salvadoreño, jugando con "ir a la U".
 const phrases = [
-  'Estudia en',
-  'Organízate en',
-  'Enfócate en',
-  'Avanza con',
-  'Planifica con',
-  'Pomodoro en',
-  'Tus tareas en',
-  'Cumple metas con'
+  'Estudiá en',
+  'Avanzá con',
+  'Organizate con',
+  'Enfocate en',
+  'Hoy toca',
+  'Modo',
+  'Tu día en',
+  'Al día con',
+  'Ponete al día en',
+  'Nos vemos en',
+  'Tus metas en',
+  'Tareas de'
 ]
 
 const index = ref(0)
