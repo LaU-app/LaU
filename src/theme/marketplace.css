@@ -1,0 +1,159 @@
+/*
+ * Marketplace. Las vistas usan class="study-ui market-ui", así que heredan TODOS
+ * los tokens y componentes de study.css (--study-bg, .study-card, .study-button,
+ * .status-chip, .today-card, .study-metrics, .study-history, .period-selector…).
+ * Aquí solo vive lo que el módulo añade.
+ *
+ * Regla de color: superficie neutra, CTA negro, y morado reservado al eyebrow,
+ * al item activo del nav y a la barra de progreso.
+ */
+
+/* ---------- Cabecera del catálogo ---------- */
+.market-welcome{margin-bottom:20px}
+.market-welcome .eyebrow{color:var(--study-purple)}
+.market-welcome .eyebrow i{background:var(--study-purple);width:7px;height:7px}
+.market-welcome h1{margin-top:8px}
+.market-search{display:flex;align-items:center;gap:10px;margin:16px 0}
+.market-search label{flex:1;display:flex;align-items:center;gap:8px;min-width:0;padding:0 14px;background:var(--study-surface);border:1px solid var(--study-border);border-radius:999px;box-shadow:var(--study-shadow)}
+.market-search input{flex:1;min-width:0;border:0;background:none;color:var(--study-text);font-size:14px;line-height:20px;padding:13px 0;outline:none}
+.market-search input::placeholder{color:var(--study-faint)}
+.market-search ion-icon{font-size:18px;color:var(--study-muted);flex-shrink:0}
+.market-search .market-filter-btn{display:grid;place-items:center;width:48px;height:48px;flex-shrink:0;border:0;border-radius:16px;background:var(--study-cta);color:var(--study-on-cta);font-size:20px}
+
+/* ---------- Scroller de categorías ---------- */
+.category-scroller{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -20px 24px;padding:2px 20px 4px}
+.category-scroller::-webkit-scrollbar{display:none}
+.category-scroller button{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;white-space:nowrap;padding:9px 16px;border:1px solid var(--study-border);border-radius:999px;background:var(--study-surface);color:var(--study-muted);font-size:13px;font-weight:600;box-shadow:var(--study-shadow)}
+.category-scroller button ion-icon{font-size:16px}
+.category-scroller button.selected{background:var(--study-cta);border-color:var(--study-cta);color:var(--study-on-cta)}
+.category-skeleton{display:flex;gap:8px;margin:0 -20px 24px;padding:2px 20px}
+.category-skeleton i{display:block;flex-shrink:0;width:96px;height:38px;border-radius:999px;background:var(--study-track);animation:market-pulse 1.4s ease-in-out infinite}
+
+/* ---------- Grid y tarjeta de producto ---------- */
+.product-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.product-card{display:flex;flex-direction:column;overflow:hidden;padding:0;border-radius:20px;text-align:left;animation:study-arrive .25s both}
+.product-thumb{position:relative;aspect-ratio:1;background:var(--study-track);overflow:hidden}
+.product-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.product-thumb .product-thumb-empty{width:100%;height:100%;display:grid;place-items:center;color:var(--study-faint);font-size:26px}
+.product-flag{position:absolute;top:8px;left:8px;padding:3px 9px;border-radius:999px;background:var(--study-surface);color:var(--study-text);font-size:10px;font-weight:700;letter-spacing:.04em;box-shadow:var(--study-shadow)}
+.product-body{display:flex;flex-direction:column;gap:6px;flex:1;padding:12px}
+.product-body h3{font-size:13px;line-height:18px;font-weight:700;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.product-meta{display:flex;align-items:center;gap:5px;font-size:10px;line-height:14px;color:var(--study-muted)}
+.product-meta ion-icon{font-size:13px;flex-shrink:0}
+.product-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;padding-top:4px}
+.product-price{font-size:16px;font-weight:800;letter-spacing:-.02em}
+.product-add{display:grid;place-items:center;width:34px;height:34px;flex-shrink:0;border:0;border-radius:50%;background:var(--study-cta);color:var(--study-on-cta);font-size:17px}
+.product-add:disabled{background:var(--study-track);color:var(--study-faint)}
+.product-card.is-out .product-thumb img{opacity:.45}
+
+/* ---------- Detalle ---------- */
+.product-gallery{position:relative;margin:0 -20px 20px;background:var(--study-track);aspect-ratio:4/3}
+.product-gallery img{width:100%;height:100%;object-fit:cover;display:block}
+.gallery-empty{width:100%;height:100%;display:grid;place-items:center;color:var(--study-faint);font-size:40px}
+.gallery-nav{position:absolute;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:50%;background:var(--study-surface);color:var(--study-text);font-size:20px;box-shadow:0 2px 10px rgba(20,20,22,.18)}
+.gallery-nav.prev{left:12px}.gallery-nav.next{right:12px}
+.gallery-count{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);padding:4px 12px;border-radius:999px;background:rgba(20,20,22,.65);color:#fff;font-size:11px;font-weight:600}
+.product-headline{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px}
+.product-headline h1{flex:1;min-width:0;overflow-wrap:anywhere}
+.product-detail-price{font-size:30px;font-weight:800;letter-spacing:-.03em;margin-bottom:12px}
+.product-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.product-section{margin-bottom:20px}
+.product-section h2{margin-bottom:8px}
+.product-section p{font-size:14px;line-height:23px;color:var(--study-muted);white-space:pre-wrap;overflow-wrap:anywhere}
+.seller-card{display:flex;align-items:center;gap:12px;padding:16px;border-radius:20px;margin-bottom:20px}
+.seller-card>div{flex:1;min-width:0;display:grid;gap:3px}
+.seller-card b{font-size:15px;line-height:20px}
+.product-cta-bar{position:sticky;bottom:0;display:flex;gap:10px;align-items:center;padding:12px 0 4px;background:linear-gradient(to top,var(--study-bg) 70%,transparent)}
+.product-cta-bar .study-button{flex:1}
+
+/* ---------- Carrito ---------- */
+.cart-group{margin-bottom:20px}
+.cart-group-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:11px;letter-spacing:.06em;font-weight:600;color:var(--study-muted);text-transform:uppercase}
+.cart-row{display:flex;gap:12px;padding:14px;border-radius:20px;margin-bottom:10px}
+.cart-thumb{width:76px;height:76px;flex-shrink:0;border-radius:14px;overflow:hidden;background:var(--study-track)}
+.cart-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.cart-thumb span{width:100%;height:100%;display:grid;place-items:center;color:var(--study-faint);font-size:22px}
+.cart-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.cart-info b{font-size:14px;line-height:19px;font-weight:700;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cart-line{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:6px}
+.cart-line>b{font-size:15px;font-weight:800}
+.stepper{display:inline-flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--study-border);border-radius:999px;background:var(--study-bg)}
+.stepper button{display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:50%;background:var(--study-surface);color:var(--study-text);font-size:16px;line-height:1}
+.stepper button:disabled{color:var(--study-faint)}
+.stepper output{min-width:24px;text-align:center;font-size:13px;font-weight:700}
+.cart-remove{border:0;background:none;padding:4px;color:var(--study-muted);font-size:18px}
+.cart-issue{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:14px;margin-bottom:10px;background:var(--study-orange-soft);color:var(--study-orange);font-size:12px;line-height:17px}
+.cart-issue ion-icon{font-size:16px;flex-shrink:0}
+.cart-summary{padding:20px;border-radius:24px;margin-bottom:16px}
+.cart-summary dl{display:grid;gap:10px;margin:0}
+.cart-summary div{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;color:var(--study-muted)}
+.cart-summary dt{margin:0}.cart-summary dd{margin:0;font-weight:600;color:var(--study-text)}
+.cart-total{border-top:1px solid var(--study-border);padding-top:12px;margin-top:2px}
+.cart-total dd{font-size:22px;font-weight:800;letter-spacing:-.02em}
+
+/* ---------- Pedidos ---------- */
+.order-card{padding:20px;border-radius:24px;margin-bottom:12px;animation:study-arrive .25s both}
+.order-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+.order-head .eyebrow{color:var(--study-purple);font-size:10px}
+.order-head h3{margin-top:3px}
+.order-items{display:grid;gap:8px;padding:12px;border-radius:16px;background:var(--study-bg);margin-bottom:14px}
+.order-item{display:flex;align-items:center;gap:10px}
+.order-item img{width:40px;height:40px;border-radius:10px;object-fit:cover;flex-shrink:0;background:var(--study-track)}
+.order-item>div{flex:1;min-width:0;display:grid;gap:2px}
+.order-item b{font-size:13px;line-height:17px;overflow-wrap:anywhere}
+.order-item small{font-size:11px;color:var(--study-muted)}
+.order-item>span{font-size:13px;font-weight:700;white-space:nowrap}
+.order-foot{display:flex;align-items:center;gap:10px}
+.order-foot .study-button{flex:1;min-height:48px}
+.order-icon-btn{display:grid;place-items:center;width:48px;height:48px;flex-shrink:0;border:1px solid var(--study-border);border-radius:50%;background:var(--study-surface);color:var(--study-text);font-size:20px}
+
+/* ---------- Panel del emprendedor ---------- */
+.store-hero{display:flex;align-items:center;gap:16px;padding:20px;border-radius:28px;margin-bottom:20px}
+.store-logo{width:64px;height:64px;flex-shrink:0;border-radius:18px;overflow:hidden;background:var(--study-track);display:grid;place-items:center;color:var(--study-faint);font-size:24px}
+.store-logo img{width:100%;height:100%;object-fit:cover;display:block}
+.store-hero>div{flex:1;min-width:0}
+.store-hero .eyebrow{color:var(--study-purple);margin-bottom:4px}
+.store-hero h1{font-size:22px;line-height:28px;overflow-wrap:anywhere}
+.store-hero p{margin-top:6px;font-size:13px;line-height:19px;color:var(--study-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.quick-actions{display:grid;gap:10px;margin-bottom:24px}
+.quick-action{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border:1px solid var(--study-border);border-radius:18px;background:var(--study-surface);color:var(--study-text);text-align:left;box-shadow:var(--study-shadow)}
+.quick-action b{flex:1;min-width:0;font-size:14px;font-weight:600}
+.dash-progress{height:8px;border-radius:999px;background:var(--study-track);overflow:hidden;margin-top:6px}
+.dash-progress>span{display:block;height:100%;border-radius:inherit;background:var(--study-orange);transition:width .4s}
+
+/* ---------- Publicar: mosaico de 6 fotos ---------- */
+.photo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto auto;gap:10px}
+.photo-slot{position:relative;display:grid;place-items:center;gap:6px;aspect-ratio:1;padding:6px;border:2px dashed var(--study-border);border-radius:16px;background:var(--study-bg);color:var(--study-muted);font-size:10px;line-height:13px;text-align:center;overflow:hidden}
+.photo-slot.primary{grid-column:span 2;grid-row:span 2;aspect-ratio:auto}
+.photo-slot ion-icon{font-size:22px;color:var(--study-purple)}
+.photo-slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.photo-slot.filled{border-style:solid;border-color:transparent;padding:0}
+.photo-remove{position:absolute;top:6px;right:6px;z-index:1;display:grid;place-items:center;width:26px;height:26px;border:0;border-radius:50%;background:rgba(20,20,22,.6);color:#fff;font-size:15px}
+.photo-cover{position:absolute;left:6px;bottom:6px;z-index:1;padding:2px 8px;border-radius:999px;background:rgba(20,20,22,.6);color:#fff;font-size:9px;font-weight:700;letter-spacing:.05em}
+
+/* ---------- Wizard de tienda ---------- */
+.wizard-progress{margin-bottom:24px}
+.wizard-progress .eyebrow{color:var(--study-purple);justify-content:space-between;margin-bottom:8px}
+.wizard-bar{height:8px;border-radius:999px;background:var(--study-track);overflow:hidden}
+.wizard-bar>span{display:block;height:100%;border-radius:inherit;background:var(--study-purple);transition:width .35s ease}
+.logo-drop{display:grid;place-items:center;gap:8px;width:140px;height:140px;margin:0 auto 24px;position:relative;overflow:hidden;border:2px dashed var(--study-border);border-radius:28px;background:var(--study-bg);color:var(--study-muted);font-size:11px;line-height:15px;text-align:center;padding:12px}
+.logo-drop ion-icon{font-size:26px;color:var(--study-purple)}
+.logo-drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+
+/* ---------- Chips rápidos (punto de entrega) ---------- */
+.quick-chips{display:flex;flex-wrap:wrap;gap:8px}
+.quick-chips button{padding:7px 13px;border:1px solid var(--study-border);border-radius:999px;background:var(--study-bg);color:var(--study-muted);font-size:12px}
+.quick-chips button.selected{background:var(--study-cta);border-color:var(--study-cta);color:var(--study-on-cta)}
+
+/* ---------- Skeletons ---------- */
+.product-skeleton{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.product-skeleton>i{display:block;border-radius:20px;background:var(--study-track);aspect-ratio:.78;animation:market-pulse 1.4s ease-in-out infinite}
+@keyframes market-pulse{0%,100%{opacity:1}50%{opacity:.45}}
+
+@media(max-width:374px){
+  .product-body{padding:10px}
+  .product-price{font-size:15px}
+  .cart-thumb{width:64px;height:64px}
+  .store-hero{gap:12px;padding:16px}
+  .store-logo{width:54px;height:54px}
+}

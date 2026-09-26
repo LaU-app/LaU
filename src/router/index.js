@@ -39,6 +39,43 @@ const routes = [
     component: () => import("@/views/UsersView.vue"),
     meta: { requiresAuth: true },
   },
+  // Marketplace: rutas de primer nivel, como el módulo de Estudio/Tareas.
+  {
+    path: "/marketplace",
+    name: "Marketplace",
+    component: () => import("@/views/MarketplaceView.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/marketplace/product/:id",
+    name: "MarketplaceProduct",
+    component: () => import("@/views/MarketplaceProductView.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/marketplace/cart",
+    name: "MarketplaceCart",
+    component: () => import("@/views/MarketplaceCartView.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/marketplace/orders",
+    name: "MarketplaceOrders",
+    component: () => import("@/views/MarketplaceOrdersView.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/marketplace/dashboard",
+    name: "MarketplaceDashboard",
+    component: () => import("@/views/MarketplaceDashboardView.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/marketplace/store/:slug",
+    name: "MarketplaceStore",
+    component: () => import("@/views/MarketplaceStoreView.vue"),
+    meta: { requiresAuth: true },
+  },
   {
     path: "/notifications",
     name: "Notifications",
