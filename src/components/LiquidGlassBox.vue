@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue';
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import { getDisplacementFilter } from '../utils/liquidGlass';
 
 const props = withDefaults(defineProps<{
@@ -37,7 +37,14 @@ const isClicked = ref(false);
 const boxRef = ref<HTMLElement | null>(null);
 const elementWidth = ref(props.width || window.innerWidth);
 
-// Actualizar ancho si cambia el tamaño de la ventana
+// Reactivo: SIEMPRE que cambie props.width, actualizamos elementWidth de inmediato
+watch(() => props.width, (newWidth) => {
+  if (newWidth) {
+    elementWidth.value = newWidth;
+  }
+}, { immediate: true });
+
+// Solo escuchamos resize de window si NO nos pasaron un width explícito
 const updateDimensions = () => {
   if (!props.width) {
     elementWidth.value = window.innerWidth;
@@ -45,10 +52,6 @@ const updateDimensions = () => {
 };
 
 onMounted(() => {
-  // Esperamos un tick para asegurar que el DOM se renderizó
-  setTimeout(() => {
-    updateDimensions();
-  }, 50);
   window.addEventListener('resize', updateDimensions);
 });
 onUnmounted(() => window.removeEventListener('resize', updateDimensions));
