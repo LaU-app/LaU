@@ -9,6 +9,7 @@
 import { IonApp, IonRouterOutlet, useBackButton, useIonRouter } from '@ionic/vue';
 import { onMounted, onUnmounted } from 'vue';
 import { startStudyRuntime, stopStudyRuntime } from '@/utils/useStudy';
+import { startCartRuntime, stopCartRuntime } from '@/utils/useCart';
 import { useDarkMode } from '@/utils/useDarkMode';
 import { useSyncQueue } from '@/utils/useSyncQueue';
 import { AuthService } from '@/services/auth';
@@ -76,12 +77,13 @@ const { initDarkMode } = useDarkMode();
 
 // Inicializar sincronización automática
 useSyncQueue();
-onUnmounted(stopStudyRuntime);
+onUnmounted(() => { stopStudyRuntime(); stopCartRuntime(); });
 
 onMounted(() => {
   initDarkMode();
-  
+
   startStudyRuntime();
+  startCartRuntime();
 
   // ✨ NUEVO: CONFIGURACIÓN DEL TECLADO ✨
   if (window.Capacitor?.isNativePlatform()) {
