@@ -3,7 +3,7 @@
         <AppHeader :isDarkMode="isDarkMode" :user="user" :isAuthenticated="isAuthenticated"
             @toggleDarkMode="toggleDarkMode" />
 
-        <FloatingAudioPlayer />
+        <FloatingAudioPlayer v-show="!loading && !isRefreshing && !isProgrammaticRefreshing" />
 
         <ion-content ref="contentRef" :scroll-events="true" @ionScroll="trackScroll">
             <!-- Pull to Refresh -->
@@ -35,11 +35,14 @@
                     <!-- Card para crear post (solo para autenticados) -->
                     <CreatePostCard v-if="isAuthenticated" :user="user" @post-created="handlePostCreated" />
 
-                    <!-- Encuestas activas -->
+                    <!-- Encuestas activas (De la rama de Cizar) -->
                     <div v-if="polls.length > 0" class="polls-list">
                         <PollCard v-for="poll in polls" :key="poll.id" :poll="poll"
                             @vote="handlePollVote" @delete="handlePollDelete" />
                     </div>
+
+                    <!-- Filtro de posts (De Master) -->
+                    <FilterPosts @filter="handleFilterPosts" />
 
                     <!-- Lista de posts -->
                     <div class="posts-list">
@@ -114,616 +117,430 @@
     </ion-page>
 </template>
 
-<script>
-import { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, alertController, toastController } from '@ionic/vue';
-import AppHeader from '@/components/AppHeader.vue';
-import CreatePostCard from '@/components/CreatePostCard.vue';
-import PostCard from '@/components/PostCard.vue';
-import PollCard from '@/components/PollCard.vue';
-import postsService from '@/services/postsService';
-import pollsService from '@/services/pollsService';
-import { AuthService } from '@/services/auth';
-import { useDarkMode } from '@/utils/useDarkMode';
-import CustomBanner from '@/components/CustomBanner.vue';
-import bannerService from '@/services/bannerService';
-import { ref, onMounted } from 'vue';
-import { pushNotificationsService } from '@/services/pushNotificationsService';
+<script setup>
+// ==========================================
+// IMPORTS LIMPIOS Y UNIFICADOS
+// ==========================================
+import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { 
+    IonPage, IonContent, IonCard, IonCardContent, 
+    IonSpinner, IonText, IonInfiniteScroll, 
+    IonInfiniteScrollContent, IonRefresher, IonRefresherContent,
+    onIonViewWillEnter, onIonViewWillLeave, alertController, toastController 
+} from '@ionic/vue';
+import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
-import apiService from '@/services/api';
-import FloatingAudioPlayer from '@/components/FloatingAudioPlayer.vue';
-import { App as CapacitorApp } from '@capacitor/app';
 
+// Componentes
+import AppHeader from '@/components/AppHeader.vue';
+import CreatePostCard from '@/components/CreatePostCard.vue';
+import FilterPosts from '@/components/FilterPosts.vue';
+import PostCard from '@/components/PostCard.vue';
+import PollCard from '@/components/PollCard.vue';
+import CustomBanner from '@/components/CustomBanner.vue';
+import FloatingAudioPlayer from '@/components/FloatingAudioPlayer.vue';
+
+// Servicios y Composables
+import apiService from '@/services/api';
+import postsService from '@/services/postsService';
+import pollsService from '@/services/pollsService';
+import bannerService from '@/services/bannerService';
+import { AuthService } from '@/services/auth';
+import { pushNotificationsService } from '@/services/pushNotificationsService';
+import { useDarkMode } from '@/utils/useDarkMode';
 import { useGlassMode } from '@/utils/useGlassMode';
 
+// ==========================================
+// 1. ESTADO GLOBAL (Variables Reactivas)
+// ==========================================
+const route = useRoute();
+const router = useRouter();
+const contentRef = ref(null);
 
-export default {
-    name: 'HomeView',
-    components: { IonPage, IonContent, IonCard, IonCardContent, IonSpinner, IonText, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent, AppHeader, CreatePostCard, PostCard, PollCard, CustomBanner, FloatingAudioPlayer },
-    data() {
-        return {
-            posts: [],
-            polls: [],
-            loading: false,
-            error: null,
-            currentPage: 1,
-            lastPage: 1,
-            hasMorePages: false,
-            user: { imagen_url: null, name: 'Usuario', username: 'usuario' },
-            feedType: 'public', // 'public', 'personalized', o 'error'
-            totalPosts: 0,
-            alertTimer: null,
-            isAuthenticated: false,
-            isRefreshing: false,
-            showLoginPrompt: false,
-            showServerBanner: false,
-            serverBannerData: null,
-            noMoreBanners: false,
-            currentScrollTop: 0,
-            isProgrammaticRefreshing: false,
+const { isDarkMode, toggleDarkMode } = useDarkMode();
+const { isGlassMode } = useGlassMode();
+
+// Estado del Feed
+const posts = ref([]);
+const polls = ref([]); // Agregado de la rama de Cizar
+const loading = ref(false);
+const error = ref(null);
+const currentPage = ref(1);
+const lastPage = ref(1);
+const hasMorePages = ref(false);
+const totalPosts = ref(0);
+const feedType = ref('public');
+const isRefreshing = ref(false);
+const isProgrammaticRefreshing = ref(false);
+const currentScrollTop = ref(0);
+
+// Estado de Usuario
+const user = ref({ imagen_url: null, name: 'Invitado', username: 'invitado' });
+const isAuthenticated = ref(false);
+
+// Estado de Banners y Alertas
+const showLoginPrompt = ref(false);
+const showNotificationsPrompt = ref(false);
+const showGlassFeatureBanner = ref(false);
+const showServerBanner = ref(false);
+const serverBannerData = ref(null);
+const noMoreBanners = ref(false);
+let alertTimer = null;
+
+// ==========================================
+// 2. LÓGICA DE USUARIO Y AUTENTICACIÓN
+// ==========================================
+const loadCurrentUser = async () => {
+    try {
+        const localUser = AuthService.getUser();
+        if (localUser) user.value = localUser;
+
+        try {
+            const apiUser = await AuthService.fetchProfile();
+            if (apiUser) user.value = apiUser;
+        } catch (apiError) {
+            console.warn('No se pudo validar el token con la API:', apiError);
+            if (apiError.response?.status === 401) {
+                AuthService.logout();
+                router.replace('/login');
+            } else if (!localUser) {
+                router.replace('/login');
+            }
         }
-    },
-    setup() {
-        const { isGlassMode } = useGlassMode();
-        const showGlassFeatureBanner = ref(false);
-
-        onMounted(() => {
-            // 1. Primero verificamos que el usuario SÍ haya iniciado sesión
-            if (AuthService.isAuthenticated()) {
-                
-                // 2. Si está logueado, revisamos si ya vio el banner antes
-                const hasSeenGlassBanner = localStorage.getItem('has_seen_glass_banner');
-                
-                // 3. Si no lo ha visto, se lo mostramos con el retraso
-                if (!hasSeenGlassBanner) {
-                    setTimeout(() => {
-                        showGlassFeatureBanner.value = true;
-                    }, 1000); 
-                }
-            }
-        });
-
-        // 4. Función para cerrar y guardar en memoria
-        const dismissGlassBanner = () => {
-            showGlassFeatureBanner.value = false;
-            localStorage.setItem('has_seen_glass_banner', 'true');
-        };
-
-        // 5. Función para activar el cristal, cerrar y guardar en memoria
-        const activateGlassMode = () => {
-            isGlassMode.value = true; 
-            dismissGlassBanner();
-        };
-
-        // Función para buscar y descargar
-        const checkForUpdates = async () => {
-            if (!Capacitor.isNativePlatform()) return;
-
-            try {
-                // 1. Leemos la versión actual del cascarón nativo (ej. "2.0.0")
-                const appInfo = await CapacitorApp.getInfo();
-                const currentNativeVersion = appInfo.version; 
-
-                // 2. Le mandamos esa versión a Axios
-                // (Asegúrate de que tu apiService.checkAppUpdate reciba este parámetro)
-                const response = await apiService.checkAppUpdate(currentNativeVersion);
-                const data = response.data; 
-
-                const lastAttemptedVersion = localStorage.getItem('last_ota_version');
-
-                if (data.update_available && lastAttemptedVersion !== data.version) {
-                console.log('Descargando OTA en segundo plano...');
-                
-                const newVersion = await CapacitorUpdater.download({
-                    url: data.zip_url,
-                    version: data.version
-                });
-                
-                localStorage.setItem('pending_update_id', newVersion.id);
-                localStorage.setItem('last_ota_version', data.version);
-                }
-            } catch (error) {
-                console.error('Error al buscar actualizaciones:', error);
-            }
-        };
-
-        // Usar composable de modo oscuro
-        const { isDarkMode, toggleDarkMode } = useDarkMode()
-        const showNotificationsPrompt = ref(false);
-
-        onMounted(() => {
-            // 5. Ejecutamos al montar el componente
-            checkForUpdates();
-            // 2. EL CANDADO: Si NO está autenticado, detenemos todo aquí mismo.
-            if (!AuthService.isAuthenticated()) {
-                console.log("Usuario invitado. No se mostrará el banner de notificaciones.");
-                return;
-            }
-
-            // Si pasa el candado, significa que SÍ hay sesión.
-            // 3. Revisamos si ya le preguntamos antes
-            const hasAsked = localStorage.getItem('has_asked_notifications');
-
-            if (!hasAsked) {
-                setTimeout(() => {
-                    showNotificationsPrompt.value = true;
-                }, 3000);
-            }
-        });
-
-        const activateNotifications = async () => {
-            showNotificationsPrompt.value = false;
-            localStorage.setItem('has_asked_notifications', 'true');
-
-            if (pushNotificationsService.isAvailable()) {
-                try {
-                    // AQUÍ LE PASAMOS TRUE PARA QUE LANCE LA ALERTA DE ANDROID
-                    await pushNotificationsService.initialize(true);
-                    console.log("Notificaciones activadas exitosamente");
-                    localStorage.setItem('notifications_granted', 'true');
-                } catch (error) {
-                    console.error("Error al activar:", error);
-                }
-            }
-        };
-
-        const closeNotificationsPrompt = () => {
-            showNotificationsPrompt.value = false;
-            localStorage.setItem('has_asked_notifications', 'true');
-        };
-
-        return {
-            isDarkMode, toggleDarkMode, showNotificationsPrompt, activateNotifications,
-            closeNotificationsPrompt,
-            isGlassMode,
-            showGlassFeatureBanner,
-            dismissGlassBanner,
-            activateGlassMode
-        }
-    },
-    mounted() {
-        // ... tu código existente (si tienes)
-        window.addEventListener('home-tab-clicked', this.onHomeTabDoubleClicked);
-    },
-    beforeUnmount() {
-        // ... tu código existente
-        if (this.alertTimer) {
-            clearTimeout(this.alertTimer)
-            this.alertTimer = null
-        }
-        // <-- NUEVA LÍNEA: Limpiamos el evento para no consumir memoria
-        window.removeEventListener('home-tab-clicked', this.onHomeTabDoubleClicked);
-    },
-    async created() {
-        // Verificar autenticación y actualizar estado
-        this.isAuthenticated = AuthService.isAuthenticated()
-
-        // Cargar usuario solo si está autenticado
-        if (this.isAuthenticated) {
-            await this.loadCurrentUser();
-            await this.checkServerBanner();
-        } else {
-            // Usuario no autenticado, usar valores por defecto
-            this.user = { imagen_url: null, name: 'Invitado', username: 'invitado' }
-        }
-
-        this.fetchPosts()
-        this.fetchPolls()
-    },
-    ionViewWillEnter() {
-        // Actualizar estado de autenticación cada vez que se entra a la vista
-        this.isAuthenticated = AuthService.isAuthenticated()
-
-        // Verificar si se viene de crear un post (state en router)
-        const postCreated = window.history.state?.postCreated
-        const postDeleted = window.history.state?.postDeleted
-        const pollCreated = window.history.state?.pollCreated
-
-        // Si el usuario acaba de iniciar sesión, recargar datos
-        if (this.isAuthenticated && this.user.username === 'invitado') {
-            this.loadCurrentUser()
-            this.fetchPosts()
-            this.fetchPolls()
-        } else if (this.isAuthenticated && postCreated) {
-            // Si viene de crear un post, refrescar el feed
-            /* console.log('📝 Post creado - Actualizando feed...') */
-            this.fetchPosts(1)
-            // Limpiar el state para evitar recargas múltiples
-            window.history.replaceState({ ...window.history.state, postCreated: false }, '')
-        } else if (postDeleted) {
-            // Si viene de eliminar un post, refrescar el feed
-            /* console.log('🗑️ Post eliminado - Actualizando feed...') */
-            this.fetchPosts(1)
-            // Limpiar el state
-            window.history.replaceState({ ...window.history.state, postDeleted: false }, '')
-        }
-
-        if (pollCreated) {
-            // Si viene de crear una encuesta, refrescar las encuestas
-            this.fetchPolls()
-            window.history.replaceState({ ...window.history.state, pollCreated: false }, '')
-        }
-
-        // Programar el alert solo si NO está autenticado y no hay timer activo
-        if (!this.isAuthenticated && !this.alertTimer) {
-            this.alertTimer = setTimeout(() => {
-                this.showLoginAlert()
-            }, 8000) // 8 segundos
-        }
-
-    },
-    ionViewWillLeave() {
-        // Cancelar el timer cuando el usuario salga de la vista (por ejemplo, al ir a login)
-        if (this.alertTimer) {
-            clearTimeout(this.alertTimer)
-            this.alertTimer = null
-        }
-    },
-    beforeUnmount() {
-        // Limpiar el timer si el componente se desmonta antes
-        if (this.alertTimer) {
-            clearTimeout(this.alertTimer)
-            this.alertTimer = null
-        }
-    },
-    methods: {
-        async loadCurrentUser() {
-            try {
-                // Primero intenta obtener el usuario del localStorage
-                const localUser = AuthService.getUser()
-                if (localUser) {
-                    this.user = localUser
-                }
-
-                // Luego valida el token con la API y actualiza los datos (en background, sin bloquear)
-                try {
-                    const apiUser = await AuthService.fetchProfile()
-                    if (apiUser) {
-                        this.user = apiUser
-                    }
-                } catch (apiError) {
-                    // Si falla la validación con la API
-                    console.warn('No se pudo validar el token con la API:', apiError)
-
-                    // Solo redirigimos al login si es un error 401 (token inválido)
-                    if (apiError.response?.status === 401) {
-                        AuthService.logout()
-                        this.$router.replace('/login')
-                    }
-                    // Si es otro tipo de error (red, servidor caído, etc.) y tenemos usuario local, continuamos
-                    else if (!localUser) {
-                        // Solo redirigimos si no hay usuario local tampoco
-                        this.$router.replace('/login')
-                    }
-                }
-            } catch (error) {
-                console.error('Error cargando usuario:', error)
-                // Solo redirige si es un error crítico
-                if (!AuthService.isAuthenticated()) {
-                    this.$router.replace('/login')
-                }
-            }
-        },
-        handleImageError(event) {
-            console.warn('Error al cargar imagen:', event.target?.src)
-        },
-        async fetchPosts(page = 1) {
-            // EVITAMOS que la pantalla se ponga en blanco si estamos usando el refresher visual
-            this.loading = page === 1 && !this.isProgrammaticRefreshing;
-            this.error = null
-
-            const result = await postsService.fetchPosts(page)
-
-            if (result.success) {
-                if (page === 1) {
-                    this.posts = result.data
-                } else {
-                    this.posts = [...this.posts, ...result.data]
-                }
-                this.currentPage = result.pagination.currentPage
-                this.lastPage = result.pagination.lastPage
-                this.hasMorePages = result.pagination.hasMorePages
-                this.totalPosts = result.pagination.total || 0
-                this.feedType = result.feedType || 'public'
-
-                // Log detallado para debugging de likes
-                /* console.log(`[HomeView] Feed cargado: ${this.feedType}`, {
-                    posts: result.data.length,
-                    total: this.totalPosts,
-                    page: this.currentPage,
-                    isAuthenticated: AuthService.isAuthenticated(),
-                    // Mostrar estado de likes de los primeros 3 posts
-                    likesStatus: result.data.slice(0, 3).map(p => ({
-                        id: p.id,
-                        user_has_liked: p.user_has_liked,
-                        likes_count: p.likes_count
-                    }))
-                }) */
-            } else {
-                this.error = result.error
-                this.feedType = result.feedType || 'error'
-
-                if (page === 1) this.posts = []
-
-                // Si es error 401, redirigir al login
-                if (result.error.includes('Sesión expirada')) {
-                    this.$router.replace('/login')
-                }
-            }
-
-            this.loading = false
-        },
-        async handleLike(postId) {
-            // Encontrar el post antes de hacer la petición
-            const postIndex = this.posts.findIndex(p => p.id === postId)
-            if (postIndex === -1) return
-
-            // Guardar el estado anterior por si hay que revertir
-            const previousLikedState = this.posts[postIndex].user_has_liked
-            const previousLikesCount = this.posts[postIndex].likes_count || 0
-
-            console.log('[HomeView] Like click - Estado antes:', {
-                postId,
-                user_has_liked: previousLikedState,
-                likes_count: previousLikesCount
-            })
-
-            // Actualizar UI optimistamente
-            this.posts[postIndex].user_has_liked = !previousLikedState
-            this.posts[postIndex].likes_count = this.posts[postIndex].user_has_liked
-                ? previousLikesCount + 1
-                : Math.max(0, previousLikesCount - 1)
-
-            console.log('[HomeView] Like click - Estado optimista:', {
-                postId,
-                user_has_liked: this.posts[postIndex].user_has_liked,
-                likes_count: this.posts[postIndex].likes_count
-            })
-
-            // Hacer la petición al backend
-            const result = await postsService.likePost(postId)
-
-            if (result.success && result.data) {
-                // Actualizar con los datos reales del backend
-                this.posts[postIndex].user_has_liked = result.data.user_has_liked !== undefined
-                    ? result.data.user_has_liked
-                    : !previousLikedState
-                this.posts[postIndex].likes_count = result.data.likes_count !== undefined
-                    ? result.data.likes_count
-                    : this.posts[postIndex].likes_count
-
-                console.log('[HomeView] Like click - Estado final del backend:', {
-                    postId,
-                    user_has_liked: this.posts[postIndex].user_has_liked,
-                    likes_count: this.posts[postIndex].likes_count
-                })
-            } else {
-                console.error('[HomeView] Like falló, revirtiendo:', result.error)
-                // Si falla, revertir al estado anterior
-                this.posts[postIndex].user_has_liked = previousLikedState
-                this.posts[postIndex].likes_count = previousLikesCount
-            }
-        },
-        async handleComment(postId) {
-            // Navegar a la vista de detalle donde se pueden ver y agregar comentarios
-            this.$router.push(`/tabs/post/${postId}`)
-        },
-        async handleShare(postId) {
-            const result = await postsService.sharePost(postId)
-            if (result.success) console.log('Post compartido')
-        },
-        async loadMorePosts(event) {
-            if (this.currentPage < this.lastPage) {
-                await this.fetchPosts(this.currentPage + 1)
-            }
-            event.target.complete()
-        },
-        async handleRefresh(event) {
-            // Marcar que estamos refrescando para no mostrar el loading duplicado
-            this.isRefreshing = true
-            // Recargar desde la primera página
-            this.currentPage = 1
-            await this.fetchPosts(1)
-            await this.fetchPolls()
-            this.isRefreshing = false
-            event.target.complete()
-        },
-        async fetchPolls() {
-            const result = await pollsService.getPolls(1)
-            if (result.success) {
-                this.polls = result.data
-            }
-        },
-        async handlePollVote({ pollId, optionId }) {
-            const pollIndex = this.polls.findIndex(p => p.id === pollId)
-            if (pollIndex === -1) return
-
-            const result = await pollsService.voteOnPoll(pollId, optionId)
-
-            if (result.success && result.data) {
-                this.polls[pollIndex].options = result.data.options
-                this.polls[pollIndex].user_has_voted = true
-            } else {
-                const toast = await toastController.create({
-                    message: result.error || 'Error al votar',
-                    duration: 3000,
-                    color: 'danger',
-                    position: 'top'
-                })
-                await toast.present()
-            }
-        },
-        async handlePollDelete(pollId) {
-            const result = await pollsService.deletePoll(pollId)
-
-            if (result.success) {
-                this.polls = this.polls.filter(p => p.id !== pollId)
-                const toast = await toastController.create({
-                    message: result.message || 'Encuesta eliminada',
-                    duration: 2000,
-                    color: 'success',
-                    position: 'top'
-                })
-                await toast.present()
-            } else {
-                const toast = await toastController.create({
-                    message: result.error || 'Error al eliminar la encuesta',
-                    duration: 3000,
-                    color: 'danger',
-                    position: 'top'
-                })
-                await toast.present()
-            }
-        },
-        handlePostCreated(newPost) {
-            console.log('Nuevo post creado:', newPost)
-            // Recargar los posts para mostrar el nuevo
-            this.fetchPosts(1)
-        },
-        async showLoginAlert() {
-            const currentRoute = this.$route.path;
-            if (!this.isAuthenticated && currentRoute === '/tabs/tab1') {
-                // En lugar de llamar a alertController, simplemente mostramos nuestro banner
-                this.showLoginPrompt = true;
-            }
-        },
-        goToLogin() {
-            this.showLoginPrompt = false;
-            this.$router.push('/login');
-        },
-
-        closeLoginPrompt() {
-            this.showLoginPrompt = false;
-        },
-
-        // 1. Buscar el banner
-        async checkServerBanner() {
-            // 2. Si la bandera dice que ya no hay banners, cancelamos la petición para no molestar al servidor
-            if (this.noMoreBanners) {
-                return;
-            }
-
-            const result = await bannerService.getActiveBanner();
-            const bannerReal = result?.data ? result.data : result;
-
-            if (bannerReal && bannerReal.id) {
-                this.serverBannerData = bannerReal;
-
-                setTimeout(() => {
-                    this.showServerBanner = true;
-                }, 500);
-            } else {
-                // 3. Laravel respondió null. Eso significa que el usuario ya vio TODO.
-                // Activamos la bandera para que no vuelva a preguntar en toda la sesión.
-                this.noMoreBanners = true;
-                console.log("Todos los banners han sido vistos. No se preguntará más en esta sesión.");
-            }
-        },
-
-        // 2. Acción: Cuando le da al botón principal (Probar, Actualizar, etc.)
-        async handleServerBannerAction(banner) {
-            this.showServerBanner = false;
-
-            // Registramos en Laravel que ya lo vio
-            await bannerService.markAsViewed(banner.id);
-
-            // Redirigimos a la URL de acción
-            if (banner.action_url) {
-                if (banner.action_url.startsWith('http')) {
-                    // Abrir en el navegador (Ideal para enlaces externos)
-                    window.open(banner.action_url, '_blank');
-                } else {
-                    // Navegación interna en Vue
-                    this.$router.push(banner.action_url);
-                }
-            }
-        },
-
-        // 3. Acción: Cuando le da a "Enterado" o lo arrastra hacia abajo
-        async handleServerBannerDismiss(banner) {
-            this.showServerBanner = false;
-
-            // Registramos en Laravel que ya lo vio para que no vuelva a salir
-            await bannerService.markAsViewed(banner.id);
-        },
-
-        // 1. Rastreamos dónde está el usuario
-        trackScroll(event) {
-            this.currentScrollTop = event.detail.scrollTop;
-        },
-
-        // 2. La lógica del doble tap
-        // async onHomeTabDoubleClicked() {
-        //     // Solo actuar si estamos en la pestaña principal
-        //     if (this.$route.path !== '/tabs/tab1') return;
-
-        //     // Si el usuario bajó más de 10 píxeles, lo subimos suavemente
-        //     if (this.currentScrollTop > 10) {
-        //         // Hacemos scroll hasta arriba con una animación de 500ms
-        //         this.$refs.contentRef.$el.scrollToTop(500);
-        //     } else {
-        //         // Si ya está arriba (scrollTop es 0), forzamos el refresco
-        //         this.isRefreshing = true;
-        //         this.currentPage = 1;
-        //         await this.fetchPosts(1);
-        //         this.isRefreshing = false;
-        //     }
-        // },
-
-        // 2. La lógica del doble tap
-        async onHomeTabDoubleClicked() {
-            if (this.$route.path !== '/tabs/tab1') return;
-
-            if (this.currentScrollTop > 10) {
-                // 1. Hacemos scroll hasta arriba (tarda 500ms)
-                this.$refs.contentRef.$el.scrollToTop(500);
-                
-                // 2. Esperamos medio segundo a que llegue arriba y sacamos la ruedita
-                setTimeout(async () => {
-                    this.isProgrammaticRefreshing = true;
-                    this.currentPage = 1;
-                    await this.fetchPosts(1);
-                    this.isProgrammaticRefreshing = false; // Oculta la ruedita
-                }, 500);
-                
-            } else {
-                // Si ya estaba hasta arriba, sacamos la ruedita de inmediato
-                this.isProgrammaticRefreshing = true;
-                this.currentPage = 1;
-                await this.fetchPosts(1);
-                this.isProgrammaticRefreshing = false;
-            }
-        },
-
-        // async showLoginAlert() {
-        //     // Solo mostrar si el usuario NO está autenticado Y está en la ruta del feed
-        //     const currentRoute = this.$route.path
-        //     if (!this.isAuthenticated && currentRoute === '/tabs/tab1') {
-        //         const alert = await alertController.create({
-        //             header: '¡Únete a LaU! 🎓',
-        //             message: 'Inicia sesión para seguir viendo el feed y aprovechar al máximo todas las funciones de LaU: conecta con estudiantes, comparte material y descubre eventos.',
-        //             buttons: [
-        //                 {
-        //                     text: 'Más tarde',
-        //                     role: 'cancel',
-        //                     cssClass: 'alert-button-cancel'
-        //                 },
-        //                 {
-        //                     text: 'Iniciar Sesión',
-        //                     cssClass: 'alert-button-confirm',
-        //                     handler: () => {
-        //                         this.$router.push('/login')
-        //                     }
-        //                 }
-        //             ],
-        //             cssClass: 'custom-alert'
-        //         })
-
-        //         await alert.present()
-        //     }
-        // }
+    } catch (err) {
+        console.error('Error cargando usuario:', err);
+        if (!AuthService.isAuthenticated()) router.replace('/login');
     }
-}
+};
+
+const showLoginAlert = () => {
+    if (!isAuthenticated.value && route.path === '/tabs/tab1') {
+        showLoginPrompt.value = true;
+    }
+};
+
+const goToLogin = () => {
+    showLoginPrompt.value = false;
+    router.push('/login');
+};
+
+const closeLoginPrompt = () => {
+    showLoginPrompt.value = false;
+};
+
+// ==========================================
+// 3. LÓGICA DEL FEED Y ENCUESTAS (Integrado)
+// ==========================================
+const fetchPosts = async (page = 1) => {
+    loading.value = page === 1 && !isProgrammaticRefreshing.value;
+    error.value = null;
+
+    const result = await postsService.fetchPosts(page);
+
+    if (result.success) {
+        if (page === 1) {
+            posts.value = result.data;
+        } else {
+            posts.value = [...posts.value, ...result.data];
+        }
+        currentPage.value = result.pagination.currentPage;
+        lastPage.value = result.pagination.lastPage;
+        hasMorePages.value = result.pagination.hasMorePages;
+        totalPosts.value = result.pagination.total || 0;
+        feedType.value = result.feedType || 'public';
+    } else {
+        error.value = result.error;
+        feedType.value = result.feedType || 'error';
+        if (page === 1) posts.value = [];
+        if (result.error.includes('Sesión expirada')) router.replace('/login');
+    }
+    loading.value = false;
+};
+
+const fetchPolls = async () => {
+    const result = await pollsService.getPolls(1);
+    if (result.success) {
+        polls.value = result.data;
+    }
+};
+
+const loadMorePosts = async (event) => {
+    if (currentPage.value < lastPage.value) {
+        await fetchPosts(currentPage.value + 1);
+    }
+    event.target.complete();
+};
+
+const handleRefresh = async (event) => {
+    isRefreshing.value = true;
+    currentPage.value = 1;
+    // Ejecutamos ambas peticiones en paralelo para mayor velocidad
+    await Promise.all([fetchPosts(1), fetchPolls()]);
+    isRefreshing.value = false;
+    event.target.complete();
+};
+
+const handlePostCreated = (newPost) => {
+    fetchPosts(1);
+};
+
+const handleFilterPosts = (filterData) => {
+    // Aquí implementas la lógica de tu filtro
+    console.log("Filtro aplicado:", filterData);
+};
+
+// ==========================================
+// 4. INTERACCIONES (Likes, Comentarios, Compartir, Votos)
+// ==========================================
+const handleLike = async (postId) => {
+    const postIndex = posts.value.findIndex(p => p.id === postId);
+    if (postIndex === -1) return;
+
+    const previousLikedState = posts.value[postIndex].user_has_liked;
+    const previousLikesCount = posts.value[postIndex].likes_count || 0;
+
+    posts.value[postIndex].user_has_liked = !previousLikedState;
+    posts.value[postIndex].likes_count = posts.value[postIndex].user_has_liked
+        ? previousLikesCount + 1
+        : Math.max(0, previousLikesCount - 1);
+
+    const result = await postsService.likePost(postId);
+
+    if (result.success && result.data) {
+        posts.value[postIndex].user_has_liked = result.data.user_has_liked !== undefined 
+            ? result.data.user_has_liked : !previousLikedState;
+        posts.value[postIndex].likes_count = result.data.likes_count !== undefined 
+            ? result.data.likes_count : posts.value[postIndex].likes_count;
+    } else {
+        posts.value[postIndex].user_has_liked = previousLikedState;
+        posts.value[postIndex].likes_count = previousLikesCount;
+    }
+};
+
+const handleComment = (postId) => router.push(`/tabs/post/${postId}`);
+
+const handleShare = async (postId) => {
+    const result = await postsService.sharePost(postId);
+    if (result.success) console.log('Post compartido');
+};
+
+const handleImageError = (event) => {
+    console.warn('Error al cargar imagen:', event.target?.src);
+};
+
+// Votación de encuestas
+const handlePollVote = async ({ pollId, optionId }) => {
+    const pollIndex = polls.value.findIndex(p => p.id === pollId);
+    if (pollIndex === -1) return;
+
+    const result = await pollsService.voteOnPoll(pollId, optionId);
+
+    if (result.success && result.data) {
+        polls.value[pollIndex].options = result.data.options;
+        polls.value[pollIndex].user_has_voted = true;
+    } else {
+        const toast = await toastController.create({
+            message: result.error || 'Error al votar',
+            duration: 3000,
+            color: 'danger',
+            position: 'top'
+        });
+        await toast.present();
+    }
+};
+
+// Eliminación de encuestas
+const handlePollDelete = async (pollId) => {
+    const result = await pollsService.deletePoll(pollId);
+
+    if (result.success) {
+        polls.value = polls.value.filter(p => p.id !== pollId);
+        const toast = await toastController.create({
+            message: result.message || 'Encuesta eliminada',
+            duration: 2000,
+            color: 'success',
+            position: 'top'
+        });
+        await toast.present();
+    } else {
+        const toast = await toastController.create({
+            message: result.error || 'Error al eliminar la encuesta',
+            duration: 3000,
+            color: 'danger',
+            position: 'top'
+        });
+        await toast.present();
+    }
+};
+
+// ==========================================
+// 5. SCROLL Y GESTOS MÁGICOS
+// ==========================================
+const trackScroll = (event) => {
+    currentScrollTop.value = event.detail.scrollTop;
+};
+
+const onHomeTabDoubleClicked = async () => {
+    if (route.path !== '/tabs/tab1') return;
+
+    if (currentScrollTop.value > 10) {
+        if (contentRef.value) contentRef.value.$el.scrollToTop(500);
+        setTimeout(async () => {
+            isProgrammaticRefreshing.value = true;
+            currentPage.value = 1;
+            await fetchPosts(1);
+            isProgrammaticRefreshing.value = false;
+        }, 500);
+    } else {
+        isProgrammaticRefreshing.value = true;
+        currentPage.value = 1;
+        await fetchPosts(1);
+        isProgrammaticRefreshing.value = false;
+    }
+};
+
+// ==========================================
+// 6. LÓGICA DE BANNERS Y NOTIFICACIONES
+// ==========================================
+const checkServerBanner = async () => {
+    if (noMoreBanners.value) return;
+
+    const result = await bannerService.getActiveBanner();
+    const bannerReal = result?.data ? result.data : result;
+
+    if (bannerReal && bannerReal.id) {
+        serverBannerData.value = bannerReal;
+        setTimeout(() => { showServerBanner.value = true; }, 500);
+    } else {
+        noMoreBanners.value = true;
+    }
+};
+
+const handleServerBannerAction = async (banner) => {
+    showServerBanner.value = false;
+    await bannerService.markAsViewed(banner.id);
+    if (banner.action_url) {
+        if (banner.action_url.startsWith('http')) window.open(banner.action_url, '_blank');
+        else router.push(banner.action_url);
+    }
+};
+
+const handleServerBannerDismiss = async (banner) => {
+    showServerBanner.value = false;
+    await bannerService.markAsViewed(banner.id);
+};
+
+const activateNotifications = async () => {
+    showNotificationsPrompt.value = false;
+    localStorage.setItem('has_asked_notifications', 'true');
+
+    if (pushNotificationsService.isAvailable()) {
+        try {
+            await pushNotificationsService.initialize(true);
+            localStorage.setItem('notifications_granted', 'true');
+        } catch (error) {
+            console.error("Error al activar:", error);
+        }
+    }
+};
+
+const closeNotificationsPrompt = () => {
+    showNotificationsPrompt.value = false;
+    localStorage.setItem('has_asked_notifications', 'true');
+};
+
+const dismissGlassBanner = () => {
+    showGlassFeatureBanner.value = false;
+    localStorage.setItem('has_seen_glass_banner', 'true');
+};
+
+const activateGlassMode = () => {
+    isGlassMode.value = true;
+    dismissGlassBanner();
+};
+
+// ==========================================
+// 7. ACTUALIZACIONES OTA
+// ==========================================
+const checkForUpdates = async () => {
+    if (!Capacitor.isNativePlatform()) return;
+    try {
+        const appInfo = await CapacitorApp.getInfo();
+        const response = await apiService.checkAppUpdate(appInfo.version);
+        const data = response.data;
+        const lastAttemptedVersion = localStorage.getItem('last_ota_version');
+
+        if (data.update_available && lastAttemptedVersion !== data.version) {
+            const newVersion = await CapacitorUpdater.download({ url: data.zip_url, version: data.version });
+            localStorage.setItem('pending_update_id', newVersion.id);
+            localStorage.setItem('last_ota_version', data.version);
+        }
+    } catch (error) {
+        console.error('Error al buscar actualizaciones:', error);
+    }
+};
+
+// ==========================================
+// 8. CICLO DE VIDA (Lifecycle Hooks)
+// ==========================================
+onMounted(async () => {
+    isAuthenticated.value = AuthService.isAuthenticated();
+
+    if (isAuthenticated.value) {
+        await loadCurrentUser();
+        await checkServerBanner();
+        
+        const hasSeenGlassBanner = localStorage.getItem('has_seen_glass_banner');
+        if (!hasSeenGlassBanner) setTimeout(() => { showGlassFeatureBanner.value = true; }, 1000);
+
+        const hasAsked = localStorage.getItem('has_asked_notifications');
+        if (!hasAsked) setTimeout(() => { showNotificationsPrompt.value = true; }, 3000);
+    }
+
+    fetchPosts();
+    fetchPolls(); // Inicializar encuestas al cargar
+    checkForUpdates();
+    
+    window.addEventListener('home-tab-clicked', onHomeTabDoubleClicked);
+});
+
+onBeforeUnmount(() => {
+    if (alertTimer) clearTimeout(alertTimer);
+    window.removeEventListener('home-tab-clicked', onHomeTabDoubleClicked);
+});
+
+onIonViewWillEnter(() => {
+    isAuthenticated.value = AuthService.isAuthenticated();
+    const state = window.history.state;
+
+    if (isAuthenticated.value && user.value.username === 'invitado') {
+        loadCurrentUser();
+        fetchPosts();
+        fetchPolls();
+    } else if (isAuthenticated.value && state?.postCreated) {
+        fetchPosts(1);
+        window.history.replaceState({ ...state, postCreated: false }, '');
+    } else if (state?.postDeleted) {
+        fetchPosts(1);
+        window.history.replaceState({ ...state, postDeleted: false }, '');
+    } else if (state?.pollCreated) { // Lógica de encuestas incorporada a la vista
+        fetchPolls();
+        window.history.replaceState({ ...state, pollCreated: false }, '');
+    }
+
+    if (!isAuthenticated.value && !alertTimer) {
+        alertTimer = setTimeout(() => { showLoginAlert(); }, 8000);
+    }
+});
+
+onIonViewWillLeave(() => {
+    if (alertTimer) {
+        clearTimeout(alertTimer);
+        alertTimer = null;
+    }
+});
 </script>
 
 <style scoped>

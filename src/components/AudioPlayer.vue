@@ -11,8 +11,13 @@
                     <span>{{ formatTime(currentTime) }}</span>
                     <span>{{ formatTime(duration) }}</span>
                 </div>
-                <ion-range v-model="currentTime" :max="duration" :pin="false" @ionChange="seek" class="progress-bar">
-                </ion-range>
+                
+                <div class="wave-progress-bar" ref="waveContainer" @click="seekByClick">
+                    <div class="liquid-fill" :style="{ width: progressPercent + '%' }">
+                        <div class="liquid-wave"></div>
+                    </div>
+                </div>
+
             </div>
 
             <ion-button fill="clear" size="small" @click="toggleMute" class="volume-button">
@@ -20,15 +25,16 @@
                 </ion-icon>
             </ion-button>
         </div>
-        <audio ref="audioElement" :src="previewUrl" @timeupdate="updateProgress" @loadedmetadata="onLoaded"
+        
+        <audio ref="audioElement" :src="previewUrl" @loadedmetadata="onLoaded"
             @ended="onEnded" preload="metadata">
         </audio>
     </div>
 </template>
 
 <script setup>
-import { ref, watch, onBeforeUnmount } from 'vue'
-import { IonButton, IonIcon, IonRange } from '@ionic/vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
+import { IonButton, IonIcon } from '@ionic/vue'
 import {
     playCircle,
     pauseCircle,
@@ -37,17 +43,31 @@ import {
 } from 'ionicons/icons'
 
 const props = defineProps({
-    previewUrl: {
-        type: String,
-        required: true
-    }
+    previewUrl: { type: String, required: true }
 })
 
 const audioElement = ref(null)
+const waveContainer = ref(null)
 const isPlaying = ref(false)
 const currentTime = ref(0)
 const duration = ref(0)
 const isMuted = ref(false)
+
+let animationFrameId = null
+
+// Calcula el porcentaje de avance para el ancho del líquido
+const progressPercent = computed(() => {
+    if (!duration.value) return 0
+    return (currentTime.value / duration.value) * 100
+})
+
+// Bucle de animación a 60 FPS
+const updateSmoothProgress = () => {
+    if (audioElement.value && isPlaying.value) {
+        currentTime.value = audioElement.value.currentTime
+        animationFrameId = requestAnimationFrame(updateSmoothProgress)
+    }
+}
 
 const togglePlay = () => {
     if (!audioElement.value) return
@@ -55,15 +75,12 @@ const togglePlay = () => {
     if (isPlaying.value) {
         audioElement.value.pause()
         isPlaying.value = false
+        if (animationFrameId) cancelAnimationFrame(animationFrameId)
     } else {
         audioElement.value.play()
         isPlaying.value = true
-    }
-}
-
-const updateProgress = () => {
-    if (audioElement.value) {
-        currentTime.value = audioElement.value.currentTime
+        // Iniciamos la animación fluida
+        animationFrameId = requestAnimationFrame(updateSmoothProgress)
     }
 }
 
@@ -79,14 +96,20 @@ const onEnded = () => {
     if (audioElement.value) {
         audioElement.value.currentTime = 0
     }
+    if (animationFrameId) cancelAnimationFrame(animationFrameId)
 }
 
-const seek = (event) => {
-    if (audioElement.value) {
-        const newTime = event.detail.value
-        audioElement.value.currentTime = newTime
-        currentTime.value = newTime
-    }
+// Nueva función de seek calculando el clic del usuario
+const seekByClick = (event) => {
+    if (!waveContainer.value || !audioElement.value) return
+    
+    const rect = waveContainer.value.getBoundingClientRect()
+    const clickX = event.clientX - rect.left
+    const percentage = Math.max(0, Math.min(1, clickX / rect.width))
+    const newTime = percentage * duration.value
+
+    audioElement.value.currentTime = newTime
+    currentTime.value = newTime
 }
 
 const toggleMute = () => {
@@ -103,23 +126,23 @@ const formatTime = (seconds) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-// Detener audio al desmontar o cuando cambie la URL
 watch(() => props.previewUrl, () => {
     if (audioElement.value && isPlaying.value) {
         audioElement.value.pause()
         isPlaying.value = false
         currentTime.value = 0
+        if (animationFrameId) cancelAnimationFrame(animationFrameId)
     }
 })
 
 onBeforeUnmount(() => {
+    if (animationFrameId) cancelAnimationFrame(animationFrameId)
     if (audioElement.value) {
         audioElement.value.pause()
         audioElement.value.currentTime = 0
     }
 })
 
-// Exponer método para detener desde el padre
 defineExpose({
     stop: () => {
         if (audioElement.value) {
@@ -127,6 +150,7 @@ defineExpose({
             audioElement.value.currentTime = 0
             isPlaying.value = false
             currentTime.value = 0
+            if (animationFrameId) cancelAnimationFrame(animationFrameId)
         }
     }
 })
@@ -170,18 +194,54 @@ defineExpose({
     justify-content: space-between;
     font-size: 0.75rem;
     color: var(--ion-color-medium);
-    margin-bottom: 0.25rem;
-    padding: 0 0.5rem;
+    margin-bottom: 0.4rem;
+    padding: 0 0.2rem;
 }
 
-.progress-bar {
-    --bar-height: 4px;
-    --bar-background: var(--ion-color-light);
-    --bar-background-active: var(--ion-color-primary);
-    --knob-size: 16px;
-    --knob-background: var(--ion-color-primary);
-    --knob-box-shadow: 0 2px 4px rgba(138, 43, 226, 0.3);
-    padding: 0;
+/* ==========================================
+   BARRA DE LÍQUIDO ANIMADA
+   ========================================== */
+.wave-progress-bar {
+    position: relative;
+    height: 12px; /* Grosor de la barra */
+    background: rgba(150, 150, 150, 0.15); /* Fondo del track */
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.liquid-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    /* Color base de tu app */
+    background: var(--ion-color-primary); 
+    border-radius: 10px;
+    /* IMPORTANTE: No le ponemos transition al width, requestAnimationFrame ya lo hace fluido */
+}
+
+/* La textura de ola en movimiento */
+.liquid-wave {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    
+    /* 👇 AQUÍ ESTÁ LA OLA: Cámbiale el 0.2 del final por 0.5 si la quieres más marcada */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 20'%3E%3Cpath d='M0,10 Q25,20 50,10 T100,10 T150,10 T200,10 L200,20 L0,20 Z' fill='rgba(255,255,255,0.4)'/%3E%3C/svg%3E");
+    
+    background-size: 100px 100%;
+    
+    /* 👇 ESTO LE DA EL MOVIMIENTO CONSTANTE */
+    animation: flowWave 1.5s linear infinite;
+}
+
+/* La animación que desplaza la ola */
+@keyframes flowWave {
+    0% { background-position: 0 0; }
+    100% { background-position: -100px 0; }
 }
 
 .volume-button {

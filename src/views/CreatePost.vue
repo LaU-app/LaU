@@ -196,7 +196,7 @@
 
                 <ion-item>
                     <ion-label position="stacked">Descripción (Opcional)</ion-label>
-                    <ion-textarea v-model="descripcion" :placeholder="descripcionPlaceholder" :rows="3" />
+                    <MentionInput v-model="descripcion" :placeholder="descripcionPlaceholder" multiline :rows="3" />
                 </ion-item>
             </div>
 
@@ -280,6 +280,7 @@ import AppHeader from '@/components/AppHeader.vue'
 import MusicSearchModal from '@/components/MusicSearchModal.vue'
 import MusicTrackPreview from '@/components/MusicTrackPreview.vue'
 import PollForm from '@/components/PollForm.vue'
+import MentionInput from '@/components/MentionInput.vue'
 import musicService from '@/services/musicService'
 import api from '../services/api'
 import { AuthService } from '../services/auth'

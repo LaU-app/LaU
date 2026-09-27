@@ -1,19 +1,22 @@
 <template>
     <ion-page>
-        <ion-header>
-            <ion-toolbar class="pt-safe-top">
-                <ion-buttons slot="start">
-                    <ion-button @click="goBack">
-                        <ion-icon :icon="arrowBack" slot="icon-only"></ion-icon>
-                    </ion-button>
-                </ion-buttons>
-                <!-- <ion-title>Detalle de Publicación</ion-title> -->
+        <ion-header class="ion-no-border transparent-header pt-safe-top">
 
-                <ion-title>
+            <div class="header-gradient-mask"></div>
+
+            <div class="floating-header-container" :class="{ 'is-glass-header': isGlassMode }">
+                
+                <!-- Burbuja 1: Botón de volver circular -->
+                <button class="header-bubble action-bubble" @click="goBack">
+                    <ion-icon :icon="arrowBack"></ion-icon>
+                </button>
+
+                <!-- Burbuja 2: Título / Info de Usuario -->
+                <div class="header-bubble info-bubble">
                     <div class="header-title-container">
                         <transition name="slide-fade">
-                            <div v-if="!showUserInHeader" class="header-default-title">
-                                Detalle de Publicación
+                            <div v-if="!showUserInHeader" class="header-default-title pl-4">
+                                Publicación
                             </div>
 
                             <div v-else class="header-user-info">
@@ -29,14 +32,14 @@
                             </div>
                         </transition>
                     </div>
-                </ion-title>
+                </div>
 
-                <ion-buttons slot="end" v-if="isMyPost">
-                    <ion-button @click="confirmDelete" color="danger">
-                        <ion-icon :icon="trashOutline" slot="icon-only"></ion-icon>
-                    </ion-button>
-                </ion-buttons>
-            </ion-toolbar>
+                <!-- Burbuja 3: Botón eliminar circular (Totalmente independiente) -->
+                <button v-if="isMyPost" class="header-bubble action-bubble delete-bubble" @click="confirmDelete">
+                    <ion-icon :icon="trashOutline"></ion-icon>
+                </button>
+
+            </div>
         </ion-header>
 
         <ion-content :fullscreen="true" ref="ionContentRef" :scroll-events="true" @ionScroll="handleScroll">
@@ -75,9 +78,8 @@
                     <ion-card-content>
                         <ion-text v-if="post.titulo || post.descripcion || post.texto">
                             <h2 v-if="post.titulo" class="post-title">{{ post.titulo }}</h2>
-                            <p v-if="post.descripcion" class="post-description">{{ post.descripcion }}</p>
-                            <p v-if="post.texto && !post.descripcion" class="post-description post-text-only">{{
-                                post.texto }}</p>
+                            <p v-if="post.descripcion" class="post-description"><MentionTextRenderer :text="post.descripcion" /></p>
+                            <p v-if="post.texto && !post.descripcion" class="post-description post-text-only"><MentionTextRenderer :text="post.texto" /></p>
                         </ion-text>
 
                         <div v-if="post.tipo === 'imagen' && post.imagen_url" class="post-media"
@@ -107,7 +109,10 @@
                     </ion-card-content>
                     <br>
                     <ion-card-content class="post-footer">
-                        <PostActions :post="post" @like="handleLike" @comment="focusCommentInput" />
+                        <div class="overlaid-actions-pill custom-pill ">
+                            <PostActions :post="post" @like="handleLike" @comment="handleComment" @share="handleShare" />
+                        </div>
+
                     </ion-card-content>
                 </ion-card>
 
@@ -211,12 +216,16 @@
                         </ion-avatar>
                         
                         <div class="comment-input-wrapper">
-                            <ion-textarea ref="commentInputRef" v-model="newComment"
+                            <MentionInput ref="commentInputRef" v-model="newComment"
                                 :placeholder="replyingToComment ? 'Escribe tu respuesta...' : 'Escribe un comentario...'"
-                                class="comment-input auto-expand" 
-                                auto-grow="true"
+                                class="comment-mention-input"
+                                input-class="comment-input auto-expand"
+                                :disabled="isSubmitting"
+                                auto-grow
+                                multiline
                                 rows="1"
-                                @keyup.enter.exact="submitComment"> </ion-textarea>
+                                @enter="submitComment"
+                            />
                             <div class="comment-input-line"></div>
                         </div>
 
@@ -237,548 +246,366 @@
                 </div>
             </div>
         </ion-footer>
+
+        <!-- ========== MODAL PERSONALIZADO: ELIMINAR PUBLICACIÓN ========== -->
+        <transition name="delete-fade">
+        <div v-if="showDeleteModal" class="delete-overlay" @click.self="closeDeleteModal">
+            <transition name="delete-scale">
+            <div v-if="showDeleteModal" class="delete-modal">
+                <div class="delete-modal-icon">
+                    <ion-icon :icon="trashOutline"></ion-icon>
+                </div>
+
+                <h3 class="delete-modal-title">¿Eliminar publicación?</h3>
+                <p class="delete-modal-message">Esta acción no se puede deshacer.</p>
+
+                <div class="delete-modal-actions">
+                <button class="delete-modal-btn delete-modal-cancel" @click="closeDeleteModal" type="button">
+                    Cancelar
+                </button>
+                <button class="delete-modal-btn delete-modal-confirm" @click="confirmDeleteAction" type="button">
+                    Eliminar
+                </button>
+                </div>
+            </div>
+            </transition>
+        </div>
+        </transition>
+
+
     </ion-page>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, nextTick, onUnmounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import {
-    IonPage,
-    IonHeader,
-    IonToolbar,
-    IonTitle,
-    IonContent,
-    IonButtons,
-    IonButton,
-    IonIcon,
-    IonAvatar,
-    IonText,
-    IonImg,
-    IonSpinner,
-    IonTextarea,
-    IonCard,
-    IonCardHeader,
-    IonCardContent,
-    IonCardTitle,
-    toastController,
-    alertController,
-    IonModal,
-    createGesture,
-    IonFooter,
-    onIonViewWillEnter,
-    onIonViewWillLeave
-} from '@ionic/vue'
+    IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, 
+    IonButton, IonIcon, IonAvatar, IonText, IonImg, IonSpinner, 
+    IonTextarea, IonCard, IonCardHeader, IonCardContent, IonCardTitle,
+    IonFooter, toastController, alertController, 
+    onIonViewWillEnter, onIonViewWillLeave
+} from '@ionic/vue';
 import {
-    arrowBack,
-    personCircle,
-    alertCircle,
-    send,
-    chatbubbleOutline,
-    downloadOutline,
-    trashOutline,
-    closeCircle,
-    closeOutline
-} from 'ionicons/icons'
-import MusicPlayer from '@/components/MusicPlayer.vue'
-import PostActions from '@/components/PostActions.vue'
-import CommentItem from '@/components/CommentItem.vue'
-import { timeAgo } from '@/utils/timeUtils'
-import api from '@/services/api'
-import postsService from '@/services/postsService'
-import { AuthService } from '@/services/auth'
-import { Filesystem, Directory } from '@capacitor/filesystem';
-import { FileOpener } from '@capacitor-community/file-opener';
-import { CapacitorHttp } from '@capacitor/core';
-import { Capacitor } from '@capacitor/core';
-import { openNativeFile } from '@/services/FileService';
+    arrowBack, personCircle, alertCircle, send, chatbubbleOutline, 
+    downloadOutline, trashOutline, closeCircle
+} from 'ionicons/icons';
+
+// Componentes y Servicios
+import MusicPlayer from '@/components/MusicPlayer.vue';
+import PostActions from '@/components/PostActions.vue';
+import CommentItem from '@/components/CommentItem.vue';
+import FullScreenImageViewer from '@/components/FullScreenImageViewer.vue';
+import LiquidGlassBox from '@/components/LiquidGlassBox.vue';
+
+import { timeAgo } from '@/utils/timeUtils';
 import { getFullImageUrl } from '@/utils/imageUtils';
 import { useAmbientMode } from "@/utils/useAmbientMode";
-import FullScreenImageViewer from '@/components/FullScreenImageViewer.vue';
-
-import LiquidGlassBox from '@/components/LiquidGlassBox.vue';
 import { useGlassMode } from '@/utils/useGlassMode';
+import { AuthService } from '@/services/auth';
+import { openNativeFile } from '@/services/FileService';
+import postsService from '@/services/postsService';
+import api from '@/services/api';
 
-const route = useRoute()
-const router = useRouter()
+// ==========================================
+// 1. ESTADO GLOBAL (Variables Reactivas)
+// ==========================================
+const route = useRoute();
+const router = useRouter();
 
-const post = ref(null)
-const loading = ref(true)
-const error = ref(null)
-const newComment = ref('')
-const commentInputRef = ref(null)
-const ionContentRef = ref(null)
-const currentUser = ref(null)
-const replyingToComment = ref(null)
-
-// NUEVA VARIABLE: Candado para evitar envíos dobles
-const isSubmitting = ref(false)
-
-// Variable para controlar qué mostrar en el header
-const showUserInHeader = ref(false);
-
-// Función que se ejecuta cada vez que el usuario hace scroll
-const handleScroll = (event) => {
-    // Obtenemos la posición actual del scroll
-    const scrollTop = event.detail.scrollTop;
-    
-    // 120 píxeles es aproximadamente donde la foto del usuario original desaparece.
-    // Puedes ajustar este número si notas que aparece muy rápido o muy lento.
-    if (scrollTop > 120) {
-        if (!showUserInHeader.value) showUserInHeader.value = true;
-    } else {
-        if (showUserInHeader.value) showUserInHeader.value = false;
-    }
-};
-
-const canSendComment = computed(() => (newComment.value ?? '').trim().length > 0)
+const post = ref(null);
+const loading = ref(true);
+const error = ref(null);
+const currentUser = ref(null);
 
 const { isAmbientMode } = useAmbientMode();
 const { isGlassMode } = useGlassMode();
 
-const commentBarRef = ref(null); // Ref para el div de la barra
-const dynamicBarHeight = ref(65); // Altura inicial
+// UI y Referencias
+const ionContentRef = ref(null);
+const showUserInHeader = ref(false);
+const isImageModalOpen = ref(false);
+const showDeleteModal = ref(false);
 
+// Comentarios
+const newComment = ref('');
+const commentInputRef = ref(null);
+const replyingToComment = ref(null);
+const isSubmitting = ref(false);
+const commentBarRef = ref(null);
+const dynamicBarHeight = ref(65);
+const windowWidth = ref(window.innerWidth);
 let resizeObserver = null;
 
-const windowWidth = ref(window.innerWidth);
+// ==========================================
+// 2. COMPUTADOS
+// ==========================================
+const isMyPost = computed(() => {
+    if (!post.value || !currentUser.value) return false;
+    return post.value.user_id === currentUser.value.id || post.value.user?.id === currentUser.value.id;
+});
 
-// Función para detectar si giran el celular
-const updateWidth = () => {
-    windowWidth.value = window.innerWidth;
+const canSendComment = computed(() => (newComment.value ?? '').trim().length > 0);
+const calculatedBarWidth = computed(() => windowWidth.value - 30);
+
+// ==========================================
+// 3. UTILIDADES AISLADAS (Principio OCP / SRP)
+// ==========================================
+// Diccionario de utilidades para archivos, abierto a extensión sin modificar la vista
+const FileFormatHelper = {
+    getName: (filePath) => {
+        if (!filePath) return 'Archivo';
+        const parts = filePath.split('/');
+        return parts[parts.length - 1].replace(/^\d+_/, '');
+    },
+    getExtension: (filePath) => {
+        if (!filePath) return '';
+        return `Archivo ${filePath.split('.').pop().toUpperCase()}`;
+    },
+    getIcon: (filePath) => {
+        if (!filePath) return '';
+        const ext = filePath.split('.').pop().toLowerCase();
+        const baseSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
+        const icons = {
+            'pdf': `${baseSvg}<path stroke="#dc2626" d="M14 3v4a1 1 0 0 0 1 1h4 M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4 M5 18h1.5a1.5 1.5 0 0 0 0 -3h-1.5v6 M17 18h2 M20 15h-3v6 M11 15v6h1a2 2 0 0 0 2 -2v-2a2 2 0 0 0 -2 -2h-1z"/></svg>`,
+            'doc': `${baseSvg}<path stroke="#2563eb" d="M14 3v4a1 1 0 0 0 1 1h4 M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4 M5 15v6h1a2 2 0 0 0 2 -2v-2a2 2 0 0 0 -2 -2h-1z M20 16.5a1.5 1.5 0 0 0 -3 0v3a1.5 1.5 0 0 0 3 0 M12.5 15a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1 -3 0v-3a1.5 1.5 0 0 1 1.5 -1.5z"/></svg>`,
+            'zip': `${baseSvg}<path stroke="#ca8a04" d="M6 20.735a2 2 0 0 1 -1 -1.735v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2h-1 M11 17a2 2 0 0 1 2 2v2a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1v-2a2 2 0 0 1 2 -2z M11 5h-1 M13 7h-1 M11 9h-1 M13 11h-1 M11 13h-1 M13 15h-1"/></svg>`
+        };
+        return icons[ext] || icons['pdf']; // Retorna PDF por defecto si no lo encuentra
+    }
 };
+
+// Funciones expuestas al template
+const getFileName = FileFormatHelper.getName;
+const getFileExtension = FileFormatHelper.getExtension;
+const getFileIcon = FileFormatHelper.getIcon;
+
+const handleImageError = (event) => {
+    if (event.target) event.target.src = 'https://via.placeholder.com/150?text=Sin+Imagen';
+};
+
+const showToast = async (message, color = 'dark') => {
+    const toast = await toastController.create({ message, duration: 2000, position: 'bottom', color });
+    await toast.present();
+};
+
+// ==========================================
+// 4. NAVEGACIÓN Y TABS VISUALES
+// ==========================================
+const toggleGlobalTabs = (show) => {
+    requestAnimationFrame(() => {
+        const tabBar = document.querySelector('ion-tab-bar.floating-tabs-redesign'); // 👈 corregido
+        const tabGradient = document.querySelector('.tabs-gradient-mask');
+        if (tabBar) show ? tabBar.classList.remove('hide-tabs-animated') : tabBar.classList.add('hide-tabs-animated');
+        if (tabGradient) show ? tabGradient.classList.remove('hide-tabs-animated') : tabGradient.classList.add('hide-tabs-animated');
+    });
+};
+
+const goBack = () => {
+    toggleGlobalTabs(true);
+    window.history.length > 2 ? router.back() : router.push('/tabs/tab1');
+};
+
+onIonViewWillEnter(() => toggleGlobalTabs(false));
+onIonViewWillLeave(() => toggleGlobalTabs(true));
+
+const handleScroll = (event) => {
+    showUserInHeader.value = event.detail.scrollTop > 120;
+};
+
+// ==========================================
+// 5. CARGA DE POST Y ACCIONES BÁSICAS
+// ==========================================
+const loadPost = async () => {
+    loading.value = true;
+    error.value = null;
+    try {
+        const postId = route.params.id;
+        if (!postId) throw new Error('ID no válido');
+
+        const response = await api.getPostById(postId);
+        if (!response.data.success) throw new Error(response.data.message || 'Error al cargar');
+
+        const postData = response.data.data;
+        const currentUserId = currentUser.value?.id;
+        
+        let hasLiked = postData.user_has_liked ?? (postData.likes?.some(l => l.user_id === currentUserId || l.usuario_id === currentUserId) || false);
+
+        post.value = {
+            ...postData,
+            user_has_liked: hasLiked,
+            likes_count: postData.likes_count ?? (postData.likes?.length || 0)
+        };
+    } catch (err) {
+        error.value = err.response?.data?.message || err.message;
+    } finally {
+        loading.value = false;
+    }
+};
+
+const handleLike = async () => {
+    if (!post.value) return;
+    const previousLikedState = post.value.user_has_liked;
+    const previousLikesCount = post.value.likes_count || 0;
+
+    post.value.user_has_liked = !previousLikedState;
+    post.value.likes_count = post.value.user_has_liked ? previousLikesCount + 1 : Math.max(0, previousLikesCount - 1);
+
+    try {
+        const result = await postsService.likePost(post.value.id);
+        if (result.success && result.data) {
+            post.value.user_has_liked = result.data.user_has_liked ?? !previousLikedState;
+            post.value.likes_count = result.data.likes_count ?? post.value.likes_count;
+        } else {
+            throw new Error('Fallo la petición');
+        }
+    } catch (err) {
+        post.value.user_has_liked = previousLikedState;
+        post.value.likes_count = previousLikesCount;
+    }
+};
+
+// ==========================================
+// 5. MODAL PERSONALIZADO: ELIMINAR PUBLICACIÓN
+// ==========================================
+const confirmDelete = () => {
+    showDeleteModal.value = true;
+};
+
+const closeDeleteModal = () => {
+    showDeleteModal.value = false;
+};
+
+const confirmDeleteAction = async () => {
+    showDeleteModal.value = false;
+    try {
+        const result = await postsService.deletePost(post.value.id);
+        if (result.success) {
+            showToast('Publicación eliminada', 'success');
+            setTimeout(() => router.push({ path: '/tabs/tab1', state: { postDeleted: true } }), 500);
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (err) {
+        showToast('Error al eliminar', 'danger');
+    }
+};
+
+// ==========================================
+// 6. GESTIÓN DE COMENTARIOS
+// ==========================================
+const startReply = (comment) => { replyingToComment.value = comment; };
+const cancelReply = () => { replyingToComment.value = null; newComment.value = ''; };
+const focusCommentInput = () => cancelReply();
+
+const recursivelyAddReply = (commentsArray, parentId, newCommentObj) => {
+    for (let comment of commentsArray) {
+        if (comment.id === parentId) {
+            if (!comment.children) comment.children = [];
+            comment.children.push(newCommentObj);
+            return true;
+        }
+        if (comment.children && recursivelyAddReply(comment.children, parentId, newCommentObj)) return true;
+    }
+    return false;
+};
+
+// [PRINCIPIO DIP] Aislamos las peticiones API directas para no acoplarlas al flujo visual
+const apiSendComment = async (postId, text, parentId) => {
+    const endpoints = [
+        { url: `/posts/${postId}/comments`, body: { comentario: text, parent_id: parentId } },
+        { url: `/posts/${postId}/comentarios`, body: { comentario: text, parent_id: parentId } },
+        { url: `/comentarios`, body: { post_id: postId, comentario: text, parent_id: parentId } }
+    ];
+    for (const endpoint of endpoints) {
+        try {
+            return await api.post(endpoint.url, endpoint.body);
+        } catch (err) {
+            if (err.response?.status !== 404) throw err;
+        }
+    }
+    throw new Error('No se encontró la ruta válida');
+};
+
+const submitComment = async () => {
+    const text = (newComment.value ?? '').trim();
+    if (!text || isSubmitting.value) return;
+
+    if (!AuthService.isAuthenticated()) {
+        showToast('Debes iniciar sesión para comentar', 'warning');
+        return;
+    }
+
+    isSubmitting.value = true;
+    try {
+        const parentId = replyingToComment.value?.id || null;
+        const response = await apiSendComment(post.value.id, text, parentId);
+
+        if (response.data.success !== false) {
+            const newCommentObj = response.data.data || response.data;
+            
+            // Datos optimistas
+            if (!newCommentObj.user && currentUser.value) {
+                newCommentObj.user = { ...currentUser.value };
+            }
+            newCommentObj.time_ago = newCommentObj.time_ago || 'ahora';
+            if (!post.value.comentarios) post.value.comentarios = [];
+
+            // Inserción en el árbol
+            if (parentId) {
+                recursivelyAddReply(post.value.comentarios, parentId, newCommentObj);
+            } else if (!post.value.comentarios.some(c => c.id === newCommentObj.id)) {
+                post.value.comentarios.push(newCommentObj);
+            }
+
+            showToast(parentId ? 'Respuesta enviada' : 'Comentario agregado', 'success');
+            cancelReply();
+
+            setTimeout(() => {
+                if (ionContentRef.value) ionContentRef.value.$el.scrollToBottom(300);
+            }, 100);
+        } else {
+            throw new Error(response.data.message);
+        }
+    } catch (err) {
+        showToast('Error al enviar comentario', 'danger');
+    } finally {
+        isSubmitting.value = false;
+    }
+};
+
+// ==========================================
+// 7. CICLO DE VIDA Y EVENTOS
+// ==========================================
+const updateWidth = () => windowWidth.value = window.innerWidth;
+const downloadFile = (url, name) => openNativeFile(url, name);
+const openImageModal = () => isImageModalOpen.value = true;
 
 onMounted(async () => {
     window.addEventListener('resize', updateWidth);
-    
-    // 2. Configuramos el observador para medir el crecimiento del texto
     if (commentBarRef.value) {
         resizeObserver = new ResizeObserver((entries) => {
-            for (let entry of entries) {
-                // Actualizamos la altura cada vez que el textarea hace crecer la barra
-                dynamicBarHeight.value = entry.contentRect.height;
-            }
+            for (let entry of entries) dynamicBarHeight.value = entry.contentRect.height;
         });
         resizeObserver.observe(commentBarRef.value);
     }
-
     currentUser.value = AuthService.getUser();
     await loadPost();
 });
 
 onUnmounted(() => {
     window.removeEventListener('resize', updateWidth);
-    // Limpiamos el observador
     if (resizeObserver) resizeObserver.disconnect();
 });
 
-// El ancho de la barra: Pantalla menos 15px de cada lado = 30px
-const calculatedBarWidth = computed(() => {
-    return windowWidth.value - 30;
+// ==========================================
+// BLOQUEO DE SCROLL MIENTRAS EL MODAL ESTÁ ABIERTO
+// ==========================================
+watch(showDeleteModal, (isOpen) => {
+    if (ionContentRef.value?.$el) {
+        ionContentRef.value.$el.scrollY = !isOpen; // false = bloquea scroll, true = lo permite
+    }
 });
-
-// ==========================================
-// LÓGICA DEL VISOR DE IMÁGENES Y GESTOS
-// ==========================================
-const isImageModalOpen = ref(false);
-
-// Computed para verificar si el post es del usuario actual
-const isMyPost = computed(() => {
-    if (!post.value || !currentUser.value) return false
-    return post.value.user_id === currentUser.value.id || post.value.user?.id === currentUser.value.id
-})
-// ==========================================
-// OCULTAR TAB BAR GLOBAL AL ENTRAR A LA VISTA
-// ==========================================
-const hideTabBar = () => {
-    requestAnimationFrame(() => {
-        const tabBar = document.querySelector('ion-tab-bar.floating-tabs');
-        const tabGradient = document.querySelector('.tabs-gradient-mask');
-
-        if (tabBar) tabBar.classList.add('hide-tabs-animated');
-        if (tabGradient) tabGradient.classList.add('hide-tabs-animated');
-    });
-};
-
-const showTabBar = () => {
-    requestAnimationFrame(() => {
-        const tabBar = document.querySelector('ion-tab-bar.floating-tabs');
-        const tabGradient = document.querySelector('.tabs-gradient-mask');
-
-        if (tabBar) tabBar.classList.remove('hide-tabs-animated');
-        if (tabGradient) tabGradient.classList.remove('hide-tabs-animated');
-    });
-};
-
-// ==========================================
-// CONTROL DEL MENÚ CON EL CICLO DE VIDA DE IONIC
-// ==========================================
-onIonViewWillEnter(() => {
-    hideTabBar();
-});
-
-onIonViewWillLeave(() => {
-    showTabBar();
-});
-
-onMounted(async () => {
-    currentUser.value = AuthService.getUser()
-    await loadPost()
-});
-
-const loadPost = async () => {
-    loading.value = true
-    error.value = null
-
-    try {
-        const postId = route.params.id
-        if (!postId) throw new Error('ID de publicación no válido')
-
-        const response = await api.getPostById(postId)
-
-        if (response.data.success) {
-            const postData = response.data.data
-            const currentUserId = AuthService.getUser()?.id
-
-            let hasLiked = false;
-            if (postData.user_has_liked !== undefined) {
-                hasLiked = postData.user_has_liked;
-            } else if (postData.likes && Array.isArray(postData.likes) && currentUserId) {
-                hasLiked = postData.likes.some(like =>
-                    like.user_id === currentUserId ||
-                    like.usuario_id === currentUserId ||
-                    like.id === currentUserId
-                );
-            }
-
-            post.value = {
-                ...postData,
-                user_has_liked: hasLiked,
-                likes_count: postData.likes_count !== undefined ? postData.likes_count : (postData.likes?.length || 0)
-            }
-        } else {
-            throw new Error(response.data.message || 'Error al cargar la publicación')
-        }
-    } catch (err) {
-        error.value = err.response?.data?.message || err.message || 'No se pudo cargar la publicación'
-    } finally {
-        loading.value = false
-    }
-}
-
-const goBack = () => {
-    showTabBar(); // 1. Forzamos mostrar el menú inmediatamente
-
-    // 2. Verificamos si hay historial previo para regresar
-    if (window.history.length > 2) {
-        router.back();
-    } else {
-        // Si recargó la página y no hay historial, lo mandamos al inicio
-        router.push('/tabs/tab1');
-    }
-}
-
-const handleImageError = (event) => {
-    if (event.target) {
-        event.target.src = 'https://via.placeholder.com/150?text=Sin+Imagen'
-    }
-}
-
-const getFileName = (filePath) => {
-    if (!filePath) return 'Archivo'
-    const parts = filePath.split('/')
-    const fileName = parts[parts.length - 1]
-    return fileName.replace(/^\d+_/, '')
-}
-
-const getFileExtension = (filePath) => {
-    if (!filePath) return ''
-    const extension = filePath.split('.').pop().toUpperCase()
-    return `Archivo ${extension}`
-}
-
-const downloadFile = (urlArchivo, nombreArchivo) => {
-    // Si nombreArchivo viene con la ruta entera, puedes limpiarlo aquí antes
-    // const nombreLimpio = getFileName(nombreArchivo);
-    openNativeFile(urlArchivo, nombreArchivo);
-};
-
-const getFileIcon = (filePath) => {
-    if (!filePath) return ''
-    const extension = filePath.split('.').pop().toLowerCase()
-
-    const icons = {
-        'pdf': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4" /><path d="M5 18h1.5a1.5 1.5 0 0 0 0 -3h-1.5v6" /><path d="M17 18h2" /><path d="M20 15h-3v6" /><path d="M11 15v6h1a2 2 0 0 0 2 -2v-2a2 2 0 0 0 -2 -2h-1z" /></svg>`,
-        'doc': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4" /><path d="M5 15v6h1a2 2 0 0 0 2 -2v-2a2 2 0 0 0 -2 -2h-1z" /><path d="M20 16.5a1.5 1.5 0 0 0 -3 0v3a1.5 1.5 0 0 0 3 0" /><path d="M12.5 15a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1 -3 0v-3a1.5 1.5 0 0 1 1.5 -1.5z" /></svg>`,
-        'docx': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4" /><path d="M2 15v6h1a2 2 0 0 0 2 -2v-2a2 2 0 0 0 -2 -2h-1z" /><path d="M17 16.5a1.5 1.5 0 0 0 -3 0v3a1.5 1.5 0 0 0 3 0" /><path d="M9.5 15a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1 -3 0v-3a1.5 1.5 0 0 1 1.5 -1.5z" /><path d="M19.5 15l3 6" /><path d="M19.5 21l3 -6" /></svg>`,
-        'zip': `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 20.735a2 2 0 0 1 -1 -1.735v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2h-1" /><path d="M11 17a2 2 0 0 1 2 2v2a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1v-2a2 2 0 0 1 2 -2z" /><path d="M11 5l-1 0" /><path d="M13 7l-1 0" /><path d="M11 9l-1 0" /><path d="M13 11l-1 0" /><path d="M11 13l-1 0" /><path d="M13 15l-1 0" /></svg>`
-    }
-
-    return icons[extension] || icons['pdf']
-}
-
-const handleLike = async () => {
-    try {
-        if (!post.value) return
-
-        const previousLikedState = post.value.user_has_liked
-        const previousLikesCount = post.value.likes_count || 0
-
-        // Optimismo UI
-        post.value.user_has_liked = !previousLikedState
-        post.value.likes_count = post.value.user_has_liked
-            ? previousLikesCount + 1
-            : Math.max(0, previousLikesCount - 1)
-
-        const result = await postsService.likePost(post.value.id)
-
-        if (result.success && result.data) {
-            post.value.user_has_liked = result.data.user_has_liked !== undefined
-                ? result.data.user_has_liked
-                : !previousLikedState
-            post.value.likes_count = result.data.likes_count !== undefined
-                ? result.data.likes_count
-                : post.value.likes_count
-        } else {
-            // Revertir
-            post.value.user_has_liked = previousLikedState
-            post.value.likes_count = previousLikesCount
-        }
-    } catch (err) {
-        await loadPost()
-    }
-}
-
-// --- Lógica de Comentarios y Respuestas ---
-
-const startReply = (comment) => {
-    replyingToComment.value = comment
-    // Opcional: agregar @Username al inicio
-    // newComment.value = `@${comment.user?.username || ''} `
-
-    // Ya no forzamos el focus - el teclado nativo se encargará cuando el usuario toque el input
-}
-
-const cancelReply = () => {
-    replyingToComment.value = null
-    newComment.value = ''
-}
-
-const focusCommentInput = () => {
-    cancelReply() // Asegurar que no esté respondiendo a nadie si clickea el icono general
-    // Ya no forzamos el focus - el teclado nativo se encargará cuando el usuario toque el input
-}
-
-const handleCommentInput = (event) => {
-    newComment.value = event?.detail?.value ?? ''
-}
-
-// Función recursiva para encontrar el comentario padre y añadir la respuesta
-const recursivelyAddReply = (commentsArray, parentId, newCommentObject) => {
-    for (let i = 0; i < commentsArray.length; i++) {
-        const comment = commentsArray[i];
-
-        // Encontramos al padre directo
-        if (comment.id === parentId) {
-            if (!comment.children) {
-                comment.children = [];
-            }
-            comment.children.push(newCommentObject);
-            return true; // Éxito
-        }
-
-        // Buscar en los hijos de este comentario
-        if (comment.children && comment.children.length > 0) {
-            if (recursivelyAddReply(comment.children, parentId, newCommentObject)) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-const submitComment = async () => {
-    const comentarioTexto = (newComment.value ?? '').trim()
-    
-    // Si está vacío o YA se está enviando un comentario, ignoramos el clic
-    if (!comentarioTexto || isSubmitting.value) return
-
-    if (!AuthService.isAuthenticated()) {
-        const toast = await toastController.create({
-            message: 'Debes iniciar sesión para comentar',
-            duration: 2000,
-            position: 'bottom',
-            color: 'warning'
-        })
-        await toast.present()
-        return
-    }
-
-    // === ACTIVAMOS EL CANDADO ===
-    isSubmitting.value = true;
-
-    try {
-        const parentId = replyingToComment.value?.id || null
-        const isReply = parentId !== null
-
-        let response
-        let success = false
-
-        // Endpoints posibles
-        const endpoints = [
-            { url: `/posts/${post.value.id}/comments`, method: 'post' },
-            { url: `/posts/${post.value.id}/comentarios`, method: 'post' },
-            { url: `/comentarios`, method: 'post', body: { post_id: post.value.id } },
-            { url: `/comments`, method: 'post', body: { post_id: post.value.id } }
-        ]
-
-        for (const endpoint of endpoints) {
-            try {
-                const requestBody = endpoint.body
-                    ? { ...endpoint.body, comentario: comentarioTexto, parent_id: parentId }
-                    : { comentario: comentarioTexto, parent_id: parentId }
-
-                response = await api.post(endpoint.url, requestBody)
-                success = true
-                break
-            } catch (endpointError) {
-                if (endpointError.response?.status === 404) continue
-                throw endpointError
-            }
-        }
-
-        if (!success) throw new Error('Error de conexión')
-
-        if (response.data.success !== false) {
-            const nuevoComentario = response.data.data || response.data;
-
-            // Completar datos de usuario si faltan (optimismo)
-            if (!nuevoComentario.user && currentUser.value) {
-                nuevoComentario.user = {
-                    id: currentUser.value.id,
-                    name: currentUser.value.name,
-                    username: currentUser.value.username,
-                    imagen_url: currentUser.value.imagen_url
-                }
-            }
-
-            // Si el backend no devuelve time_ago
-            if (!nuevoComentario.time_ago) {
-                nuevoComentario.time_ago = 'ahora';
-            }
-
-            // Inicializar array si no existe
-            if (!post.value.comentarios) {
-                post.value.comentarios = [];
-            }
-
-            // Prevenir duplicados: verificar si el comentario ya existe por ID
-            const comentarioExiste = isReply
-                ? false // Para respuestas, usamos recursivelyAddReply que maneja duplicados
-                : post.value.comentarios.some(c => c.id === nuevoComentario.id);
-
-            // Inserción Reactiva
-            if (isReply) {
-                recursivelyAddReply(post.value.comentarios, parentId, nuevoComentario);
-            } else if (!comentarioExiste) {
-                post.value.comentarios.push(nuevoComentario);
-            }
-
-            const toast = await toastController.create({
-                message: isReply ? 'Respuesta enviada' : 'Comentario agregado',
-                duration: 1500,
-                position: 'bottom',
-                color: 'success'
-            })
-            await toast.present()
-
-            // Limpiar UI
-            cancelReply()
-            newComment.value = ''
-
-            // Scroll al fondo suavemente
-            setTimeout(() => {
-                if (ionContentRef.value) {
-                    ionContentRef.value.$el.scrollToBottom(300);
-                }
-            }, 100);
-
-        } else {
-            throw new Error(response.data.message || 'Error al agregar comentario')
-        }
-    } catch (err) {
-        const toast = await toastController.create({
-            message: 'Error al enviar comentario',
-            duration: 3000,
-            position: 'bottom',
-            color: 'danger'
-        })
-        await toast.present()
-    } finally {
-        // === APAGAMOS EL CANDADO SIEMPRE (Pase lo que pase) ===
-        isSubmitting.value = false;
-    }
-}
-
-
-const confirmDelete = async () => {
-    const alert = await alertController.create({
-        header: '¿Eliminar publicación?',
-        message: 'Esta acción no se puede deshacer.',
-        buttons: [
-            {
-                text: 'Cancelar',
-                role: 'cancel',
-                cssClass: 'alert-button-cancel'
-            },
-            {
-                text: 'Eliminar',
-                cssClass: 'alert-button-danger',
-                handler: async () => {
-                    await deletePost()
-                }
-            }
-        ],
-        cssClass: 'custom-alert-delete'
-    })
-
-    await alert.present()
-}
-
-const deletePost = async () => {
-    try {
-        const result = await postsService.deletePost(post.value.id)
-        if (result.success) {
-            const toast = await toastController.create({
-                message: 'Publicación eliminada',
-                duration: 2000,
-                position: 'bottom',
-                color: 'success'
-            })
-            await toast.present()
-            setTimeout(() => {
-                router.push({
-                    path: '/tabs/tab1',
-                    state: { postDeleted: true }
-                })
-            }, 500)
-        } else {
-            throw new Error(result.error)
-        }
-    } catch (err) {
-        const toast = await toastController.create({
-            message: 'Error al eliminar',
-            duration: 3000,
-            position: 'bottom',
-            color: 'danger'
-        })
-        await toast.present()
-    }
-}
-
-const openImageModal = () => {
-    isImageModalOpen.value = true;
-};
 </script>
 
 <style scoped>
@@ -805,8 +632,11 @@ ion-tabs.layout-with-tabs ion-content {
 }
 
 .post-detail-container {
-    padding: 1rem;
+    /* Declaramos los lados por separado para evitar que choquen */
+    padding-left: 1rem;
+    padding-right: 1rem;
     padding-bottom: 0;
+    padding-top: calc(5rem + env(safe-area-inset-top, 0px));
 }
 
 /* Post Card Styles */
@@ -1277,7 +1107,7 @@ ion-modal.image-viewer-modal ion-content {
 .floating-comment-bar {
     position: relative;
     z-index: 2; 
-    margin: 0 15px calc(10px + env(safe-area-inset-bottom)) 15px;
+    margin: 0 15px max(10px , env(safe-area-inset-bottom)) 15px;
     padding: 8px 15px;
     border-radius: 30px;
     
@@ -1443,18 +1273,95 @@ ion-modal.image-viewer-modal ion-content {
 
 
 /* --- ESTILOS DEL HEADER DINÁMICO --- */
+/* --- ENCABEZADO FLOTANTE TIPO TELEGRAM --- */
+.transparent-header {
+    background: transparent !important;
+    position: absolute; /* Vital: hace que la página pase por debajo */
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+}
+
+/* Oculta la sombra por defecto de Ionic */
+ion-header.transparent-header::after {
+    display: none !important;
+}
+
+.floating-header-container {
+    padding-top: calc(10px + env(safe-area-inset-top));
+    padding-bottom: 10px;
+    padding-left: 15px;
+    padding-right: 15px;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    pointer-events: none; 
+}
+
+/* Estilo base de las burbujas */
+.header-bubble {
+    background: var(--ion-card-background);
+    border: 1px solid rgba(178, 178, 178, 0.15);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    
+    /* Vuelve a activar los clics dentro de la burbuja */
+    pointer-events: auto; 
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s ease, border 0.3s ease;
+}
+
+/* Sincronización con el Efecto Cristal del usuario */
+.is-glass-header .header-bubble {
+    background: rgba(var(--ion-color-light-rgb), 0.5);
+    border: 0.5px solid rgba(255,255,255,0.2);
+}
+
+/* Burbuja 1: Circular para volver */
+.back-bubble ion-icon {
+    font-size: 24px;
+    color: var(--ion-color-dark);
+}
+
+.back-bubble:active {
+    transform: scale(0.95);
+    opacity: 0.8;
+}
+
+/* Burbuja 2: Píldora para la info */
+.info-bubble {
+    flex: 1;
+    min-height: 44px;
+    border-radius: 30px;
+    padding: 4px 6px 4px 16px;
+    justify-content: space-between;
+    overflow: hidden;
+}
+
+
+/* --- ESTILOS DEL INTERIOR DEL HEADER DINÁMICO --- */
 .header-title-container {
     position: relative;
     display: flex;
     align-items: center;
-    width: 100%;
+    flex: 1;
     height: 100%;
-    min-height: 40px; /* Asegura que el contenedor tenga altura */
+    min-height: 36px;
 }
 
 .header-default-title {
     position: absolute;
     width: 100%;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--ion-color-dark);
+    /* Ajuste para que se vea centrado visualmente si no está el basurero */
+    text-align: left; 
 }
 
 .header-user-info {
@@ -1490,29 +1397,287 @@ ion-modal.image-viewer-modal ion-content {
     line-height: 1.1;
 }
 
+/* Burbujas de acción circulares (Sirve para Volver y para Eliminar) */
+.action-bubble {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    padding: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+    /* Quitamos los estilos de botón por defecto del navegador */
+    border: none; 
+    outline: none;
+    color: var(--ion-color-dark);
+}
+
+.action-bubble ion-icon {
+    font-size: 24px;
+    /* El color por defecto heredado */
+    color: inherit; 
+}
+
+/* Color específico para el botón de eliminar */
+.action-bubble.delete-bubble {
+    color: var(--ion-color-danger);
+}
+
+.action-bubble:active {
+    transform: scale(0.95);
+    opacity: 0.8;
+}
+
+/* Burbuja 2: Píldora para la info */
+.info-bubble {
+    flex: 1;
+    min-height: 44px;
+    border-radius: 30px;
+    padding: 4px 6px 4px;
+    /* Ya no necesita justify-content: space-between porque el basurero ya no está aquí */
+    justify-content: center; 
+    overflow: hidden;
+}
+
+
+/* --- DEGRADADO SUPERIOR (Fade-out al hacer scroll) --- */
+.header-gradient-mask {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    /* Altura suficiente para cubrir el notch del teléfono y las burbujas */
+    height: calc(75px + env(safe-area-inset-top)); 
+    
+    /* Degradado lineal de arriba (sólido) hacia abajo (transparente) */
+    background: linear-gradient(
+        to bottom,
+        var(--ion-background-color) 0%,
+        rgba(var(--ion-background-color-rgb), 0.7) 40%,
+        rgba(var(--ion-background-color-rgb), 0.3) 70%,
+        transparent 100%
+    );
+    
+    /* VITAL: Permite que los clics traspasen el degradado para poder tocar la pantalla */
+    pointer-events: none; 
+    
+    /* Lo ponemos por detrás de las burbujas */
+    z-index: -1; 
+}
+
+
 /* --- ANIMACIÓN SLIDE-FADE --- */
-/* Estado activo de la transición (velocidad y curva) */
 .slide-fade-enter-active,
 .slide-fade-leave-active {
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-/* Estado inicial al ENTRAR y final al SALIR */
 .slide-fade-enter-from {
     opacity: 0;
-    transform: translateX(-20px); /* Entra desde la izquierda */
+    transform: translateY(10px); /* Cambiado a vertical para que se vea más fluido al salir de la píldora */
 }
 
 .slide-fade-leave-to {
     opacity: 0;
-    transform: translateX(20px); /* Sale hacia la derecha */
+    transform: translateY(-10px);
 }
 
+/* --- ANIMACIÓN SLIDE-FADE --- */
 .btn-spinner {
     width: 20px;
     height: 20px;
     color: white;
 }
+
+
+
+/* ==================================================
+   ✨ BORDE DE DESTELLO (Edge Glint) PARA EL CRISTAL ✨
+   Mismo patrón que en TabsPage: diagonal arriba-izq / abajo-der
+   ================================================== */
+
+/* --- BARRA DE COMENTARIOS --- */
+.floating-comment-bar.is-glass::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 30px; /* mismo radio que .floating-comment-bar */
+    padding: 2.4px;
+    pointer-events: none;
+    z-index: 2; /* por encima de .comment-bar-content (z-index:1) */
+
+    /* 🌞 TEMA CLARO (default) → destello NEGRO */
+    background: conic-gradient(
+        from -45deg,
+        rgba(0, 0, 0, 0.35) 0deg,
+        rgba(0, 0, 0, 0.03) 60deg,
+        rgba(0, 0, 0, 0.03) 150deg,
+        rgba(0, 0, 0, 0.22) 180deg,
+        rgba(0, 0, 0, 0.03) 210deg,
+        rgba(0, 0, 0, 0.03) 300deg,
+        rgba(0, 0, 0, 0.35) 360deg
+    );
+
+    -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+}
+
+.floating-comment-bar.is-glass {
+    box-shadow:
+        inset 0 0 10px rgba(0, 0, 0, 0.08),
+        0 0 14px rgba(0, 0, 0, 0.06);
+}
+
+.ion-palette-dark .floating-comment-bar.is-glass::after {
+    background: conic-gradient(
+        from -45deg,
+        rgba(255, 255, 255, 0.5) 0deg,
+        rgba(255, 255, 255, 0.02) 60deg,
+        rgba(255, 255, 255, 0.02) 150deg,
+        rgba(180, 200, 255, 0.4) 180deg,
+        rgba(255, 255, 255, 0.02) 210deg,
+        rgba(255, 255, 255, 0.02) 300deg,
+        rgba(255, 255, 255, 0.5) 360deg
+    );
+}
+
+.ion-palette-dark .floating-comment-bar.is-glass {
+    box-shadow:
+        inset 0 0 10px rgba(255, 255, 255, 0.1),
+        0 0 16px rgba(120, 160, 255, 0.12);
+}
+
+.delete-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    touch-action: none; /* 👈 NUEVO: bloquea gestos táctiles sobre el overlay */
+}
+
+/* ==================================================
+   BOTONES DE ACCIONES Y CONTADORES
+   ================================================== */
+@keyframes likePop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.35); }
+    100% { transform: scale(1); }
+}
+
+.overlaid-actions-container {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bottom-actions-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px 16px 16px; 
+}
+
+.custom-pill {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 24px;
+    padding: 6px 14px;
+    display: flex;
+    align-items: center;
+    gap: 16px; 
+    border: 1px solid rgb(0 0 0 / 15%);
+}
+.ion-palette-dark .custom-pill {
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.action-btn-custom {
+    background: transparent;
+    border: none;
+    color: #ffffff; 
+    display: flex;
+    align-items: center;
+    gap: 4px; 
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    line-height: 1; 
+}
+
+.action-btn-custom ion-icon {
+    font-size: 22px;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.action-btn-custom .liked-active {
+    color: #ff4757 !important;
+    animation: likePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.action-count {
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-top: 0; 
+    display: inline-block;
+}
+
+.overlaid-save-pill {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgb(0 0 0 / 15%);
+}
+
+.ion-palette-dark .overlaid-save-pill {
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.overlaid-save-pill ion-icon {
+    color: #ffffff;
+    font-size: 20px;
+}
+
+.adapt-color, .adapt-color-icon {
+    color: var(--ion-color-dark, #333) !important;
+}
+.adapt-color ion-icon {
+    color: var(--ion-color-dark, #333) !important;
+}
+.adapt-color .liked-active {
+    color: #ff4757 !important; 
+}
+
+:global(body.dark) .solid-pill,
+:global(.ion-palette-dark) .solid-pill {
+    background: rgba(255, 255, 255, 0.1);
+}
+:global(body.dark) .adapt-color,
+:global(body.dark) .adapt-color ion-icon,
+:global(body.dark) .adapt-color-icon,
+:global(.ion-palette-dark) .adapt-color,
+:global(.ion-palette-dark) .adapt-color ion-icon,
+:global(.ion-palette-dark) .adapt-color-icon {
+    color: #ffffff !important;
+}
+
 </style>
 
 <style>
@@ -1547,5 +1712,131 @@ ion-modal.image-viewer-modal ion-content {
 
 :global(.alert-button-cancel) {
     color: var(--ion-color-medium) !important;
+}
+
+/* ========== MODAL PERSONALIZADO: ELIMINAR PUBLICACIÓN ========== */
+.delete-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.delete-modal {
+    width: 100%;
+    max-width: 320px;
+    padding: 28px 24px 20px 24px;
+    border-radius: 24px;
+    text-align: center;
+
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+
+    backdrop-filter: blur(20px) saturate(1.5);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+}
+
+.ion-palette-dark .delete-modal {
+    background: rgba(28, 28, 30, 0.9);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.delete-modal-icon {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 14px auto;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+}
+
+.delete-modal-icon ion-icon {
+    font-size: 26px;
+    color: #ef4444;
+}
+
+.delete-modal-title {
+    margin: 0 0 6px 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--ion-color-dark, #1c1c1e);
+}
+
+.delete-modal-message {
+    margin: 0 0 22px 0;
+    font-size: 13.5px;
+    line-height: 1.4;
+    color: var(--ion-color-medium, #6b7280);
+}
+
+.delete-modal-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.delete-modal-btn {
+    flex: 1;
+    height: 46px;
+    border-radius: 14px;
+    border: none;
+    font-size: 14.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.delete-modal-cancel {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--ion-color-dark, #1c1c1e);
+}
+
+.ion-palette-dark .delete-modal-cancel {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+}
+
+.delete-modal-confirm {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+/* ========== ANIMACIONES DEL MODAL ========== */
+.delete-fade-enter-active,
+.delete-fade-leave-active {
+    transition: opacity 0.25s ease;
+}
+
+.delete-fade-enter-from,
+.delete-fade-leave-to {
+    opacity: 0;
+}
+
+.delete-scale-enter-active {
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+}
+
+.delete-scale-leave-active {
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.delete-scale-enter-from {
+    transform: scale(0.85);
+    opacity: 0;
+}
+
+.delete-scale-leave-to {
+    transform: scale(0.9);
+    opacity: 0;
 }
 </style>

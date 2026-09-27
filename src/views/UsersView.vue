@@ -63,7 +63,7 @@
                 </ion-row>
             </ion-grid>
             <ion-list v-if="!loading && filteredUsers.length > 0">
-                <div v-for="(u, index) in filteredUsers" :key="index" v-memo="[u.id, followingIds.includes(u.id)]">
+                <div v-for="u in filteredUsers" :key="u.id">
                     <ion-item v-if="u.id !== currentUserId">
                         <ion-avatar slot="start">
                             <img v-if="u.imagen_url" :src="getFullImageUrl(u.imagen_url)" alt="avatar" loading="lazy"
@@ -121,7 +121,7 @@
                 </ion-button>
             </div>
 
-            <ion-infinite-scroll @ionInfinite="onIonInfinite">
+            <ion-infinite-scroll :disabled="currentPage >= lastPage" @ionInfinite="onIonInfinite">
                 <ion-infinite-scroll-content />
             </ion-infinite-scroll>
         </ion-content>
@@ -141,7 +141,6 @@ import { closeOutline, chevronDownOutline, personCircle, searchOutline, schoolOu
 import { AuthService } from "@/services/auth";
 import { useDarkMode } from '@/utils/useDarkMode';
 import FollowButton from '@/components/FollowButton.vue';
-import { followersService } from '@/services/followersService';
 import { getFullImageUrl } from '@/utils/imageUtils';
 
 export default {
@@ -174,10 +173,10 @@ export default {
             loading: false,
             searchText: '',
             currentUserId: null,
-            followingIds: [],
             // --- NUEVAS VARIABLES DE PAGINACIÓN ---
             currentPage: 1,
             lastPage: 1,
+            hasEntered: false,
         };
     },
     computed: {
@@ -199,11 +198,14 @@ export default {
         }
 
         await this.loadCurrentUser();
-        await this.loadFollowingIds();
         await this.loadUniversidades();
         
         // Carga inicial (Página 1)
         await this.getUsers(true);
+    },
+    ionViewWillEnter() {
+        if (this.hasEntered) this.getUsers(true);
+        this.hasEntered = true;
     },
 
     methods: {
@@ -215,14 +217,6 @@ export default {
                     this.currentUserId = localUser.id;
                 }
             } catch (error) { }
-        },
-
-        async loadFollowingIds() {
-            try {
-                this.followingIds = await followersService.getFollowingIds();
-            } catch (error) {
-                this.followingIds = [];
-            }
         },
 
         async loadUniversidades() {
@@ -291,30 +285,11 @@ export default {
                 // Actualizamos la última página (si el backend lo devuelve, usualmente en response.data.data.last_page)
                 this.lastPage = response.data?.data?.last_page || response.data?.last_page || 1;
 
-                const currentUserId = this.currentUserId;
-
-                // 4. Enriquecer usuarios (Tu misma lógica de is_following)
-                const enrichedUsers = usersData.map((user) => {
-                    let isFollowing = false;
-                    if (this.followingIds.includes(user.id)) {
-                        isFollowing = true;
-                    } else if (user.is_following !== undefined && user.is_following !== null) {
-                        isFollowing = Boolean(user.is_following);
-                    } else if (user.followers && Array.isArray(user.followers) && currentUserId) {
-                        isFollowing = user.followers.some(follower => {
-                            const followerId = follower.follower_id || follower.user_id || follower.id;
-                            return followerId === currentUserId;
-                        });
-                    }
-
-                    return {
-                        ...user,
-                        is_following: isFollowing,
-                        followers_count: user.followers_count !== undefined
-                            ? user.followers_count
-                            : (user.followers?.length || 0),
-                    };
-                });
+                // La API calcula el seguimiento para cada página, sin limitarlo a los primeros 20 seguidos.
+                const enrichedUsers = usersData.map(user => ({
+                    ...user,
+                    is_following: Boolean(user.is_following),
+                }));
 
                 // 5. Decidimos si reemplazamos la lista o agregamos (Scroll infinito)
                 if (isFirstLoad) {
@@ -324,12 +299,14 @@ export default {
                 }
                 
                 this.filteredUsers = this.users;
+                return true;
 
             } catch (error) {
                 if (error.response?.status === 401) {
                     AuthService.logout(); // Mejor usar tu servicio directamente si tiene esta función
                     this.$router.replace("/login");
                 }
+                return false;
             } finally {
                 this.loading = false;
             }
@@ -339,15 +316,10 @@ export default {
         async onIonInfinite(ev) {
             if (this.currentPage < this.lastPage) {
                 this.currentPage++;
-                await this.getUsers(false); // isFirstLoad = false
+                if (!(await this.getUsers(false))) this.currentPage--;
             }
             
             ev.target.complete();
-
-            // Si llegamos a la última página, lo deshabilitamos para que no gire sin sentido
-            if (this.currentPage >= this.lastPage) {
-                ev.target.disabled = true;
-            }
         },
 
         goBack() {
@@ -362,16 +334,6 @@ export default {
             user.is_following = event.isFollowing;
             user.followers_count = event.followersCount;
 
-            if (event.isFollowing) {
-                if (!this.followingIds.includes(user.id)) {
-                    this.followingIds.push(user.id);
-                }
-            } else {
-                const index = this.followingIds.indexOf(user.id);
-                if (index > -1) {
-                    this.followingIds.splice(index, 1);
-                }
-            }
         },
 
         goToProfile(user) {

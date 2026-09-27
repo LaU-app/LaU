@@ -2,6 +2,10 @@ import { createApp } from "vue";
 import App from "./App.vue";
 import router from "./router";
 import { IonicVue } from "@ionic/vue";
+import { addIcons } from "ionicons";
+import { chevronDownCircleOutline } from "ionicons/icons";
+
+addIcons({ 'chevron-down-circle-outline': chevronDownCircleOutline });
 
 /* CSS Imports */
 import "@ionic/vue/css/core.css";
@@ -50,9 +54,10 @@ window.Echo = new Echo({
   authorizer: (channel, options) => {
     return {
       authorize: (socketId, callback) => {
+        const authPath = channel.name.startsWith('private-study.') ? '/api/realtime/auth' : '/api/chat/auth';
         axios
           .post(
-            `${BASE_URL}/api/chat/auth`,
+            `${BASE_URL}${authPath}`,
             {
               socket_id: socketId,
               channel_name: channel.name,

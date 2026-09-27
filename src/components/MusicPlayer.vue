@@ -15,7 +15,9 @@
 
             <div v-if="isAmbientMode" class="dark-overlay" :class="{ 'active-dark': isDarkMode }"></div>
 
-            <div class="progress-bg" :style="{ width: progressPercent + '%' }"></div>
+
+            <div class="progress-bg" :class="{ 'is-playing': isPlaying }" :style="{ width: progressPercent + '%' }"></div>
+
             
             <div class="card-inner-content">
                 <ion-thumbnail class="album-art">
@@ -31,9 +33,8 @@
                         ref="audioElement" 
                         :src="post.itunes_preview_url" 
                         @play="onNativePlay"
-                        @pause="isPlaying = false"
+                        @pause="onNativePause"
                         @ended="onEnded"
-                        @timeupdate="updateTime"
                         @loadedmetadata="loadMetadata"
                     ></audio>
 
@@ -78,15 +79,15 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'; // NUEVO: nextTick
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import { IonCard, IonCardContent, IonThumbnail, IonText, IonIcon, IonButton } from '@ionic/vue';
 import { musicalNotesOutline, playCircle, pauseCircle } from 'ionicons/icons';
 import { useAmbientMode } from "@/utils/useAmbientMode";
 import * as VibrantNamespace from 'node-vibrant';
-import { globalAudioState } from '@/utils/audioPlayerState';
 import { App } from '@capacitor/app';
 import { useDarkMode } from "@/utils/useDarkMode";
+import { globalAudioState, startAudioAnimation, stopAudioAnimation } from '@/utils/audioPlayerState';
 
 export default {
     name: 'MusicPlayer',
@@ -104,29 +105,46 @@ export default {
 
         const dominantColorHex = ref('#113a82'); 
         const dominantColorRgb = ref('77, 141, 255');
-
         const playerContainer = ref(null);
-
         let appStateListener = null;
-
-        const isPlaying = ref(false);
-        const currentTimeFormatted = ref('0:00');
-        const durationFormatted = ref('0:30');
-        const progressPercent = ref(0); 
-
         const isCardCurrentlyVisible = ref(true);
 
-        // --- NUEVO: Lógica de Marquesina (Marquee) ---
-        // Referencias a los elementos de texto en el DOM
+        // ==========================================
+        // APLICACIÓN SOLID: SINGLE SOURCE OF TRUTH
+        // Delegamos el estado al cerebro global.
+        // ==========================================
+        const isPlaying = computed(() => {
+            return globalAudioState.post?.id === props.post.id && globalAudioState.isPlaying;
+        });
+
+        const progressPercent = computed(() => {
+            return globalAudioState.post?.id === props.post.id ? globalAudioState.progressPercent : 0;
+        });
+
+        const currentTimeFormatted = ref('0:00');
+        const durationFormatted = ref('0:30');
+
+        // Mantenemos el tiempo local actualizado sin calcular animaciones
+        watch(() => progressPercent.value, () => {
+            if (audioElement.value && isPlaying.value) {
+                currentTimeFormatted.value = formatTime(audioElement.value.currentTime);
+            }
+        });
+
+        const formatTime = (seconds) => {
+            if (isNaN(seconds)) return '0:00';
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return `${m}:${s < 10 ? '0' : ''}${s}`;
+        };
+
+        // --- Lógica de Marquesina (Marquee) ---
         const songTitleRef = ref(null);
         const artistNameRef = ref(null);
-        // Estados reactivos para saber si el texto debe desplazarse
         const shouldScrollTitle = ref(false);
         const shouldScrollArtist = ref(false);
 
-        // Función que revisa si el texto es más ancho que su contenedor
         const checkScrollingRequirements = () => {
-            // Le damos 150 milisegundos al navegador para que termine de aplicar los estilos de Ionic
             setTimeout(() => {
                 nextTick(() => {
                     if (songTitleRef.value && songTitleRef.value.parentElement) {
@@ -143,9 +161,8 @@ export default {
             if (!url) return;
             try {
                 const VibrantClass = VibrantNamespace.Vibrant || VibrantNamespace.default || VibrantNamespace;
-                
                 const img = new Image();
-                img.crossOrigin = "anonymous"; // Necesario para imágenes externas (iTunes)
+                img.crossOrigin = "anonymous"; 
                 
                 const imagePromise = new Promise((resolve, reject) => {
                     img.onload = () => resolve(img);
@@ -155,71 +172,83 @@ export default {
 
                 const loadedImg = await imagePromise;
                 const palette = await VibrantClass.from(loadedImg).getPalette();
-
-                // Buscamos el mejor color disponible
                 const swatch = palette.Vibrant || palette.LightVibrant || palette.Muted;
                 
                 if (swatch) {
-                    dominantColorHex.value = swatch.getHex(); // Ejemplo: "#ff0000"
+                    dominantColorHex.value = swatch.getHex(); 
                     const rgb = swatch.getRgb();
-                    dominantColorRgb.value = `${Math.round(rgb[0])}, ${Math.round(rgb[1])}, ${Math.round(rgb[2])}`; // Ejemplo: "255, 0, 0"
+                    dominantColorRgb.value = `${Math.round(rgb[0])}, ${Math.round(rgb[1])}, ${Math.round(rgb[2])}`;
                 }
             } catch (error) {
-                // Si falla (por reglas de CORS del servidor de Apple), simplemente se queda con el azul base
-                console.warn("Usando color azul por defecto, no se pudo extraer color de la portada.");
+                console.warn("Usando color azul por defecto.");
             }
         };
 
-        // --- Mantenemos la lógica anterior ---
         const route = useRoute();
 
-        // Pausar si cambiamos de vista (Mejora UX que ya teníamos)
         watch(() => route.path, () => {
             if (isPlaying.value && audioElement.value) {
                 audioElement.value.pause();
-                isPlaying.value = false;
             }
         });
 
-        // NUEVO: Volvemos a revisar si se necesita marquesina si los datos del post cambian
         watch(() => props.post, () => {
             checkScrollingRequirements();
         }, { deep: true });
 
-        // Cuando se pausa desde la burbuja flotante, actualizamos nuestro botón local
-        watch(() => globalAudioState.isPlaying, (newVal) => {
-            if (globalAudioState.post?.id === props.post.id) {
-                isPlaying.value = newVal;
-            }
-        });
-
-        const formatTime = (seconds) => {
-            if (isNaN(seconds)) return '0:00';
-            const m = Math.floor(seconds / 60);
-            const s = Math.floor(seconds % 60);
-            return `${m}:${s < 10 ? '0' : ''}${s}`;
-        };
-
+        // ==========================================
+        // CONTROLADORES DE AUDIO (Emisores)
+        // ==========================================
         const togglePlay = () => {
             if (!audioElement.value) return;
+            
+            // Asignar al estado global si es un audio nuevo
+            if (globalAudioState.post?.id !== props.post.id) {
+                globalAudioState.post = props.post;
+                globalAudioState.audioElement = audioElement.value;
+                globalAudioState.themeColorHex = dominantColorHex.value;
+                globalAudioState.themeColorRgb = dominantColorRgb.value;
+            }
+
             if (audioElement.value.paused) {
-                audioElement.value.play();
-                isPlaying.value = true;
+                audioElement.value.play(); // Dispara onNativePlay nativamente
             } else {
-                audioElement.value.pause();
-                isPlaying.value = false;
+                audioElement.value.pause(); // Dispara onNativePause nativamente
             }
         };
 
-        const updateTime = () => {
-            if (audioElement.value) {
-                currentTimeFormatted.value = formatTime(audioElement.value.currentTime);
-                progressPercent.value = (audioElement.value.currentTime / audioElement.value.duration) * 100 || 0;
-                
-                // Sincronizamos con la burbuja flotante
-                if (globalAudioState.post && globalAudioState.post.id === props.post.id) {
-                    globalAudioState.progressPercent = progressPercent.value;
-                }
+        const onNativePlay = (event) => {
+            globalAudioState.isVisible = isCardCurrentlyVisible.value; 
+            globalAudioState.isDismissed = false;
+            
+            globalAudioState.post = props.post;
+            globalAudioState.isPlaying = true;
+            globalAudioState.audioElement = audioElement.value;
+            globalAudioState.themeColorHex = dominantColorHex.value;
+            globalAudioState.themeColorRgb = dominantColorRgb.value;
+
+            startAudioAnimation(); // Arrancar el motor global
+
+            // Pausar los demás audios en el feed
+            const audios = document.querySelectorAll('audio');
+            audios.forEach((audio) => {
+                if (audio !== event.target) audio.pause();
+            });
+        };
+
+        const onNativePause = () => {
+            if (globalAudioState.post?.id === props.post.id) {
+                globalAudioState.isPlaying = false;
+                stopAudioAnimation(); // Detener el motor global
+            }
+        };
+
+        const onEnded = () => {
+            currentTimeFormatted.value = '0:00';
+            if (globalAudioState.post?.id === props.post.id) {
+                globalAudioState.isPlaying = false;
+                globalAudioState.progressPercent = 0;
+                stopAudioAnimation();
             }
         };
 
@@ -229,51 +258,17 @@ export default {
             }
         };
 
-        const onEnded = () => {
-            isPlaying.value = false;
-            progressPercent.value = 0;
-            currentTimeFormatted.value = '0:00';
-        };
-
-        // Cuando le damos play a ESTE post
-        const onNativePlay = (event) => {
-            globalAudioState.isVisible = isCardCurrentlyVisible.value; 
-
-            globalAudioState.isDismissed = false;
-            
-            isPlaying.value = true;
-            globalAudioState.post = props.post;
-            globalAudioState.isPlaying = true;
-            globalAudioState.audioElement = audioElement.value;
-            
-            globalAudioState.themeColorHex = dominantColorHex.value;
-            globalAudioState.themeColorRgb = dominantColorRgb.value;
-
-            const audios = document.querySelectorAll('audio');
-            audios.forEach((audio) => {
-                if (audio !== event.target) audio.pause();
-            });
-        };
-
         onMounted(async () => {
-            // Revisa si se necesita marquesina al montar el componente por primera vez
             checkScrollingRequirements();
 
-            // --- MAGIA: DETECTAR SI LA TARJETA SALE DE LA PANTALLA ---
             const observer = new IntersectionObserver(([entry]) => {
-                // 1. Siempre actualizamos la memoria local de esta tarjeta
                 isCardCurrentlyVisible.value = entry.isIntersecting;
-                
-                // 2. Si es la canción que está sonando, también le avisa al cerebro global
                 if (globalAudioState.post && globalAudioState.post.id === props.post.id) {
                     globalAudioState.isVisible = entry.isIntersecting;
                 }
-            }, { 
-                threshold: [0, 0.1, 0.9, 1.0] 
-            });
+            }, { threshold: [0, 0.1, 0.9, 1.0] });
 
             if (playerContainer.value) {
-                // En Ionic a veces necesitamos acceder a $el
                 observer.observe(playerContainer.value.$el || playerContainer.value);
             }
 
@@ -284,7 +279,6 @@ export default {
             appStateListener = await App.addListener('appStateChange', (state) => {
                 if (!state.isActive && audioElement.value) {
                     audioElement.value.pause();
-                    isPlaying.value = false;
                 }
             });
         });
@@ -297,9 +291,9 @@ export default {
             musicalNotesOutline, playCircle, pauseCircle,
             audioElement, isPlaying, togglePlay,
             currentTimeFormatted, durationFormatted, progressPercent,
-            updateTime, loadMetadata, onEnded, onNativePlay,
-            // Exponemos las refs y estados de la marquesina
-            songTitleRef, artistNameRef, shouldScrollTitle, shouldScrollArtist, isAmbientMode, dominantColorHex, dominantColorRgb, playerContainer,
+            loadMetadata, onEnded, onNativePlay, onNativePause,
+            songTitleRef, artistNameRef, shouldScrollTitle, shouldScrollArtist, 
+            isAmbientMode, dominantColorHex, dominantColorRgb, playerContainer,
             isDarkMode
         }
     }
@@ -372,22 +366,75 @@ export default {
 }
 
 /* 3. CAPA SUPERIOR DE FONDO: Barra de progreso (Tu color #4d8dff con transparencia) */
-/* MODO NORMAL */
+/* --- LA NUEVA BARRA DE PROGRESO MULTI-OLA --- */
 .progress-bg {
     position: absolute;
     top: 0; left: 0; 
     height: 100%;
-    /* Usamos el RGB dinámico con 45% de opacidad */
-    background: rgba(var(--theme-color-rgb), 0.55); 
-    transition: width 0.1s linear; 
+    /* El contenedor ahora es invisible, el color lo ponen las olas */
+    background: transparent; 
     z-index: 2;
+    /* El halo de luz ilumina ambas olas al mismo tiempo dándoles volumen */
+    filter: drop-shadow(3px 0px 5px rgba(255, 255, 255, 0.4));
 }
 
-/* MODO AMBIENTE */
-.is-ambient .progress-bg {
-    /* Usamos el RGB dinámico con solo 15% de opacidad para que el blur de fondo brille */
-    background: rgba(var(--theme-color-rgb), 0.15); 
+/* OLA 1: La ola principal y el cuerpo sólido de la barra */
+.progress-bg::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(var(--theme-color-rgb), 0.55);
+    -webkit-mask-image: 
+        linear-gradient(black, black), 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 100' preserveAspectRatio='none'%3E%3Cpath d='M20,0 Q40,25 20,50 T20,100 L0,100 L0,0 Z' fill='black'/%3E%3C/svg%3E");
+    
+    /* CAMBIO AQUÍ: Cambiamos 30px 50px a 30px 100px para estirarla verticalmente */
+    -webkit-mask-size: calc(100% - 14px) 100%, 30px 100px; 
+    
+    -webkit-mask-position: left top, right 0px top 0px;
+    -webkit-mask-repeat: no-repeat, repeat-y;
 }
+/* OLA 2: Ola secundaria desfasada (Efecto 3D de líquido traslúcido) */
+.progress-bg::after {
+    content: '';
+    position: absolute;
+    /* Sobresale 10px a la derecha para adelantarse a la ola principal */
+    top: 0; left: 0; right: -10px; bottom: 0; 
+    background: rgba(var(--theme-color-rgb), 0.35); /* Más transparente */
+    
+    /* Esta máscara solo dibuja la ola, no el cuerpo de la barra */
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 100' preserveAspectRatio='none'%3E%3Cpath d='M20,0 Q40,25 20,50 T20,100 L0,100 L0,0 Z' fill='black'/%3E%3C/svg%3E");
+    -webkit-mask-size: 25px 70px; /* Ola más estirada verticalmente */
+    -webkit-mask-position: right 0px top 0px;
+    -webkit-mask-repeat: repeat-y;
+    z-index: -1;
+}
+
+/* MODO AMBIENTE (Ajuste de transparencia si estás en MusicPlayer.vue) */
+.is-ambient .progress-bg::before { background: rgba(var(--theme-color-rgb), 0.20); }
+.is-ambient .progress-bg::after  { background: rgba(var(--theme-color-rgb), 0.10); }
+
+/* --- ANIMACIONES INDEPENDIENTES --- */
+/* Al tener velocidades distintas (0.8s y 1.3s), las olas se cruzan de forma caótica y natural */
+.progress-bg.is-playing::before {
+    animation: flowWaveEdge1 0.8s linear infinite;
+}
+.progress-bg.is-playing::after {
+    animation: flowWaveEdge2 1.3s linear infinite;
+}
+
+@keyframes flowWaveEdge1 {
+    0% { -webkit-mask-position: left top, right 0px top 0px; }
+    100% { -webkit-mask-position: left top, right 0px top 100px; } 
+}
+
+@keyframes flowWaveEdge2 {
+    0% { -webkit-mask-position: right 0px top 0px; }
+    100% { -webkit-mask-position: right 0px top 70px; } /* Sincronizado con su mask-size */
+}
+
+
+
 
 /* --- EL CONTENIDO REAL (z-index superior) --- */
 .card-inner-content {

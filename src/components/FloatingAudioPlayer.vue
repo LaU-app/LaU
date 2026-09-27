@@ -23,7 +23,9 @@
                    :width="calculatedPillWidth" 
                 />
                 
-                <div class="progress-bg" :style="{ width: globalAudioState.progressPercent + '%' }"></div>
+
+                <div class="progress-bg" :class="{ 'is-playing': globalAudioState.isPlaying }" :style="{ width: globalAudioState.progressPercent + '%' }"></div>
+
                 
                 <div class="pill-content">
                     <img v-if="globalAudioState.post.itunes_artwork_url" 
@@ -53,15 +55,18 @@
 import { ref, watch, nextTick, computed, onMounted, onUnmounted } from 'vue';
 import { IonButton, IonIcon, createGesture } from '@ionic/vue';
 import { playCircle, pauseCircle } from 'ionicons/icons';
-import { globalAudioState, toggleGlobalAudio, dismissGlobalAudio } from '@/utils/audioPlayerState';
 
+// Inversión de Dependencias: Dependemos del estado central, no de lógica local
+import { globalAudioState, toggleGlobalAudio, dismissGlobalAudio } from '@/utils/audioPlayerState';
 import LiquidGlassBox from '@/components/LiquidGlassBox.vue';
 import { useGlassMode } from '@/utils/useGlassMode';
 
+// ==========================================
+// 1. ESTADO DE INTERFAZ Y RESPONSIVE
+// ==========================================
 const { isGlassMode } = useGlassMode();
 const windowWidth = ref(window.innerWidth);
 
-// 3. Función para detectar si giran el celular
 const updateWidth = () => {
     windowWidth.value = window.innerWidth;
 };
@@ -69,31 +74,33 @@ const updateWidth = () => {
 onMounted(() => window.addEventListener('resize', updateWidth));
 onUnmounted(() => window.removeEventListener('resize', updateWidth));
 
-// 4. Calculamos el ancho exacto: 
-// El ancho de la pantalla menos los paddings (32px), pero nunca mayor a 400px.
 const calculatedPillWidth = computed(() => {
     return Math.min(windowWidth.value - 32, 400);
 });
 
+// ==========================================
+// 2. GESTOS Y ANIMACIONES (Responsabilidad Visual)
+// ==========================================
 const pillRef = ref(null);
 let gesture = null;
 
-// Observamos cuándo la píldora aparece en pantalla para conectarle los gestos
+// ¡RESTAURADO! Observador vital para que funcione el Swipe-to-dismiss
 watch(
     () => globalAudioState.post && !globalAudioState.isVisible && !globalAudioState.isDismissed, 
     async (shouldShow) => {
         if (shouldShow) {
-            // Esperamos a que Vue dibuje la píldora en la pantalla
+            // Esperamos a que Vue dibuje la píldora en el DOM
             await nextTick();
             initGesture();
         } else {
-            // Si desaparece, limpiamos la memoria del gesto
+            // Limpiamos la memoria si desaparece
             if (gesture) {
                 gesture.destroy();
                 gesture = null;
             }
         }
-    }
+    },
+    { immediate: true } // Ejecutar al cargar por si la píldora ya debía mostrarse
 );
 
 const initGesture = () => {
@@ -105,35 +112,33 @@ const initGesture = () => {
         direction: 'x', // Solo movimiento horizontal
         
         onStart: () => {
-            // Quitamos transiciones para que el movimiento sea pegado al dedo
+            // Quitamos transiciones para que se pegue al dedo del usuario
             pillRef.value.style.transition = 'none'; 
         },
         
         onMove: (detail) => {
-            // Movemos la píldora y le bajamos la opacidad poco a poco
             pillRef.value.style.transform = `translateX(${detail.deltaX}px)`;
             pillRef.value.style.opacity = `${1 - Math.abs(detail.deltaX) / 300}`;
         },
         
         onEnd: (detail) => {
-            // Le devolvemos la fluidez a la animación
             pillRef.value.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
             
-            // Si deslizó más de 100px (a la izq o der), la cerramos
+            // Umbral para decidir si se cierra o no (100px)
             if (Math.abs(detail.deltaX) > 100) {
-                
                 const direccion = detail.deltaX > 0 ? 1 : -1;
-                // La sacamos volando fuera de la pantalla
+                
+                // La sacamos de la pantalla visualmente
                 pillRef.value.style.transform = `translateX(${direccion * window.innerWidth}px)`;
                 pillRef.value.style.opacity = '0';
 
-                // Esperamos que termine de volar y luego ejecutamos la pausa global
+                // Le avisamos al Cerebro Global que la oculte y la pause
                 setTimeout(() => {
                     dismissGlobalAudio();
                 }, 300);
 
             } else {
-                // Si se arrepintió y no deslizó lo suficiente, regresa al centro como un resorte
+                // Efecto resorte si no deslizó lo suficiente
                 pillRef.value.style.transform = 'translateX(0px)';
                 pillRef.value.style.opacity = '1';
             }
@@ -192,13 +197,72 @@ const initGesture = () => {
 }
 
 /* --- COLORES DINÁMICOS AQUÍ --- */
+/* --- LA NUEVA BARRA DE PROGRESO MULTI-OLA --- */
 .progress-bg {
     position: absolute;
-    top: 0; left: 0; height: 100%;
-    background: rgba(var(--theme-color-rgb), 0.45); /* Color dinámico con opacidad */
-    transition: width 0.1s linear;
+    top: 0; left: 0; 
+    height: 100%;
+    /* El contenedor ahora es invisible, el color lo ponen las olas */
+    background: transparent; 
     z-index: 0;
+    pointer-events: none;
+    /* El halo de luz ilumina ambas olas al mismo tiempo dándoles volumen */
+    filter: drop-shadow(3px 0px 5px rgba(255, 255, 255, 0.4));
 }
+
+/* OLA 1: La ola principal y el cuerpo sólido de la barra */
+.progress-bg::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(var(--theme-color-rgb), 0.55);
+    -webkit-mask-image: 
+        linear-gradient(black, black), 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 100' preserveAspectRatio='none'%3E%3Cpath d='M20,0 Q40,25 20,50 T20,100 L0,100 L0,0 Z' fill='black'/%3E%3C/svg%3E");
+    -webkit-mask-size: calc(100% - 14px) 100%, 30px 50px;
+    -webkit-mask-position: left top, right 0px top 0px;
+    -webkit-mask-repeat: no-repeat, repeat-y;
+}
+
+/* OLA 2: Ola secundaria desfasada (Efecto 3D de líquido traslúcido) */
+.progress-bg::after {
+    content: '';
+    position: absolute;
+    /* Sobresale 10px a la derecha para adelantarse a la ola principal */
+    top: 0; left: 0; right: -10px; bottom: 0; 
+    background: rgba(var(--theme-color-rgb), 0.35); /* Más transparente */
+    
+    /* Esta máscara solo dibuja la ola, no el cuerpo de la barra */
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 100' preserveAspectRatio='none'%3E%3Cpath d='M20,0 Q40,25 20,50 T20,100 L0,100 L0,0 Z' fill='black'/%3E%3C/svg%3E");
+    -webkit-mask-size: 25px 70px; /* Ola más estirada verticalmente */
+    -webkit-mask-position: right 0px top 0px;
+    -webkit-mask-repeat: repeat-y;
+    z-index: -1;
+}
+
+/* MODO AMBIENTE (Ajuste de transparencia si estás en MusicPlayer.vue) */
+.is-ambient .progress-bg::before { background: rgba(var(--theme-color-rgb), 0.20); }
+.is-ambient .progress-bg::after  { background: rgba(var(--theme-color-rgb), 0.10); }
+
+/* --- ANIMACIONES INDEPENDIENTES --- */
+/* Al tener velocidades distintas (0.8s y 1.3s), las olas se cruzan de forma caótica y natural */
+.progress-bg.is-playing::before {
+    animation: flowWaveEdge1 0.8s linear infinite;
+}
+.progress-bg.is-playing::after {
+    animation: flowWaveEdge2 1.3s linear infinite;
+}
+
+@keyframes flowWaveEdge1 {
+    0% { -webkit-mask-position: left top, right 0px top 0px; }
+    100% { -webkit-mask-position: left top, right 0px top 50px; } /* Sincronizado con su mask-size */
+}
+
+@keyframes flowWaveEdge2 {
+    0% { -webkit-mask-position: right 0px top 0px; }
+    100% { -webkit-mask-position: right 0px top 70px; } /* Sincronizado con su mask-size */
+}
+
 
 .mini-play-btn ion-icon { 
     font-size: 32px; 
@@ -261,4 +325,62 @@ const initGesture = () => {
 
 .slide-down-enter-active, .slide-down-leave-active { transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
 .slide-down-enter-from, .slide-down-leave-to { opacity: 0; transform: translateY(-20px) scale(0.95); }
+/* ==================================================
+   ✨ BORDE DE DESTELLO (Edge Glint) PARA EL CRISTAL ✨
+   Diagonal: pico fuerte arriba-izq, pico suave abajo-der
+   ================================================== */
+.floating-pill.is-glass::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 30px; /* mismo radio que .floating-pill */
+    padding: 2.4px;
+    pointer-events: none;
+    z-index: 2; /* por encima de .pill-content (z-index:1) */
+
+    /* 🌞 TEMA CLARO (default) → destello NEGRO */
+    background: conic-gradient(
+        from -45deg,
+        rgba(0, 0, 0, 0.35) 0deg,
+        rgba(0, 0, 0, 0.03) 60deg,
+        rgba(0, 0, 0, 0.03) 150deg,
+        rgba(0, 0, 0, 0.22) 180deg,
+        rgba(0, 0, 0, 0.03) 210deg,
+        rgba(0, 0, 0, 0.03) 300deg,
+        rgba(0, 0, 0, 0.35) 360deg
+    );
+
+    -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+}
+
+/* Halo sutil del tema claro */
+.floating-pill.is-glass {
+    box-shadow:
+        inset 0 0 10px rgba(0, 0, 0, 0.08),
+        0 0 14px rgba(0, 0, 0, 0.06);
+}
+
+/* 🌙 TEMA OSCURO → destello BLANCO */
+.ion-palette-dark .floating-pill.is-glass::after {
+    background: conic-gradient(
+        from -45deg,
+        rgba(255, 255, 255, 0.5) 0deg,
+        rgba(255, 255, 255, 0.02) 60deg,
+        rgba(255, 255, 255, 0.02) 150deg,
+        rgba(180, 200, 255, 0.4) 180deg,
+        rgba(255, 255, 255, 0.02) 210deg,
+        rgba(255, 255, 255, 0.02) 300deg,
+        rgba(255, 255, 255, 0.5) 360deg
+    );
+}
+
+.ion-palette-dark .floating-pill.is-glass {
+    box-shadow:
+        inset 0 0 10px rgba(255, 255, 255, 0.1),
+        0 0 16px rgba(120, 160, 255, 0.12);
+}
 </style>
