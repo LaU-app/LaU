@@ -42,3 +42,7 @@ ios/App/GoogleService-Info.plist
 service-account.json
 firebase-adminsdk.json
 **/firebase/*-adminsdk-*.json
+
+# Artefactos de Cypress
+/tests/e2e/screenshots
+/tests/e2e/videos

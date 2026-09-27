@@ -5,7 +5,12 @@
         <img src="/LaU.png" alt="LaU" class="logo-img" />
       </div>
       <ion-buttons slot="end" class="header-buttons">
-        
+
+        <!-- Botón de búsqueda (solo en las vistas que muestran el buscador) -->
+        <ion-button v-if="showSearch" @click="$emit('openSearch')" aria-label="Buscar publicaciones" fill="clear" class="tasks-header-btn search-header-btn">
+          <ion-icon :icon="search" class="header-icon"></ion-icon>
+        </ion-button>
+
         <!-- Botón de login -->
         <ion-button v-if="!isAuthenticated" @click="goToLogin" aria-label="Iniciar sesión">
           <ion-icon :icon="logIn" class="header-icon"></ion-icon>
@@ -42,7 +47,7 @@
 
 <script setup>
 import { IonHeader, IonToolbar, IonButtons, IonButton, IonIcon, IonBadge } from "@ionic/vue";
-import { logIn, notificationsSharp } from "ionicons/icons";
+import { logIn, notificationsSharp, search } from "ionicons/icons";
 import { computed, ref, watch, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { notificationsService } from "@/services/notificationsService"; // Ahora usamos notificaciones
@@ -52,9 +57,10 @@ const props = defineProps({
   isDarkMode: { type: Boolean, required: true },
   user: { type: Object, default: () => ({}) },
   isAuthenticated: { type: Boolean, default: false },
+  showSearch: { type: Boolean, default: false },
 });
 
-defineEmits(["toggleDarkMode"]);
+defineEmits(["toggleDarkMode", "openSearch"]);
 const router = useRouter();
 const route = useRoute();
 const onMarketplace = computed(() => route.path.startsWith("/marketplace"));
