@@ -1,6 +1,7 @@
-import { defineConfig } from 'cypress';
+// CommonJS: con "type": "module" en package.json Cypress no puede cargar un cypress.config.ts
+const { defineConfig } = require('cypress');
 
-export default defineConfig({
+module.exports = defineConfig({
   e2e: {
     supportFile: 'tests/e2e/support/e2e.{js,jsx,ts,tsx}',
     specPattern: 'tests/e2e/specs/**/*.cy.{js,jsx,ts,tsx}',

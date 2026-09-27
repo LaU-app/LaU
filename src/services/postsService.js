@@ -5,9 +5,91 @@
 import { api } from "./api";
 import { AuthService } from "./auth";
 
+// Búsqueda en cliente: cuántas páginas del feed se revisan y cuánto dura la caché
+const SEARCH_MAX_PAGES = 5;
+const SEARCH_CACHE_TTL = 60 * 1000;
+
+/**
+ * Minúsculas y sin tildes, para que "calculo" encuentre "Cálculo"
+ * @param {string} value
+ * @returns {string}
+ */
+export function normalizeSearchText(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * Indica si un post contiene todas las palabras del término de búsqueda,
+ * mirando el contenido, el autor y la canción
+ * @param {Object} post
+ * @param {string} query
+ * @returns {boolean}
+ */
+export function postMatchesQuery(post, query) {
+  const words = normalizeSearchText(query).split(/\s+/).filter(Boolean);
+  if (words.length === 0) return true;
+
+  const haystack = normalizeSearchText(
+    [
+      post.texto,
+      post.titulo,
+      post.descripcion,
+      post.user?.name,
+      post.user?.username,
+      post.itunes_track_name,
+      post.itunes_artist_name,
+    ]
+      .filter(Boolean)
+      .join(" "),
+  );
+
+  return words.every((word) => haystack.includes(word));
+}
+
 class PostsService {
   constructor() {
     // Ya no necesitamos apiBaseUrl ni headers porque api.js lo maneja
+
+    // null = aún no sabemos si el backend expone GET /posts/search
+    this._searchEndpointAvailable = null;
+    this._searchCache = new Map();
+  }
+
+  /**
+   * Agrega user_has_liked y los contadores que usa PostCard
+   * @param {Object} post - Post tal como viene del backend
+   * @param {number} currentUserId - ID del usuario autenticado
+   * @returns {Object} Post enriquecido
+   */
+  _enrichPost(post, currentUserId) {
+    // Calcular user_has_liked desde el array de likes si no viene del backend
+    let hasLiked = false;
+
+    if (post.user_has_liked !== undefined) {
+      // Si el backend envía user_has_liked, usarlo
+      hasLiked = post.user_has_liked;
+    } else if (post.likes && Array.isArray(post.likes) && currentUserId) {
+      // Si no viene user_has_liked pero sí el array de likes, calcularlo
+      hasLiked = post.likes.some(like =>
+        like.user_id === currentUserId ||
+        like.usuario_id === currentUserId ||
+        like.id === currentUserId
+      );
+    }
+
+    return {
+      ...post,
+      // IMPORTANTE: Preservar el valor calculado o del backend
+      user_has_liked: hasLiked,
+      // Contar likes (puede venir como count o array)
+      likes_count: post.likes_count !== undefined ? post.likes_count : (post.likes?.length || 0),
+      // Contar comentarios
+      comments_count: post.comentarios?.length || 0,
+    };
   }
 
   /**
@@ -69,32 +151,7 @@ class PostsService {
         } */
 
         // Enriquecer posts con información de autenticación
-        const enrichedPosts = posts.map((post) => {
-          // Calcular user_has_liked desde el array de likes si no viene del backend
-          let hasLiked = false;
-
-          if (post.user_has_liked !== undefined) {
-            // Si el backend envía user_has_liked, usarlo
-            hasLiked = post.user_has_liked;
-          } else if (post.likes && Array.isArray(post.likes) && currentUserId) {
-            // Si no viene user_has_liked pero sí el array de likes, calcularlo
-            hasLiked = post.likes.some(like =>
-              like.user_id === currentUserId ||
-              like.usuario_id === currentUserId ||
-              like.id === currentUserId
-            );
-          }
-
-          return {
-            ...post,
-            // IMPORTANTE: Preservar el valor calculado o del backend
-            user_has_liked: hasLiked,
-            // Contar likes (puede venir como count o array)
-            likes_count: post.likes_count !== undefined ? post.likes_count : (post.likes?.length || 0),
-            // Contar comentarios
-            comments_count: post.comentarios?.length || 0,
-          };
-        });
+        const enrichedPosts = posts.map((post) => this._enrichPost(post, currentUserId));
 
         return {
           success: true,
@@ -354,6 +411,146 @@ class PostsService {
 
       return { success: false, error: errorMessage };
     }
+  }
+
+  /**
+   * Busca posts por texto y/o por la universidad y carrera del autor
+   *
+   * Usa GET /posts/search si el backend lo expone. Si responde 404/405 se
+   * recuerda y, a partir de ahí, se busca en cliente sobre las publicaciones
+   * más recientes del feed (scope "recent").
+   *
+   * @param {string} query - Término de búsqueda (puede ir vacío si hay filtros)
+   * @param {Object} filters - { universidad_id, carrera_id }
+   * @returns {Promise<Object>} { success, data, scope, error? }
+   */
+  async searchPosts(query, filters = {}) {
+    const term = (query || "").trim();
+    const hasFilters = Boolean(filters.universidad_id || filters.carrera_id);
+
+    if (!term && !hasFilters) {
+      return { success: true, data: [], scope: null };
+    }
+
+    if (term && this._searchEndpointAvailable !== false) {
+      try {
+        const response = await api.get("/posts/search", {
+          params: {
+            q: term,
+            universidad: filters.universidad_id || undefined,
+            carrera: filters.carrera_id || undefined,
+          },
+        });
+
+        // Acepta tanto { data: [...] } como la paginación de Laravel { data: { data: [...] } }
+        const payload = response.data?.data;
+        const posts = Array.isArray(payload) ? payload : payload?.data;
+
+        if (response.data?.success && Array.isArray(posts)) {
+          this._searchEndpointAvailable = true;
+          const currentUserId = AuthService.getUser()?.id;
+
+          return {
+            success: true,
+            data: posts.map((post) => this._enrichPost(post, currentUserId)),
+            scope: "all",
+          };
+        }
+      } catch (err) {
+        const status = err.response?.status;
+        if (status === 404 || status === 405) {
+          this._searchEndpointAvailable = false;
+        }
+        // Cualquier otro fallo (red, 500...) también cae a la búsqueda en cliente
+      }
+    }
+
+    return this._searchPostsClientSide(term, filters);
+  }
+
+  /**
+   * Olvida las publicaciones guardadas para la búsqueda en cliente
+   */
+  clearSearchCache() {
+    this._searchCache.clear();
+  }
+
+  /**
+   * Filtra en cliente las publicaciones recientes (con los filtros aplicados)
+   * @private
+   */
+  async _searchPostsClientSide(term, filters) {
+    const corpus = await this._getSearchCorpus(filters);
+
+    if (!corpus.success) {
+      return {
+        success: false,
+        error: corpus.error || "Error al buscar publicaciones",
+        data: [],
+        scope: "recent",
+      };
+    }
+
+    return {
+      success: true,
+      data: corpus.data.filter((post) => postMatchesQuery(post, term)),
+      scope: "recent",
+    };
+  }
+
+  /**
+   * Devuelve hasta SEARCH_MAX_PAGES páginas del feed (o de /posts/filter).
+   * Se guarda la promesa para que varias búsquedas seguidas compartan la
+   * misma descarga en lugar de repetirla con cada tecla.
+   * @private
+   */
+  async _getSearchCorpus(filters = {}) {
+    const key = `${filters.universidad_id || ""}:${filters.carrera_id || ""}`;
+    const cached = this._searchCache.get(key);
+
+    if (cached && Date.now() - cached.at < SEARCH_CACHE_TTL) {
+      return cached.promise;
+    }
+
+    const promise = this._loadSearchCorpus(filters);
+    this._searchCache.set(key, { at: Date.now(), promise });
+
+    const result = await promise;
+    if (!result.success) {
+      // No guardar errores: el siguiente intento debe volver a pedir los datos
+      this._searchCache.delete(key);
+    }
+    return result;
+  }
+
+  /** @private */
+  async _loadSearchCorpus(filters) {
+    const firstPage = await this.fetchPosts(1, filters);
+    if (!firstPage.success) {
+      return { success: false, error: firstPage.error };
+    }
+
+    const lastPage = Math.min(firstPage.pagination.lastPage, SEARCH_MAX_PAGES);
+    const otherPages = await Promise.all(
+      Array.from({ length: Math.max(0, lastPage - 1) }, (_, index) =>
+        this.fetchPosts(index + 2, filters),
+      ),
+    );
+
+    // Si entra un post nuevo mientras se piden las páginas, el mismo post
+    // puede venir en dos de ellas; una página que falle simplemente se omite
+    const seen = new Set();
+    const data = [];
+    for (const page of [firstPage, ...otherPages]) {
+      if (!page.success) continue;
+      for (const post of page.data) {
+        if (seen.has(post.id)) continue;
+        seen.add(post.id);
+        data.push(post);
+      }
+    }
+
+    return { success: true, data };
   }
 
   /**

@@ -1,7 +1,7 @@
 <template>
     <ion-page>
-        <AppHeader :isDarkMode="isDarkMode" :user="user" :isAuthenticated="isAuthenticated"
-            @toggleDarkMode="toggleDarkMode" />
+        <AppHeader :isDarkMode="isDarkMode" :user="user" :isAuthenticated="isAuthenticated" showSearch
+            @toggleDarkMode="toggleDarkMode" @openSearch="showSearchModal = true" />
 
         <FloatingAudioPlayer v-show="!loading && !isRefreshing && !isProgrammaticRefreshing" />
 
@@ -40,9 +40,6 @@
                         <PollCard v-for="poll in polls" :key="poll.id" :poll="poll"
                             @vote="handlePollVote" @delete="handlePollDelete" />
                     </div>
-
-                    <!-- Filtro de posts (De Master) -->
-                    <FilterPosts @filter="handleFilterPosts" />
 
                     <!-- Lista de posts -->
                     <div class="posts-list">
@@ -114,6 +111,10 @@
 
         <CustomBanner :isOpen="showServerBanner" :banner="serverBannerData" @confirm="handleServerBannerAction"
             @cancel="handleServerBannerDismiss" />
+
+        <!-- Búsqueda y filtro por universidad/carrera -->
+        <SearchPostsModal :isOpen="showSearchModal" @close="showSearchModal = false" @share="handleShare"
+            @post-updated="syncPostFromSearch" />
     </ion-page>
 </template>
 
@@ -136,8 +137,8 @@ import { CapacitorUpdater } from '@capgo/capacitor-updater';
 // Componentes
 import AppHeader from '@/components/AppHeader.vue';
 import CreatePostCard from '@/components/CreatePostCard.vue';
-import FilterPosts from '@/components/FilterPosts.vue';
 import PostCard from '@/components/PostCard.vue';
+import SearchPostsModal from '@/components/SearchPostsModal.vue';
 import PollCard from '@/components/PollCard.vue';
 import CustomBanner from '@/components/CustomBanner.vue';
 import FloatingAudioPlayer from '@/components/FloatingAudioPlayer.vue';
@@ -188,6 +189,9 @@ const showServerBanner = ref(false);
 const serverBannerData = ref(null);
 const noMoreBanners = ref(false);
 let alertTimer = null;
+
+// Estado de la búsqueda
+const showSearchModal = ref(false);
 
 // ==========================================
 // 2. LÓGICA DE USUARIO Y AUTENTICACIÓN
@@ -286,9 +290,10 @@ const handlePostCreated = (newPost) => {
     fetchPosts(1);
 };
 
-const handleFilterPosts = (filterData) => {
-    // Aquí implementas la lógica de tu filtro
-    console.log("Filtro aplicado:", filterData);
+// Un like dado desde la búsqueda también debe verse en el feed
+const syncPostFromSearch = ({ id, ...changes }) => {
+    const post = posts.value.find(p => p.id === id);
+    if (post) Object.assign(post, changes);
 };
 
 // ==========================================
