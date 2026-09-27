@@ -181,6 +181,12 @@ const routes = [
     name: "AuthCallback",
     component: () => import("@/views/AuthCallback.vue"),
   },
+  {
+    path: "/create-poll",
+    name: "CreatePoll",
+    component: () => import("@/views/CreatePollView.vue"),
+    meta: { requiresAuth: true },
+  },
 ];
 
 const router = createRouter({

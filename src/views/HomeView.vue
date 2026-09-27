@@ -35,6 +35,13 @@
                     <!-- Card para crear post (solo para autenticados) -->
                     <CreatePostCard v-if="isAuthenticated" :user="user" @post-created="handlePostCreated" />
 
+                    <!-- Encuestas activas (De la rama de Cizar) -->
+                    <div v-if="polls.length > 0" class="polls-list">
+                        <PollCard v-for="poll in polls" :key="poll.id" :poll="poll"
+                            @vote="handlePollVote" @delete="handlePollDelete" />
+                    </div>
+
+                    <!-- Filtro de posts (De Master) -->
                     <FilterPosts @filter="handleFilterPosts" />
 
                     <!-- Lista de posts -->
@@ -111,22 +118,16 @@
 </template>
 
 <script setup>
+// ==========================================
+// IMPORTS LIMPIOS Y UNIFICADOS
+// ==========================================
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { 
-    IonPage, 
-    IonContent, 
-    IonCard, 
-    IonCardContent, 
-    IonSpinner, 
-    IonText, 
-    IonInfiniteScroll, 
-    IonInfiniteScrollContent, 
-    IonRefresher, 
-    IonRefresherContent,
-    onIonViewWillEnter, 
-    onIonViewWillLeave, 
-    alertController 
+    IonPage, IonContent, IonCard, IonCardContent, 
+    IonSpinner, IonText, IonInfiniteScroll, 
+    IonInfiniteScrollContent, IonRefresher, IonRefresherContent,
+    onIonViewWillEnter, onIonViewWillLeave, alertController, toastController 
 } from '@ionic/vue';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
@@ -137,12 +138,14 @@ import AppHeader from '@/components/AppHeader.vue';
 import CreatePostCard from '@/components/CreatePostCard.vue';
 import FilterPosts from '@/components/FilterPosts.vue';
 import PostCard from '@/components/PostCard.vue';
+import PollCard from '@/components/PollCard.vue';
 import CustomBanner from '@/components/CustomBanner.vue';
 import FloatingAudioPlayer from '@/components/FloatingAudioPlayer.vue';
 
 // Servicios y Composables
 import apiService from '@/services/api';
 import postsService from '@/services/postsService';
+import pollsService from '@/services/pollsService';
 import bannerService from '@/services/bannerService';
 import { AuthService } from '@/services/auth';
 import { pushNotificationsService } from '@/services/pushNotificationsService';
@@ -161,6 +164,7 @@ const { isGlassMode } = useGlassMode();
 
 // Estado del Feed
 const posts = ref([]);
+const polls = ref([]); // Agregado de la rama de Cizar
 const loading = ref(false);
 const error = ref(null);
 const currentPage = ref(1);
@@ -227,7 +231,7 @@ const closeLoginPrompt = () => {
 };
 
 // ==========================================
-// 3. LÓGICA DEL FEED DE PUBLICACIONES
+// 3. LÓGICA DEL FEED Y ENCUESTAS (Integrado)
 // ==========================================
 const fetchPosts = async (page = 1) => {
     loading.value = page === 1 && !isProgrammaticRefreshing.value;
@@ -252,8 +256,14 @@ const fetchPosts = async (page = 1) => {
         if (page === 1) posts.value = [];
         if (result.error.includes('Sesión expirada')) router.replace('/login');
     }
-
     loading.value = false;
+};
+
+const fetchPolls = async () => {
+    const result = await pollsService.getPolls(1);
+    if (result.success) {
+        polls.value = result.data;
+    }
 };
 
 const loadMorePosts = async (event) => {
@@ -266,7 +276,8 @@ const loadMorePosts = async (event) => {
 const handleRefresh = async (event) => {
     isRefreshing.value = true;
     currentPage.value = 1;
-    await fetchPosts(1);
+    // Ejecutamos ambas peticiones en paralelo para mayor velocidad
+    await Promise.all([fetchPosts(1), fetchPolls()]);
     isRefreshing.value = false;
     event.target.complete();
 };
@@ -275,8 +286,13 @@ const handlePostCreated = (newPost) => {
     fetchPosts(1);
 };
 
+const handleFilterPosts = (filterData) => {
+    // Aquí implementas la lógica de tu filtro
+    console.log("Filtro aplicado:", filterData);
+};
+
 // ==========================================
-// 4. INTERACCIONES (Likes, Comentarios, Compartir)
+// 4. INTERACCIONES (Likes, Comentarios, Compartir, Votos)
 // ==========================================
 const handleLike = async (postId) => {
     const postIndex = posts.value.findIndex(p => p.id === postId);
@@ -285,7 +301,6 @@ const handleLike = async (postId) => {
     const previousLikedState = posts.value[postIndex].user_has_liked;
     const previousLikesCount = posts.value[postIndex].likes_count || 0;
 
-    // Optimismo UI
     posts.value[postIndex].user_has_liked = !previousLikedState;
     posts.value[postIndex].likes_count = posts.value[postIndex].user_has_liked
         ? previousLikesCount + 1
@@ -299,7 +314,6 @@ const handleLike = async (postId) => {
         posts.value[postIndex].likes_count = result.data.likes_count !== undefined 
             ? result.data.likes_count : posts.value[postIndex].likes_count;
     } else {
-        // Revertir
         posts.value[postIndex].user_has_liked = previousLikedState;
         posts.value[postIndex].likes_count = previousLikesCount;
     }
@@ -314,6 +328,51 @@ const handleShare = async (postId) => {
 
 const handleImageError = (event) => {
     console.warn('Error al cargar imagen:', event.target?.src);
+};
+
+// Votación de encuestas
+const handlePollVote = async ({ pollId, optionId }) => {
+    const pollIndex = polls.value.findIndex(p => p.id === pollId);
+    if (pollIndex === -1) return;
+
+    const result = await pollsService.voteOnPoll(pollId, optionId);
+
+    if (result.success && result.data) {
+        polls.value[pollIndex].options = result.data.options;
+        polls.value[pollIndex].user_has_voted = true;
+    } else {
+        const toast = await toastController.create({
+            message: result.error || 'Error al votar',
+            duration: 3000,
+            color: 'danger',
+            position: 'top'
+        });
+        await toast.present();
+    }
+};
+
+// Eliminación de encuestas
+const handlePollDelete = async (pollId) => {
+    const result = await pollsService.deletePoll(pollId);
+
+    if (result.success) {
+        polls.value = polls.value.filter(p => p.id !== pollId);
+        const toast = await toastController.create({
+            message: result.message || 'Encuesta eliminada',
+            duration: 2000,
+            color: 'success',
+            position: 'top'
+        });
+        await toast.present();
+    } else {
+        const toast = await toastController.create({
+            message: result.error || 'Error al eliminar la encuesta',
+            duration: 3000,
+            color: 'danger',
+            position: 'top'
+        });
+        await toast.present();
+    }
 };
 
 // ==========================================
@@ -441,6 +500,7 @@ onMounted(async () => {
     }
 
     fetchPosts();
+    fetchPolls(); // Inicializar encuestas al cargar
     checkForUpdates();
     
     window.addEventListener('home-tab-clicked', onHomeTabDoubleClicked);
@@ -458,12 +518,16 @@ onIonViewWillEnter(() => {
     if (isAuthenticated.value && user.value.username === 'invitado') {
         loadCurrentUser();
         fetchPosts();
+        fetchPolls();
     } else if (isAuthenticated.value && state?.postCreated) {
         fetchPosts(1);
         window.history.replaceState({ ...state, postCreated: false }, '');
     } else if (state?.postDeleted) {
         fetchPosts(1);
         window.history.replaceState({ ...state, postDeleted: false }, '');
+    } else if (state?.pollCreated) { // Lógica de encuestas incorporada a la vista
+        fetchPolls();
+        window.history.replaceState({ ...state, pollCreated: false }, '');
     }
 
     if (!isAuthenticated.value && !alertTimer) {
@@ -487,6 +551,14 @@ onIonViewWillLeave(() => {
     display: flex;
     flex-direction: column;
     gap: 0;
+}
+
+.polls-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 0 16px;
+    margin-bottom: 8px;
 }
 
 /* Estilos personalizados para el alert */
