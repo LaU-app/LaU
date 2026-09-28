@@ -77,6 +77,12 @@ vi.mock('@ionic/vue', async () => {
     IonIcon: passthrough('ion-icon'),
     IonSelectOption: passthrough('ion-select-option'),
     IonProgressBar: passthrough('ion-progress-bar'),
+    IonInfiniteScroll: defineComponent({
+      name: 'IonInfiniteScroll',
+      emits: ['ionInfinite'],
+      setup: (_, { slots }) => () => h('div', { 'data-stub': 'ion-infinite-scroll' }, slots.default?.()),
+    }),
+    IonInfiniteScrollContent: passthrough('ion-infinite-scroll-content'),
   }
 })
 
@@ -266,6 +272,64 @@ describe('SearchPostsModal', () => {
     expect(wrapper.find('.filter-clear').exists()).toBe(false)
     expect(selects()[1].props('disabled')).toBe(true)
     expect(wrapper.text()).toContain('Encuentra lo que buscas')
+  })
+
+  it('muestra el total del servidor y carga más páginas al hacer scroll', async () => {
+    postsService.searchPosts
+      .mockResolvedValueOnce({ ...found([post(1), post(2)], 'all'), pagination: { currentPage: 1, hasMorePages: true, total: 3 } })
+      // El post 2 se repite (se corrió la paginación) y no debe duplicarse
+      .mockResolvedValueOnce({ ...found([post(2), post(3)], 'all'), pagination: { currentPage: 2, hasMorePages: false, total: 3 } })
+    await open()
+    await type('parcial')
+
+    expect(wrapper.find('.results-count').text()).toBe('3 resultados')
+    expect(wrapper.find('.results-scope').exists()).toBe(false)
+
+    const complete = vi.fn()
+    wrapper.findComponent({ name: 'IonInfiniteScroll' }).vm.$emit('ionInfinite', { target: { complete } })
+    await flushPromises()
+
+    expect(postsService.searchPosts).toHaveBeenLastCalledWith('parcial', { universidad_id: null, carrera_id: null }, 2)
+    expect(cards()).toHaveLength(3)
+    expect(complete).toHaveBeenCalled()
+    expect(wrapper.findComponent({ name: 'IonInfiniteScroll' }).exists()).toBe(false)
+  })
+
+  it('descarta la página si mientras tanto empezó otra búsqueda', async () => {
+    let resolvePage!: (value: unknown) => void
+    postsService.searchPosts
+      .mockResolvedValueOnce({ ...found([post(1)], 'all'), pagination: { currentPage: 1, hasMorePages: true, total: 2 } })
+      .mockImplementationOnce(() => new Promise((resolve) => { resolvePage = resolve }))
+      .mockResolvedValueOnce({ ...found([post(9, { texto: 'otra' })], 'all'), pagination: { currentPage: 1, hasMorePages: false, total: 1 } })
+    await open()
+    await type('primera')
+
+    wrapper.findComponent({ name: 'IonInfiniteScroll' }).vm.$emit('ionInfinite', { target: { complete: vi.fn() } })
+    await type('otra')
+    resolvePage({ ...found([post(2)], 'all'), pagination: { currentPage: 2, hasMorePages: false, total: 2 } })
+    await flushPromises()
+
+    expect(cards()).toHaveLength(1)
+    expect(cards()[0].text()).toContain('otra')
+  })
+
+  it('si falla cargar más ofrece reintentar', async () => {
+    postsService.searchPosts
+      .mockResolvedValueOnce({ ...found([post(1)], 'all'), pagination: { currentPage: 1, hasMorePages: true, total: 2 } })
+      .mockResolvedValueOnce({ success: false, error: 'No se pudieron cargar más resultados', data: [] })
+      .mockResolvedValueOnce({ ...found([post(2)], 'all'), pagination: { currentPage: 2, hasMorePages: false, total: 2 } })
+    await open()
+    await type('hola')
+
+    wrapper.findComponent({ name: 'IonInfiniteScroll' }).vm.$emit('ionInfinite', { target: { complete: vi.fn() } })
+    await flushPromises()
+    expect(wrapper.find('.load-more-error').exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'IonInfiniteScroll' }).exists()).toBe(false)
+
+    await wrapper.find('.load-more-error button').trigger('click')
+    await flushPromises()
+    expect(cards()).toHaveLength(2)
+    expect(wrapper.find('.load-more-error').exists()).toBe(false)
   })
 
   it('abre el post y se cierra al navegar', async () => {

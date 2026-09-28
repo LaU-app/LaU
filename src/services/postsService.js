@@ -50,6 +50,9 @@ export function postMatchesQuery(post, query) {
   return words.every((word) => haystack.includes(word));
 }
 
+// Paginación de un resultado que ya viene completo
+const singlePage = (page, total) => ({ currentPage: page, lastPage: page, hasMorePages: false, total });
+
 class PostsService {
   constructor() {
     // Ya no necesitamos apiBaseUrl ni headers porque api.js lo maneja
@@ -416,29 +419,31 @@ class PostsService {
   /**
    * Busca posts por texto y/o por la universidad y carrera del autor
    *
-   * Usa GET /posts/search si el backend lo expone. Si responde 404/405 se
-   * recuerda y, a partir de ahí, se busca en cliente sobre las publicaciones
-   * más recientes del feed (scope "recent").
+   * Usa GET /posts/search (paginado, sobre todo el historial). Si el backend
+   * responde 404/405 se recuerda y, a partir de ahí, se busca en cliente sobre
+   * las publicaciones más recientes del feed (scope "recent", sin más páginas).
    *
    * @param {string} query - Término de búsqueda (puede ir vacío si hay filtros)
    * @param {Object} filters - { universidad_id, carrera_id }
-   * @returns {Promise<Object>} { success, data, scope, error? }
+   * @param {number} page - Página de resultados
+   * @returns {Promise<Object>} { success, data, scope, pagination, error? }
    */
-  async searchPosts(query, filters = {}) {
+  async searchPosts(query, filters = {}, page = 1) {
     const term = (query || "").trim();
     const hasFilters = Boolean(filters.universidad_id || filters.carrera_id);
 
     if (!term && !hasFilters) {
-      return { success: true, data: [], scope: null };
+      return { success: true, data: [], scope: null, pagination: singlePage(page, 0) };
     }
 
-    if (term && this._searchEndpointAvailable !== false) {
+    if (this._searchEndpointAvailable !== false) {
       try {
         const response = await api.get("/posts/search", {
           params: {
-            q: term,
+            q: term || undefined,
             universidad: filters.universidad_id || undefined,
             carrera: filters.carrera_id || undefined,
+            page,
           },
         });
 
@@ -449,22 +454,42 @@ class PostsService {
         if (response.data?.success && Array.isArray(posts)) {
           this._searchEndpointAvailable = true;
           const currentUserId = AuthService.getUser()?.id;
+          const currentPage = payload?.current_page || page;
+          const lastPage = payload?.last_page || currentPage;
 
           return {
             success: true,
             data: posts.map((post) => this._enrichPost(post, currentUserId)),
             scope: "all",
+            pagination: {
+              currentPage,
+              lastPage,
+              hasMorePages: currentPage < lastPage,
+              total: payload?.total ?? posts.length,
+            },
           };
         }
       } catch (err) {
         const status = err.response?.status;
         if (status === 404 || status === 405) {
           this._searchEndpointAvailable = false;
+        } else if (page > 1) {
+          // A mitad del scroll no tiene sentido cambiar a la búsqueda en cliente
+          return {
+            success: false,
+            error: err.response?.data?.message || "No se pudieron cargar más resultados",
+            data: [],
+            scope: "all",
+          };
         }
-        // Cualquier otro fallo (red, 500...) también cae a la búsqueda en cliente
+        // Cualquier otro fallo (red, 500...) cae a la búsqueda en cliente
       }
     }
 
+    // La búsqueda en cliente devuelve todo en la primera página
+    if (page > 1) {
+      return { success: true, data: [], scope: "recent", pagination: singlePage(page, 0) };
+    }
     return this._searchPostsClientSide(term, filters);
   }
 
@@ -491,11 +516,8 @@ class PostsService {
       };
     }
 
-    return {
-      success: true,
-      data: corpus.data.filter((post) => postMatchesQuery(post, term)),
-      scope: "recent",
-    };
+    const data = corpus.data.filter((post) => postMatchesQuery(post, term));
+    return { success: true, data, scope: "recent", pagination: singlePage(1, data.length) };
   }
 
   /**

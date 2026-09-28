@@ -178,6 +178,31 @@ describe('Búsqueda de publicaciones', () => {
     cy.get('.search-modal .filter-clear').should('not.exist')
   })
 
+  it('con el endpoint del backend busca en todo el historial y carga más al hacer scroll', () => {
+    visitHome()
+    // Sustituye el 404: ahora el backend sí tiene /posts/search (25 resultados, 20 por página)
+    const matches = Array.from({ length: 25 }, (_, i) =>
+      textPost(500 + i, i % 2 ? ana : sofia, `Repaso de álgebra lineal, parte ${i + 1}`, 24 * (i + 3)))
+    cy.intercept({ method: 'GET', hostname: host, pathname: '/api/posts/search' }, (req) => {
+      const page = Number(req.query.page || 1)
+      const data = matches.slice((page - 1) * 20, page * 20)
+      req.reply({ success: true, data: { data, current_page: page, last_page: 2, total: matches.length, per_page: 20 } })
+    }).as('serverSearch')
+
+    openSearch()
+    searchInput().type('algebra')
+    cy.wait('@serverSearch').its('request.query').should('include', { q: 'algebra', page: '1' })
+    resultsCount().should('have.text', '25 resultados')
+    cy.get('.search-modal .results-scope').should('not.exist')
+    resultCards().should('have.length', 20)
+    shot('search-11-server-results')
+
+    cy.get('.search-modal ion-content').then((el) => (el[0] as any).scrollToBottom(0))
+    cy.wait('@serverSearch').its('request.query.page').should('eq', '2')
+    resultCards().should('have.length', 25)
+    cy.get('.search-modal ion-infinite-scroll').should('not.exist')
+  })
+
   it('respeta el modo oscuro', () => {
     visitHome(true)
     cy.get('html').should('have.class', 'ion-palette-dark')

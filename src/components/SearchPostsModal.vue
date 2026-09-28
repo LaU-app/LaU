@@ -200,6 +200,22 @@
             @imageError="handleImageError"
           />
         </div>
+
+        <ion-infinite-scroll
+          v-if="pagination.hasMorePages && !loadMoreFailed"
+          threshold="200px"
+          @ionInfinite="loadMore"
+        >
+          <ion-infinite-scroll-content
+            loading-spinner="crescent"
+            loading-text="Cargando más resultados..."
+          ></ion-infinite-scroll-content>
+        </ion-infinite-scroll>
+
+        <div v-if="loadMoreFailed" class="load-more-error">
+          <span>No se pudieron cargar más resultados.</span>
+          <button type="button" class="text-button" @click="retryLoadMore">Reintentar</button>
+        </div>
       </div>
     </ion-content>
   </ion-modal>
@@ -217,6 +233,8 @@ import {
   IonSelect,
   IonSelectOption,
   IonProgressBar,
+  IonInfiniteScroll,
+  IonInfiniteScrollContent,
 } from "@ionic/vue";
 import {
   atOutline,
@@ -269,6 +287,8 @@ const resultsScope = ref(null);
 const isSearching = ref(false);
 const searchError = ref(null);
 const recentSearches = ref([]);
+const pagination = ref({ currentPage: 1, hasMorePages: false, total: 0 });
+const loadMoreFailed = ref(false);
 
 const trimmedQuery = computed(() => searchQuery.value.trim());
 const hasActiveFilters = computed(() => Boolean(filters.universidad_id || filters.carrera_id));
@@ -283,7 +303,8 @@ const view = computed(() => {
 });
 
 const resultsLabel = computed(() => {
-  const total = searchResults.value.length;
+  // El servidor informa el total aunque todavía no se hayan cargado todas las páginas
+  const total = Math.max(pagination.value.total, searchResults.value.length);
   return `${total} ${total === 1 ? "resultado" : "resultados"}`;
 });
 
@@ -300,6 +321,18 @@ let debounceTimer = null;
 let searchSeq = 0;
 let rememberPending = false;
 let lastSearchedQuery = null;
+// Criterios de la última búsqueda terminada: "cargar más" pide sus páginas
+// aunque el usuario ya esté escribiendo otra cosa
+let lastCriteria = null;
+
+const setPagination = (value) => {
+  pagination.value = {
+    currentPage: value?.currentPage ?? 1,
+    hasMorePages: Boolean(value?.hasMorePages),
+    total: value?.total ?? 0,
+  };
+  loadMoreFailed.value = false;
+};
 
 const resetResults = () => {
   // Invalida cualquier respuesta que siga en camino
@@ -311,6 +344,8 @@ const resetResults = () => {
   searchError.value = null;
   resultsScope.value = null;
   lastSearchedQuery = null;
+  lastCriteria = null;
+  setPagination(null);
 };
 
 const scheduleSearch = () => {
@@ -333,26 +368,58 @@ const runSearch = async () => {
   }
 
   const seq = ++searchSeq;
-  const query = trimmedQuery.value;
+  const criteria = { query: trimmedQuery.value, filters: { ...filters } };
   isSearching.value = true;
   searchError.value = null;
 
-  const result = await postsService.searchPosts(query, { ...filters });
+  const result = await postsService.searchPosts(criteria.query, criteria.filters);
   // Llegó tarde: ya se lanzó una búsqueda más nueva
   if (seq !== searchSeq) return;
 
   isSearching.value = false;
-  lastSearchedQuery = query;
+  lastSearchedQuery = criteria.query;
+  lastCriteria = criteria;
   if (result.success) {
     searchResults.value = result.data;
     resultsScope.value = result.scope;
+    setPagination(result.pagination);
   } else {
     searchResults.value = [];
     resultsScope.value = null;
+    setPagination(null);
     searchError.value = result.error || "No se pudo completar la búsqueda.";
   }
 
   if (rememberPending) rememberQuery();
+};
+
+const loadMore = async (event) => {
+  const seq = searchSeq;
+  const criteria = lastCriteria;
+  if (!criteria || !pagination.value.hasMorePages) {
+    event?.target?.complete();
+    return;
+  }
+
+  const result = await postsService.searchPosts(criteria.query, criteria.filters, pagination.value.currentPage + 1);
+
+  // Si mientras tanto se lanzó otra búsqueda, estas páginas ya no aplican
+  if (seq === searchSeq) {
+    if (result.success) {
+      // Un post nuevo puede correr la paginación y repetir uno ya mostrado
+      const shown = new Set(searchResults.value.map((post) => post.id));
+      searchResults.value = [...searchResults.value, ...result.data.filter((post) => !shown.has(post.id))];
+      setPagination(result.pagination);
+    } else {
+      loadMoreFailed.value = true;
+    }
+  }
+  event?.target?.complete();
+};
+
+const retryLoadMore = () => {
+  loadMoreFailed.value = false;
+  loadMore();
 };
 
 // ionChange solo se dispara al confirmar (Enter o al salir del campo)
@@ -1045,5 +1112,16 @@ watch(
 .results-list {
   display: flex;
   flex-direction: column;
+}
+
+.load-more-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 16px 8px 8px;
+  font-size: 13px;
+  color: var(--search-muted);
 }
 </style>
