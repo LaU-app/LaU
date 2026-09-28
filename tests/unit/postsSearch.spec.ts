@@ -82,23 +82,67 @@ describe('coincidencias de búsqueda', () => {
 describe('postsService.searchPosts', () => {
   it('no hace peticiones si no hay término ni filtros', async () => {
     const result = await postsService.searchPosts('   ')
-    expect(result).toEqual({ success: true, data: [], scope: null })
+    expect(result.success).toBe(true)
+    expect(result.data).toEqual([])
     expect(api.get).not.toHaveBeenCalled()
     expect(api.post).not.toHaveBeenCalled()
   })
 
-  it('usa GET /posts/search cuando el backend lo tiene y calcula user_has_liked', async () => {
+  it('usa GET /posts/search cuando el backend lo tiene, con paginación y user_has_liked', async () => {
     mockFeed([], () => Promise.resolve({
-      data: { success: true, data: { data: [post(1, { texto: 'cálculo', likes: [{ user_id: 7 }] })] } },
+      data: {
+        success: true,
+        data: { data: [post(1, { texto: 'cálculo', likes: [{ user_id: 7 }] })], current_page: 1, last_page: 3, total: 45 },
+      },
     }))
 
     const result = await postsService.searchPosts(' cálculo ', { universidad_id: 3, carrera_id: null })
 
-    expect(api.get).toHaveBeenCalledWith('/posts/search', { params: { q: 'cálculo', universidad: 3, carrera: undefined } })
+    expect(api.get).toHaveBeenCalledWith('/posts/search', { params: { q: 'cálculo', universidad: 3, carrera: undefined, page: 1 } })
     expect(result.success).toBe(true)
     expect(result.scope).toBe('all')
+    expect(result.pagination).toEqual({ currentPage: 1, lastPage: 3, hasMorePages: true, total: 45 })
     expect(result.data[0]).toMatchObject({ id: 1, user_has_liked: true, likes_count: 1 })
     expect(feedCalls()).toHaveLength(0)
+  })
+
+  it('pide la página indicada al servidor', async () => {
+    mockFeed([], () => Promise.resolve({ data: { success: true, data: page([post(21)], 2, 3).data.data } }))
+
+    const result = await postsService.searchPosts('hola', {}, 2)
+
+    expect(searchCalls()[0][1].params.page).toBe(2)
+    expect(result.pagination).toMatchObject({ currentPage: 2, hasMorePages: true })
+  })
+
+  it('con solo filtros también usa /posts/search si existe', async () => {
+    mockFeed([], () => Promise.resolve({ data: { success: true, data: page([post(1)]).data.data } }))
+
+    await postsService.searchPosts('', { universidad_id: 4, carrera_id: 9 })
+
+    expect(searchCalls()[0][1].params).toEqual({ q: undefined, universidad: 4, carrera: 9, page: 1 })
+    expect(api.post).not.toHaveBeenCalled()
+  })
+
+  it('si falla a mitad del scroll devuelve error en lugar de cambiar a la búsqueda en cliente', async () => {
+    mockFeed([[post(1, { texto: 'hola' })]], () => Promise.reject(httpError(500)))
+
+    const result = await postsService.searchPosts('hola', {}, 2)
+
+    expect(result.success).toBe(false)
+    expect(feedCalls()).toHaveLength(0)
+  })
+
+  it('la búsqueda en cliente no tiene más páginas', async () => {
+    mockFeed([[post(1, { texto: 'hola' }), post(2, { texto: 'hola otra vez' })]])
+
+    const first = await postsService.searchPosts('hola')
+    expect(first.pagination).toEqual({ currentPage: 1, lastPage: 1, hasMorePages: false, total: 2 })
+
+    api.get.mockClear()
+    const second = await postsService.searchPosts('hola', {}, 2)
+    expect(second).toMatchObject({ success: true, data: [], pagination: { hasMorePages: false } })
+    expect(api.get).not.toHaveBeenCalled()
   })
 
   it('si /posts/search no existe busca en cliente sobre máx. 5 páginas, sin duplicados', async () => {
@@ -139,13 +183,14 @@ describe('postsService.searchPosts', () => {
     expect(feedCalls()).toHaveLength(2)
   })
 
-  it('con solo filtros usa POST /posts/filter y devuelve todo lo filtrado', async () => {
+  it('sin /posts/search, con solo filtros usa POST /posts/filter y devuelve todo lo filtrado', async () => {
+    mockFeed([])
     api.post.mockResolvedValue(page([post(1), post(2)]))
 
     const result = await postsService.searchPosts('', { universidad_id: 4, carrera_id: 9 })
 
     expect(api.post).toHaveBeenCalledWith('/posts/filter?page=1', { universidad: 4, carrera: 9 })
-    expect(searchCalls()).toHaveLength(0)
+    expect(result.scope).toBe('recent')
     expect(result.data).toHaveLength(2)
   })
 
