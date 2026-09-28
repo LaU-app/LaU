@@ -50,7 +50,7 @@
         <ion-fab-button aria-label="Publicar un producto" @click="publish"><ion-icon :icon="addOutline"/></ion-fab-button>
       </ion-fab>
     </ion-content>
-    <MarketplaceBottomNav active="explore"/>
+
   </ion-page>
 </template>
 
@@ -132,7 +132,7 @@ async function refresh(event: CustomEvent) {
 }
 
 const clearFilters = () => { search.value = ''; category.value = null }
-const open = (product: Product) => router.push(`/marketplace/product/${product.id}`)
+const open = (product: Product) => router.push(`/tabs/marketplace/product/${product.id}`)
 
 async function add(product: Product) {
   const added = await cart.add(product)

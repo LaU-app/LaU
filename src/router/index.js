@@ -13,7 +13,6 @@ const routes = [
     path: "/welcome",
     name: "Welcome",
     component: () => import("@/views/WelcomeView.vue"),
-    // Permitir acceso a welcome siempre (sin meta)
   },
   {
     path: "/login",
@@ -39,43 +38,6 @@ const routes = [
     component: () => import("@/views/UsersView.vue"),
     meta: { requiresAuth: true },
   },
-  // Marketplace: rutas de primer nivel, como el módulo de Estudio/Tareas.
-  {
-    path: "/marketplace",
-    name: "Marketplace",
-    component: () => import("@/views/MarketplaceView.vue"),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: "/marketplace/product/:id",
-    name: "MarketplaceProduct",
-    component: () => import("@/views/MarketplaceProductView.vue"),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: "/marketplace/cart",
-    name: "MarketplaceCart",
-    component: () => import("@/views/MarketplaceCartView.vue"),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: "/marketplace/orders",
-    name: "MarketplaceOrders",
-    component: () => import("@/views/MarketplaceOrdersView.vue"),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: "/marketplace/dashboard",
-    name: "MarketplaceDashboard",
-    component: () => import("@/views/MarketplaceDashboardView.vue"),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: "/marketplace/store/:slug",
-    name: "MarketplaceStore",
-    component: () => import("@/views/MarketplaceStoreView.vue"),
-    meta: { requiresAuth: true },
-  },
   {
     path: "/notifications",
     name: "Notifications",
@@ -86,24 +48,6 @@ const routes = [
     path: "/notification-settings",
     name: "NotificationSettings",
     component: () => import("@/views/NotificationSettingsView.vue"),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: "/tasks",
-    name: "Tasks",
-    component: () => import("@/views/TasksView.vue"),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: "/tasks/:id",
-    name: "TaskDetail",
-    component: () => import("@/views/TaskDetailView.vue"),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: "/study",
-    name: "Study",
-    component: () => import("@/views/StudyView.vue"),
     meta: { requiresAuth: true },
   },
   {
@@ -118,13 +62,11 @@ const routes = [
         path: "tab1",
         name: "Home",
         component: () => import("@/views/HomeView.vue"),
-        // Sin meta: permite acceso público (feed público) y autenticado (feed personalizado)
       },
       {
         path: "post/:id",
         name: "PostDetail",
         component: () => import("@/views/PostDetailView.vue"),
-        // Sin meta: permite ver posts públicos sin login
       },
       {
         path: "create-post/:tipo?",
@@ -156,8 +98,67 @@ const routes = [
         component: () => import("@/views/PerfilView.vue"),
         meta: { requiresAuth: true },
       },
+      
+      // ✨ RUTAS DE ESTUDIO Y TAREAS (Ahora son hijas de TabsPage) ✨
+      {
+        path: "study",
+        name: "Study",
+        component: () => import("@/views/StudyView.vue"),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: "tasks",
+        name: "Tasks",
+        component: () => import("@/views/TasksView.vue"),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: "tasks/:id",
+        name: "TaskDetail",
+        component: () => import("@/views/TaskDetailView.vue"),
+        meta: { requiresAuth: true },
+      },
+
+      // ✨ RUTAS DE MARKETPLACE (Ahora son hijas de TabsPage) ✨
+      {
+        path: "marketplace",
+        name: "Marketplace",
+        component: () => import("@/views/MarketplaceView.vue"),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: "marketplace/product/:id",
+        name: "MarketplaceProduct",
+        component: () => import("@/views/MarketplaceProductView.vue"),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: "marketplace/cart",
+        name: "MarketplaceCart",
+        component: () => import("@/views/MarketplaceCartView.vue"),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: "marketplace/orders",
+        name: "MarketplaceOrders",
+        component: () => import("@/views/MarketplaceOrdersView.vue"),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: "marketplace/dashboard",
+        name: "MarketplaceDashboard",
+        component: () => import("@/views/MarketplaceDashboardView.vue"),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: "marketplace/store/:slug",
+        name: "MarketplaceStore",
+        component: () => import("@/views/MarketplaceStoreView.vue"),
+        meta: { requiresAuth: true },
+      },
     ],
   },
+  // Rutas que cubren pantalla completa sin menús
   {
     path: "/chat/:id",
     name: "ChatDetail",
@@ -198,25 +199,22 @@ const router = createRouter({
 window.addEventListener("pushNotificationAction", (event) => {
   const { type, postId, userId, notificationId, chatUserId } = event.detail;
 
-  // Navegar según el tipo
   if (type === "like" || type === "comment") {
     if (postId) {
       router.push(`/tabs/post/${postId}`);
     } else {
-      router.push("/tabs/notifications");
+      router.push("/notifications");
     }
   } else if (type === "follow") {
-    router.push("/tabs/notifications");
+    router.push("/notifications");
   } else if (type === "message" || type === "chat") {
-    // Nueva lógica para mensajes de chat
     if (chatUserId) {
       router.push(`/chat/${chatUserId}`);
     } else {
       router.push("/tabs/chat");
     }
   } else {
-    // Por defecto, ir a notificaciones
-    router.push("/tabs/notifications");
+    router.push("/notifications");
   }
 });
 
@@ -224,35 +222,20 @@ window.addEventListener("pushNotificationAction", (event) => {
 router.beforeEach(async (to, from, next) => {
   const isAuthenticated = AuthService.isAuthenticated();
 
-  // Si la ruta requiere autenticación
   if (to.meta.requiresAuth) {
     if (!isAuthenticated) {
-      // No hay token, redirigir al welcome para invitar a login
       next("/welcome");
       return;
     }
-
-    // Hay token, permitir acceso
     next();
-  }
-  // Si la ruta es para invitados (login/register) y ya está autenticado
-  else if (to.meta.requiresGuest && isAuthenticated) {
-    // --- EXCEPCIÓN PARA REGISTRO SOCIAL ---
-    // Revisamos si tiene la miga de pan que dejamos antes de ir a Google/Microsoft
-    const vieneDeRegistro =
-      localStorage.getItem("flujo_registro_social") === "true";
-
-    // Verificamos si la ruta de destino es el registro
-    // (Usa to.path === '/register' o to.name === 'Register' dependiendo de cómo lo llamaste en tu router)
+  } else if (to.meta.requiresGuest && isAuthenticated) {
+    const vieneDeRegistro = localStorage.getItem("flujo_registro_social") === "true";
     if (to.path === "/register" && vieneDeRegistro) {
-      next(); // ¡Le abrimos la puerta para que termine de llenar sus datos!
+      next(); 
     } else {
-      next("/tabs/tab1"); // Comportamiento normal: lo mandamos al Home
+      next("/tabs/tab1"); 
     }
-    // --------------------------------------
-  }
-  // Caso normal (incluye /welcome y /tabs/tab1 sin autenticación)
-  else {
+  } else {
     next();
   }
 });

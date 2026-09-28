@@ -2,18 +2,20 @@
   <ion-app>
     <ion-router-outlet />
     <StudyFloatingIndicator />
+
   </ion-app>
 </template>
 
 <script setup>
 import { IonApp, IonRouterOutlet, useBackButton, useIonRouter } from '@ionic/vue';
-import { onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted, computed } from 'vue';
 import { startStudyRuntime, stopStudyRuntime } from '@/utils/useStudy';
 import { startCartRuntime, stopCartRuntime } from '@/utils/useCart';
 import { useDarkMode } from '@/utils/useDarkMode';
 import { useSyncQueue } from '@/utils/useSyncQueue';
 import { AuthService } from '@/services/auth';
 import StudyFloatingIndicator from '@/components/study/StudyFloatingIndicator.vue';
+
 import { App } from '@capacitor/app';
 import { useRoute, useRouter } from 'vue-router';
 import { StatusBar } from '@capacitor/status-bar';
@@ -27,11 +29,23 @@ const ionRouter = useIonRouter();
 const route = useRoute();
 const router = useRouter();
 
+// ✨ LÓGICA PARA MOSTRAR/OCULTAR EL MENÚ GLOBAL ✨
+const showGlobalNav = computed(() => {
+  // 1. Rutas donde NO debe aparecer el menú (Login, Registro, etc.)
+  const authRoutes = ['/welcome', '/login', '/register', '/university-select'];
+  const isAuthRoute = authRoutes.includes(route.path);
+  
+  // 2. Rutas donde quieres que se oculte (como el detalle del post para ver la foto completa)
+  const isPostDetail = route.path.includes('/post/');
+  const isChatDetail = route.path.includes('/chat/') && route.path !== '/tabs/chat';
+
+  // Solo se muestra si está logueado y no está en ninguna de las pantallas anteriores
+  return AuthService.isAuthenticated() && !isAuthRoute && !isPostDetail && !isChatDetail;
+});
+
 // ✨ 2. EL GUARDIÁN DEL MENÚ ✨
 router.afterEach((to) => {
-  // Si la ruta a la que vamos NO es el detalle de un post...
   if (!to.path.includes('/post/')) {
-    // Forzamos a que el menú y el degradado reaparezcan
     setTimeout(() => {
       try {
         const tabBar = document.querySelector('ion-tab-bar.floating-tabs');
@@ -96,7 +110,7 @@ onMounted(() => {
   // Escuchar cuando la app se abre desde un enlace externo
     App.addListener('appUrlOpen', (event) => {
         // Ejemplo de event.url: https://lauapp-81f4d.web.app/tabs/post/28
-        const urlDomain = 'https://lauapp-81f4d.web.app';
+        const urlDomain = 'https://lauapp.es';
         
         if (event.url.includes(urlDomain)) {
             // Extraemos solo la ruta (ej: /tabs/post/28)

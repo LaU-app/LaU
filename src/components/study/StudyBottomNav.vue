@@ -6,5 +6,5 @@ import { studyPageTransition } from '@/utils/studyTransition'
 const props=defineProps<{active:string;inModal?:boolean}>()
 const router=useIonRouter()
 const items=[{id:'focus',label:'Enfoque',icon:timerOutline},{id:'tasks',label:'Tareas',icon:checkmarkCircleOutline},{id:'progress',label:'Progreso',icon:statsChart},{id:'ranking',label:'Ranking',icon:podiumOutline}]
-async function navigate(item:typeof items[number]) { if(props.inModal) await modalController.dismiss(); router.push(item.id==='tasks' ? '/tasks' : {path:'/study',query:{tab:item.id}}, studyPageTransition) }
+async function navigate(item:typeof items[number]) { if(props.inModal) await modalController.dismiss(); router.push(item.id==='tasks' ? '/tasks' : {path:'/tabs/study',query:{tab:item.id}}, studyPageTransition) }
 </script>

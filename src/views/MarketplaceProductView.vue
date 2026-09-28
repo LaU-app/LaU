@@ -37,7 +37,7 @@
             <span v-if="product.delivery_point" class="status-chip"><i class="dot-orange"/>{{ product.delivery_point }}</span>
           </div>
 
-          <button v-if="product.store" class="seller-card study-card" @click="router.push(`/marketplace/store/${product.store.slug}`)">
+          <button v-if="product.store" class="seller-card study-card" @click="router.push(`/tabs/marketplace/store/${product.store.slug}`)">
             <span class="store-logo"><img v-if="product.store.logo_url" :src="product.store.logo_url" :alt="product.store.name"/><ion-icon v-else :icon="storefrontOutline"/></span>
             <div><b>{{ product.store.name }}</b><span class="study-muted">Ver la tienda</span></div>
             <span class="round-arrow"><ion-icon :icon="arrowForwardOutline"/></span>
@@ -65,7 +65,7 @@
         </template>
       </main>
     </ion-content>
-    <MarketplaceBottomNav active="explore"/>
+
   </ion-page>
 </template>
 

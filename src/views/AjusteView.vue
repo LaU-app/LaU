@@ -31,7 +31,7 @@
 
         <!-- ========== GENERAL ========== -->
         <div class="settings-section">
-          <div class="settings-card">
+          <div class="settings-cards">
             <div class="section-title-row">General</div>
             <div class="item-divider"></div>
 
@@ -67,7 +67,7 @@
 
         <!-- ========== NOTIFICACIONES ========== -->
         <div class="settings-section">
-          <div class="settings-card">
+          <div class="settings-cards">
             <div class="section-title-row">Notificaciones</div>
             <div class="item-divider"></div>
             <div class="settings-item">
@@ -80,7 +80,7 @@
 
         <!-- ========== PRIVACIDAD Y SEGURIDAD ========== -->
         <div class="settings-section">
-          <div class="settings-card">
+          <div class="settings-cards">
             <div class="section-title-row">Privacidad y seguridad</div>
             <div class="item-divider"></div>
 
@@ -102,7 +102,7 @@
 
         <!-- ========== ACTUALIZACIONES ========== -->
         <div class="settings-section">
-          <div class="settings-card">
+          <div class="settings-cards">
             <div class="section-title-row">Actualizaciones</div>
             <div class="item-divider"></div>
             <button class="settings-item settings-item-btn" type="button" @click="openDriveUpdates">
@@ -118,7 +118,7 @@
 
         <!-- ========== INFORMACIÓN ========== -->
         <div class="settings-section">
-          <div class="settings-card">
+          <div class="settings-cards">
             <div class="section-title-row">Información</div>
             <div class="item-divider"></div>
 
@@ -611,14 +611,14 @@ ion-page {
   color: var(--ion-color-dark, #1c1c1e);
 }
 
-.settings-card {
+.settings-cards {
   background: #ffffff;
   border-radius: 18px;
   overflow: hidden;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
 }
 
-.ion-palette-dark .settings-card {
+.ion-palette-dark .settings-cards {
   background: #1c1c1e;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }

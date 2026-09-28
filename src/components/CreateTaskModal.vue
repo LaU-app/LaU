@@ -322,10 +322,7 @@
       </main>
     </ion-content>
 
-    <StudyBottomNav
-      active="tasks"
-      in-modal
-    />
+
   </ion-page>
 </template>
 

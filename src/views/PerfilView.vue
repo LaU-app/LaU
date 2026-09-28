@@ -1724,7 +1724,7 @@ export default {
     },
 
     goToTasks() {
-      this.$router.push('/tasks');
+      this.$router.push('/tabs/tasks');
     },
 
     goToUserProfile(user) {

@@ -111,8 +111,8 @@ watch(() => props.isAuthenticated, (newValue) => {
 }, { immediate: true });
 
 const goToLogin = () => router.push("/login");
-const goToTasks = () => router.push('/tasks');
-const goToMarketplace = () => router.push('/marketplace');
+const goToTasks = () => router.push('/tabs/tasks');
+const goToMarketplace = () => router.push('/tabs/marketplace');
 const openNotifications = () => router.push("/notifications");
 </script>
 

@@ -42,20 +42,20 @@ async function confirmDiscard() {
   })
   await alert.present()
 }
-watch(selected, tab => { notice.value = ''; void shell.value?.closest('ion-content')?.scrollToTop(0); void router.replace({ path: '/study', query: { ...route.query, tab } }) })
-watch(() => route.query.tab, tab => { if (route.path === '/study' && ['focus','progress','ranking'].includes(String(tab))) selected.value = String(tab) })
+watch(selected, tab => { notice.value = ''; void shell.value?.closest('ion-content')?.scrollToTop(0); void router.replace({ path: '/tabs/study', query: { ...route.query, tab } }) })
+watch(() => route.query.tab, tab => { if (route.path === '/tabs/study' && ['focus','progress','ranking'].includes(String(tab))) selected.value = String(tab) })
 async function selectRouteTask() {
-  if (route.path !== '/study') return
+  if (route.path !== '/tabs/study') return
   const taskQuery = route.query.task, freeQuery = route.query.free
   await study.initialize()
   const id = Number(taskQuery)
   if (id > 0) {
-    try { const result = await tasksService.getTaskById(id); if (route.path === '/study' && route.query.task === taskQuery) await study.selectTask(id, result.data.title) }
+    try { const result = await tasksService.getTaskById(id); if (route.path === '/tabs/study' && route.query.task === taskQuery) await study.selectTask(id, result.data.title) }
     catch { notice.value = 'No pudimos abrir esa tarea. Puedes elegir otra en Mis tareas.' }
   } else if (freeQuery === '1') await study.selectTask(null, '')
 }
 onMounted(selectRouteTask)
 onIonViewWillEnter(selectRouteTask)
-watch(() => [route.query.task, route.query.free], () => { if (route.path === '/study') void selectRouteTask() })
+watch(() => [route.query.task, route.query.free], () => { if (route.path === '/tabs/study') void selectRouteTask() })
 useStudyScreen(() => study.refreshRemote(['timer', 'preferences']), ['timer','tasks','stats','ranking','preferences'], false)
 </script>

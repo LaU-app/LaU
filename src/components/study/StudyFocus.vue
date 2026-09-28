@@ -46,7 +46,7 @@
           !timer.pending
         "
         class="study-link choose-task"
-        to="/tasks?choose=1"
+        to="/tabs/tasks?choose=1"
       >
         {{
           timer.taskId

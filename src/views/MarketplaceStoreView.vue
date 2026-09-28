@@ -49,7 +49,7 @@
         </template>
       </main>
     </ion-content>
-    <MarketplaceBottomNav active="explore"/>
+
   </ion-page>
 </template>
 
@@ -103,7 +103,7 @@ async function load() {
   }
 }
 
-const open = (product: Product) => router.push(`/marketplace/product/${product.id}`)
+const open = (product: Product) => router.push(`/tabs/marketplace/product/${product.id}`)
 
 async function add(product: Product) {
   const added = await cart.add(product)

@@ -1,4 +1,4 @@
-<template><ion-page class="study-page study-ui" :class="['study-destination-'+selected, { 'study-focus-active': study.focusActive.value }]"><ion-content><StudyHub/></ion-content><StudyBottomNav :active="selected"/></ion-page></template>
+<template><ion-page class="study-page study-ui" :class="['study-destination-'+selected, { 'study-focus-active': study.focusActive.value }]"><ion-content><StudyHub/></ion-content></ion-page></template>
 <script setup lang="ts">
 import { IonPage, IonContent } from '@ionic/vue'
 import { computed } from 'vue'
