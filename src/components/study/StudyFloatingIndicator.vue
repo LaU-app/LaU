@@ -148,7 +148,7 @@ const calculatedPillWidth = computed(() =>
 // completo en la pantalla de Enfoque.
 const onFocusScreen = computed(
     () =>
-        route.path === '/study' &&
+        route.path === '/tabs/study' &&
         (
             !route.query.tab ||
             route.query.tab === 'focus'
@@ -156,14 +156,14 @@ const onFocusScreen = computed(
 )
 
 const onStudyScreen = computed(
-    () => route.path === '/study'
+    () => route.path === '/tabs/study'
 )
 
 // El desplazamiento por defecto libera el AppHeader
 // del feed; /tasks no tiene header propio,
 // así que la píldora sube como en /study.
 const onTasksScreen = computed(
-    () => route.path === '/tasks'
+    () => route.path === '/tabs/tasks'
 )
 
 const visible = computed(
@@ -206,7 +206,7 @@ const progressPercent = computed(() => {
 
 function goToFocus() {
     router.push({
-        path: '/study',
+        path: '/tabs/study',
         query: {
             tab: 'focus'
         }

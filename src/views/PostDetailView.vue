@@ -297,7 +297,8 @@ import PostActions from '@/components/PostActions.vue';
 import CommentItem from '@/components/CommentItem.vue';
 import FullScreenImageViewer from '@/components/FullScreenImageViewer.vue';
 import LiquidGlassBox from '@/components/LiquidGlassBox.vue';
-
+import MentionInput from '@/components/MentionInput.vue'; 
+import MentionTextRenderer from '@/components/MentionTextRenderer.vue';
 import { timeAgo } from '@/utils/timeUtils';
 import { getFullImageUrl } from '@/utils/imageUtils';
 import { useAmbientMode } from "@/utils/useAmbientMode";

@@ -24,7 +24,7 @@
           <span class="study-symbol tone-blue"><ion-icon :icon="receiptOutline"/></span>
           <h2>{{ tab === 'purchases' ? 'No has apartado nada' : 'Todavía no te apartan nada' }}</h2>
           <p>{{ tab === 'purchases' ? 'Lo que apartes aparecerá acá.' : 'Publicá algo y aparecerá acá cuando alguien lo aparte.' }}</p>
-          <button class="study-link" @click="router.push('/marketplace')">Ir al marketplace</button>
+          <button class="study-link" @click="router.push('/tabs/marketplace')">Ir al marketplace</button>
         </div>
 
         <article v-for="order in orders" :key="order.id" class="order-card study-card">
@@ -67,7 +67,7 @@
         <button v-if="page < lastPage" class="study-link load-more" :disabled="loading" @click="load(true)">Ver más</button>
       </main>
     </ion-content>
-    <MarketplaceBottomNav active="orders"/>
+
   </ion-page>
 </template>
 

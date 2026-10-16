@@ -31,7 +31,7 @@
 
             <div class="hero-actions">
               <button class="study-button secondary-button" @click="openWizard(data.store)"><ion-icon :icon="createOutline"/>Editar perfil</button>
-              <button class="study-button secondary-button" @click="router.push(`/marketplace/store/${data.store.slug}`)"><ion-icon :icon="eyeOutline"/>Ver vitrina</button>
+              <button class="study-button secondary-button" @click="router.push(`/tabs/marketplace/store/${data.store.slug}`)"><ion-icon :icon="eyeOutline"/>Ver vitrina</button>
             </div>
 
             <!-- El hero del mockup era una tarjeta morada a sangre; aquí es la misma
@@ -72,11 +72,11 @@
             <div class="section-title"><h2>Acciones rápidas</h2></div>
             <div class="quick-actions">
               <button class="quick-action" @click="publish"><span class="study-symbol tone-purple"><ion-icon :icon="addOutline"/></span><b>Añadir producto</b><span class="round-arrow"><ion-icon :icon="arrowForwardOutline"/></span></button>
-              <button class="quick-action" @click="router.push('/marketplace/orders')"><span class="study-symbol tone-blue"><ion-icon :icon="receiptOutline"/></span><b>Ver apartados</b><span class="round-arrow"><ion-icon :icon="arrowForwardOutline"/></span></button>
+              <button class="quick-action" @click="router.push('/tabs/marketplace/orders')"><span class="study-symbol tone-blue"><ion-icon :icon="receiptOutline"/></span><b>Ver apartados</b><span class="round-arrow"><ion-icon :icon="arrowForwardOutline"/></span></button>
             </div>
 
             <template v-if="data.recent_orders.length">
-              <div class="section-title"><h2>Apartados recientes</h2><button class="study-link" @click="router.push('/marketplace/orders')">Ver todo</button></div>
+              <div class="section-title"><h2>Apartados recientes</h2><button class="study-link" @click="router.push('/tabs/marketplace/orders')">Ver todo</button></div>
               <ol class="study-history">
                 <li v-for="order in data.recent_orders" :key="order.id">
                   <StudyAvatar :src="order.buyer?.imagen_url" :name="order.buyer?.name"/>
@@ -95,7 +95,7 @@
             <template v-if="data.low_stock.length">
               <div class="section-title"><h2>Poco stock</h2></div>
               <ol class="study-history">
-                <li v-for="product in data.low_stock" :key="product.id" @click="router.push(`/marketplace/product/${product.id}`)">
+                <li v-for="product in data.low_stock" :key="product.id" @click="router.push(`/tabs/marketplace/product/${product.id}`)">
                   <span class="store-logo small">
                     <img v-if="product.images[0]" :src="product.images[0].url" :alt="product.name"/>
                     <ion-icon v-else :icon="imageOutline"/>
@@ -112,7 +112,7 @@
         </template>
       </main>
     </ion-content>
-    <MarketplaceBottomNav active="store"/>
+
   </ion-page>
 </template>
 

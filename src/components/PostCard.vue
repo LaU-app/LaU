@@ -8,55 +8,40 @@
             
             <!-- ENCABEZADO -->
             <div class="post-header-redesign">
-                <div class="post-user-left" @click.stop="goToProfile(post.user?.id)">
+                <!-- Cambiamos id por username aquí -->
+                <div class="post-user-left" @click.stop="goToProfile(post.user?.username)">
                     <ion-avatar class="post-avatar-small">
-                        <img
-                            v-if="post.user?.imagen_url"
-                            :src="getFullImageUrl(post.user.imagen_url)"
-                            :alt="post.user?.name || 'Usuario'"
-                            loading="lazy"
-                            @error="handleImageError"
-                        />
-                        <ion-icon
-                            v-else
-                            :icon="personCircle"
-                            size="large"
-                        ></ion-icon>
+                        <img v-if="post.user?.imagen_url" :src="getFullImageUrl(post.user.imagen_url)" :alt="post.user?.name || 'Usuario'" loading="lazy" @error="handleImageError" />
+                        <ion-icon v-else :icon="personCircle" size="large"></ion-icon>
                     </ion-avatar>
-
-                    <div
-                        class="post-user-info"
-                        v-memo="[post.user?.name, post.user?.username]"
-                    >
+                    <div class="post-user-info" v-memo="[post.user?.name, post.user?.username]">
                         <h3>{{ post.user?.name || 'Usuario' }}</h3>
-                        <p class="post-meta">
-                            {{ formatTimeRelative(post.created_at) }}
-                        </p>
+                        <p class="post-meta">{{ post.user?.username || 'usuario' }} • {{ formatTimeRelative(post.created_at) }}</p>
                     </div>
                 </div>
                 
                 <div class="post-actions-right">
                     <!-- Botón Seguir -->
-                    <!--
-                    <ion-button
+
+                    <!-- <ion-button
                         fill="solid"
                         class="btn-follow"
                         @click.stop="handleFollow"
                     >
                         FOLLOW
-                    </ion-button>
-                    -->
+                    </ion-button> -->
+
 
                     <!-- Menú de 3 puntos -->
-                    <!--
+<!-- 
                     <ion-button
                         fill="clear"
                         class="btn-more-options"
                         @click.stop="handleOptions"
                     >
                         <ion-icon :icon="ellipsisVertical"></ion-icon>
-                    </ion-button>
-                    -->
+                    </ion-button> -->
+
                 </div>
             </div>
 
@@ -99,14 +84,12 @@
                         />
                     </div>
                     
-                    <!--
-                    <div
+                    <!-- <div
                         class="overlaid-save-pill"
                         @click.stop="handleSave"
                     >
                         <ion-icon :icon="bookmarkOutline"></ion-icon>
-                    </div>
-                    -->
+                    </div> -->
                 </div>
             </div>
 
@@ -125,7 +108,7 @@
                 
                 <!-- Acciones en la parte inferior de la burbuja -->
                 <div class="bottom-actions-container">
-                    <div class="overlaid-actions-pill custom-pill">
+                    <div class="overlaid-actions-pill custom-pill adapt-color">
                         <PostActions
                             :post="post"
                             @like="handleLike"
@@ -134,8 +117,7 @@
                         />
                     </div>
                     
-                    <!--
-                    <div
+                    <!-- <div
                         class="overlaid-save-pill solid-pill"
                         @click.stop="handleSave"
                     >
@@ -143,8 +125,7 @@
                             :icon="bookmarkOutline"
                             class="adapt-color-icon"
                         ></ion-icon>
-                    </div>
-                    -->
+                    </div> -->
                 </div>
             </div>
 
@@ -153,33 +134,54 @@
                 v-else-if="post.tipo === 'archivo' && post.archivo_url"
                 class="full-width-media"
             >
+                <!-- ... (tu código del archivo queda igual aquí) ... -->
                 <div class="file-attachment-seamless">
                     <div class="file-info">
                         <div class="file-icon-container">
-                            <ion-icon
-                                :icon="documentAttach"
-                                size="large"
-                                :color="getFileColor(post.archivo)"
-                            ></ion-icon>
+                            <ion-icon :icon="documentAttach" size="large" :color="getFileColor(post.archivo)"></ion-icon>
                         </div>
-
                         <div class="file-details">
                             <h4>{{ getFileName(post.archivo) }}</h4>
                             <p>{{ getFileExtension(post.archivo) }}</p>
                         </div>
                     </div>
-
-                    <ion-button
-                        fill="clear"
-                        size="small"
-                        @click.stop="downloadFile(post.archivo_url, post.archivo)"
-                    >
+                    <ion-button fill="clear" size="small" @click.stop="downloadFile(post.archivo_url, post.archivo)">
                         <ion-icon :icon="downloadOutline"></ion-icon>
                     </ion-button>
                 </div>
                 
                 <div class="bottom-actions-container">
-                    <div class="overlaid-actions-pill custom-pill">
+                    <div class="overlaid-actions-pill custom-pill adapt-color">
+                        <PostActions :post="post" @like="handleLike" @comment="handleComment" @share="handleShare" />
+                    </div>
+                    <!-- <!<div class="overlaid-save-pill solid-pill" @click.stop="handleSave">
+                        <ion-icon :icon="bookmarkOutline" class="adapt-color-icon"></ion-icon>
+                    </div> -->
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- CASO 4: SÓLO TEXTO (Sin medios)            -->
+            <!-- ========================================== -->
+            <div v-else class="text-only-media">
+                
+                <!-- EL TEXTO COMO CONTENIDO PRINCIPAL -->
+                <div class="text-content-inside">
+                    <h2 v-if="post.titulo" class="post-title">{{ post.titulo }}</h2>
+                    
+                    <p v-if="post.descripcion" class="post-text">
+                        <span v-html="formatTextWithLinks(post.descripcion)" @click="handleLinkClick"></span>
+                    </p>
+                    
+                    <p v-if="post.texto && !post.descripcion" class="post-text">
+                        <span v-html="formatTextWithLinks(post.texto)" @click="handleLinkClick"></span>
+                    </p>
+                </div>
+
+                <!-- LOS BOTONES DE ACCIÓN ABAJO -->
+                <div class="bottom-actions-container">
+                    
+                    <div class="overlaid-actions-pill custom-pill adapt-color">
                         <PostActions
                             :post="post"
                             @like="handleLike"
@@ -188,17 +190,10 @@
                         />
                     </div>
                     
-                    <!--
-                    <div
-                        class="overlaid-save-pill solid-pill"
-                        @click.stop="handleSave"
-                    >
-                        <ion-icon
-                            :icon="bookmarkOutline"
-                            class="adapt-color-icon"
-                        ></ion-icon>
-                    </div>
-                    -->
+                    <!-- <div class="overlaid-save-pill solid-pill" @click.stop="handleSave">
+                        <ion-icon :icon="bookmarkOutline" class="adapt-color-icon"></ion-icon>
+                    </div> -->
+
                 </div>
             </div>
 
@@ -210,7 +205,7 @@
         <!-- ========================================== -->
         <div
             class="post-caption-bubble"
-            v-if="post.titulo || post.descripcion || post.texto"
+            v-if="(post.titulo || post.descripcion || post.texto) && (post.tipo === 'imagen' || post.tipo === 'musica' || post.tipo === 'archivo')"
         >
             <h2
                 v-if="post.titulo"
@@ -258,8 +253,7 @@
         <!-- 3. BURBUJA DE COMENTARIO Y LÍNEA -->
         <!-- ========================================== -->
 
-        <!--
-        <div
+        <!-- <div
             class="post-comment-container"
             v-if="
                 post.latest_comment ||
@@ -327,8 +321,7 @@
                     </span>
                 </div>
             </div>
-        </div>
-        -->
+        </div> -->
 
         <!-- Visor de Pantalla Completa -->
         <FullScreenImageViewer
@@ -437,8 +430,11 @@ export default {
             console.log('Guardar post')
         }
 
-        const goToProfile = (userId) => {
-            console.log('Ir al perfil', userId)
+        const goToProfile = (username) => {
+            if (!username) return; // Evita errores si el usuario no tiene username
+            
+            // Navega a la ruta usando el nombre de usuario
+            router.push(`/tabs/perfil/${username}`); 
         }
 
         // ==========================================
@@ -486,60 +482,51 @@ export default {
         // ==========================================
 
         const formatTimeRelative = (dateString) => {
-            if (!dateString) {
-                return 'today'
+            if (!dateString) return '';
+
+            // Convertimos la fecha que viene de Laravel (UTC) a la hora local del teléfono
+            const date = new Date(dateString);
+            const now = new Date();
+            
+            // Si la fecha de Laravel viene sin la 'Z' al final, a veces JavaScript se confunde.
+            // Aseguramos que la trate como UTC si trae el formato YYYY-MM-DD HH:MM:SS
+            if (typeof dateString === 'string' && !dateString.includes('T') && !dateString.includes('Z')) {
+                dateString = dateString.replace(' ', 'T') + 'Z';
+                date.setTime(Date.parse(dateString));
             }
 
-            const date = new Date(dateString)
-            const now = new Date()
+            const secondsDiff = Math.floor((now - date) / 1000);
 
-            const secondsDiff = Math.floor(
-                (now - date) / 1000
-            )
-
+            // Menos de 1 minuto
             if (secondsDiff < 60) {
-                return 'Hace un momento'
+                return 'Hace un momento';
             }
 
-            const minutesDiff = Math.floor(
-                secondsDiff / 60
-            )
-
+            // Menos de 1 hora
+            const minutesDiff = Math.floor(secondsDiff / 60);
             if (minutesDiff < 60) {
-                return `Hace ${minutesDiff}m`
+                return `Hace ${minutesDiff}m`; // Ej: Hace 15m
             }
 
-            const hoursDiff = Math.floor(
-                minutesDiff / 60
-            )
-
+            // Menos de 24 horas (¡AQUÍ ESTÁ LA CORRECCIÓN!)
+            const hoursDiff = Math.floor(minutesDiff / 60);
             if (hoursDiff < 24) {
-                return `${date
-                    .getHours()
-                    .toString()
-                    .padStart(2, '0')}:${date
-                    .getMinutes()
-                    .toString()
-                    .padStart(2, '0')}`
+                return `Hace ${hoursDiff}h`; // Ej: Hace 4h
             }
 
-            const daysDiff = Math.floor(
-                hoursDiff / 24
-            )
-
+            // Menos de 7 días
+            const daysDiff = Math.floor(hoursDiff / 24);
             if (daysDiff < 7) {
-                return daysDiff === 1
-                    ? 'Ayer'
-                    : `Hace ${daysDiff}d`
+                return daysDiff === 1 ? 'Ayer' : `Hace ${daysDiff}d`; // Ej: Hace 3d
             }
 
-            return date.toLocaleDateString(
-                'es-SV',
-                {
-                    month: 'short',
-                    day: 'numeric'
-                }
-            )
+            // Más de 7 días
+            const options = { month: 'short', day: 'numeric' };
+            if (date.getFullYear() !== now.getFullYear()) {
+                options.year = 'numeric'; // Solo muestra el año si es de un año anterior
+            }
+            
+            return date.toLocaleDateString('es-SV', options);
         }
 
         const getFileName = (filePath) => {
@@ -1126,6 +1113,10 @@ export default {
 :global(.ion-palette-dark)
 .adapt-color-icon {
     color: #ffffff !important;
+}
+
+.text-content-inside {
+    padding: 0 16px 4px 16px;
 }
 
 /* ==================================================

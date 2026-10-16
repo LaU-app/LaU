@@ -17,7 +17,7 @@
           <span class="study-symbol tone-blue"><ion-icon :icon="cartOutline"/></span>
           <h2>Nada apartado todavía</h2>
           <p>Cuando encuentres algo que te sirva, agregalo aquí.</p>
-          <button class="study-link" @click="router.push('/marketplace')">Seguir explorando</button>
+          <button class="study-link" @click="router.push('/tabs/marketplace')">Seguir explorando</button>
         </div>
 
         <template v-else>
@@ -82,7 +82,7 @@
         </template>
       </main>
     </ion-content>
-    <MarketplaceBottomNav active="cart"/>
+
   </ion-page>
 </template>
 

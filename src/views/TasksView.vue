@@ -10,11 +10,12 @@
         <p v-if="error" class="study-error" role="alert">{{ error }} <button class="study-link" @click="load()">Reintentar</button></p>
         <p v-if="loading && !tasks.length" class="study-empty" role="status">Cargando tus tareas…</p>
         <div v-else-if="!tasks.length && !error" class="study-empty tasks-empty"><span class="study-symbol tone-blue"><ion-icon :icon="bookOutline"/></span><h2>{{ filter ? 'Todo despejado por aquí' : 'Dale espacio a tu próxima meta' }}</h2><p>{{ filter ? 'No tienes tareas con este estado.' : 'Crea una tarea y empieza con un Pomodoro.' }}</p><button class="study-link" @click="filter ? clearFilter() : openCreate()">{{ filter ? 'Ver todas las tareas' : 'Crear mi primera tarea' }}</button></div>
-        <div class="task-list"><TaskCard v-for="task in tasks" :key="task.id || task.uuid_cliente" :task="task" @click="router.push('/tasks/' + task.id)" @study="studyTask(task)"/></div>
+        <div class="task-list"><TaskCard v-for="task in tasks" :key="task.id || task.uuid_cliente" :task="task" @click="router.push('/tabs/tasks/' + task.id)" @study="studyTask(task)"/></div>
         <button v-if="page < lastPage" class="study-link load-more" :disabled="loading" @click="load(true)">Ver más tareas</button>
       </div>
     </main>
-  </ion-content><StudyBottomNav active="tasks"/></ion-page>
+  </ion-content>
+  </ion-page>
 </template>
 <script setup>
 import { ref } from 'vue'
@@ -43,7 +44,7 @@ async function load(append = false) {
   finally { if(id === request) loading.value = false }
 }
 const clearFilter = () => { filter.value = ''; void load() }
-const studyTask = task => router.push({path:'/study',query:{task:String(task.id),tab:'focus'}})
+const studyTask = task => router.push({path:'/tabs/study',query:{task:String(task.id),tab:'focus'}})
 async function openCreate() {
   const modal = await modalController.create({component:CreateTaskModal})
   await modal.present()

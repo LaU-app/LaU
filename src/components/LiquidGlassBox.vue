@@ -86,8 +86,9 @@ const computedStyle = computed(() => {
       rgb(0 0 0 / 18%) 1px 4px 20px 0px, rgb(0 0 0 / 40%) -2px -1px 1px 0px
     `,
     // Aquí está la magia del backdrop-filter
-    backdropFilter: `blur(${props.blur / 2}px) url('${filterUrl}') blur(${props.blur}px) brightness(1.1) saturate(1.5)`,
-    WebkitBackdropFilter: `blur(${props.blur / 2}px) url('${filterUrl}') blur(${props.blur}px) brightness(1.1) saturate(1.5)`,
+backdropFilter: `blur(${props.blur / 2}px) url('${filterUrl}') blur(${props.blur}px) brightness(1.1) saturate(1.5)`,
+WebkitBackdropFilter: `blur(${props.blur / 2}px) url('${filterUrl}') blur(${props.blur}px) brightness(1.1) saturate(1.5)`,
+    
     transform: 'translate3d(0,0,0)',
   };
 });
@@ -106,6 +107,13 @@ const containerStyle = computed(() => computedStyle.value);
   will-change: backdrop-filter, transform;
   transform: translateZ(0);
   contain: paint;
+  animation: forceRepaint 1s linear infinite;
+}
+
+@keyframes forceRepaint {
+  0% { transform: translateZ(0) scale(1); }
+  50% { transform: translateZ(0) scale(1.0000001); }
+  100% { transform: translateZ(0) scale(1); }
 }
 
 /* 2. COMPATIBILIDAD CON IONIC: Le enseñamos a leer el modo oscuro de tu app */
