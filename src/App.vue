@@ -8,7 +8,7 @@
 
 <script setup>
 import { IonApp, IonRouterOutlet, useBackButton, useIonRouter } from '@ionic/vue';
-import { onMounted, onUnmounted, computed } from 'vue';
+import { onMounted, onUnmounted } from 'vue';
 import { startStudyRuntime, stopStudyRuntime } from '@/utils/useStudy';
 import { startCartRuntime, stopCartRuntime } from '@/utils/useCart';
 import { useDarkMode } from '@/utils/useDarkMode';
@@ -29,36 +29,7 @@ const ionRouter = useIonRouter();
 const route = useRoute();
 const router = useRouter();
 
-// ✨ LÓGICA PARA MOSTRAR/OCULTAR EL MENÚ GLOBAL ✨
-const showGlobalNav = computed(() => {
-  // 1. Rutas donde NO debe aparecer el menú (Login, Registro, etc.)
-  const authRoutes = ['/welcome', '/login', '/register', '/university-select'];
-  const isAuthRoute = authRoutes.includes(route.path);
-  
-  // 2. Rutas donde quieres que se oculte (como el detalle del post para ver la foto completa)
-  const isPostDetail = route.path.includes('/post/');
-  const isChatDetail = route.path.includes('/chat/') && route.path !== '/tabs/chat';
-
-  // Solo se muestra si está logueado y no está en ninguna de las pantallas anteriores
-  return AuthService.isAuthenticated() && !isAuthRoute && !isPostDetail && !isChatDetail;
-});
-
-// ✨ 2. EL GUARDIÁN DEL MENÚ ✨
-router.afterEach((to) => {
-  if (!to.path.includes('/post/')) {
-    setTimeout(() => {
-      try {
-        const tabBar = document.querySelector('ion-tab-bar.floating-tabs');
-        const tabGradient = document.querySelector('.tabs-gradient-mask');
-        
-        if (tabBar) tabBar.style.display = 'flex';
-        if (tabGradient) tabGradient.style.display = 'block';
-      } catch (e) {
-        console.warn('Error al restaurar menú', e);
-      }
-    }, 50);
-  }
-});
+// La visibilidad del menú inferior la decide TabsPage a partir de la ruta.
 
 // ÚNICO LUGAR DE CONTROL
 useBackButton(10, (processNextHandler) => {

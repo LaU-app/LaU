@@ -43,7 +43,8 @@ async function confirmDiscard() {
   await alert.present()
 }
 watch(selected, tab => { notice.value = ''; void shell.value?.closest('ion-content')?.scrollToTop(0); void router.replace({ path: '/tabs/study', query: { ...route.query, tab } }) })
-watch(() => route.query.tab, tab => { if (route.path === '/tabs/study' && ['focus','progress','ranking'].includes(String(tab))) selected.value = String(tab) })
+// Sin ?tab (o con uno inválido) la ruta significa Enfoque, igual que en el menú inferior
+watch(() => route.query.tab, tab => { if (route.path === '/tabs/study') selected.value = ['focus','progress','ranking'].includes(String(tab)) ? String(tab) : 'focus' })
 async function selectRouteTask() {
   if (route.path !== '/tabs/study') return
   const taskQuery = route.query.task, freeQuery = route.query.free

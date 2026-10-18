@@ -32,17 +32,19 @@ const routes = [
     component: () => import("@/views/RegisterView.vue"),
     meta: { requiresGuest: true },
   },
+  // Rutas antiguas: ahora viven dentro de /tabs (con el menú inferior visible).
+  // Se redirigen para que enlaces, notificaciones push y pantallas que aún las usan sigan funcionando.
+  { path: "/users", redirect: "/tabs/users" },
+  { path: "/notifications", redirect: "/tabs/notifications" },
+  { path: "/study", redirect: "/tabs/study" },
+  { path: "/tasks", redirect: "/tabs/tasks" },
+  { path: "/tasks/:id", redirect: (to) => ({ path: `/tabs/tasks/${to.params.id}` }) },
   {
-    path: "/users",
-    name: "Users",
-    component: () => import("@/views/UsersView.vue"),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: "/notifications",
-    name: "Notifications",
-    component: () => import("@/views/NotificationsView.vue"),
-    meta: { requiresAuth: true },
+    path: "/marketplace/:pathMatch(.*)*",
+    redirect: (to) => {
+      const rest = [].concat(to.params.pathMatch || []).join("/");
+      return { path: rest ? `/tabs/marketplace/${rest}` : "/tabs/marketplace" };
+    },
   },
   {
     path: "/notification-settings",
@@ -84,6 +86,18 @@ const routes = [
         path: "chat",
         name: "ChatList",
         component: () => import("@/views/ChatList.vue"),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: "users",
+        name: "Users",
+        component: () => import("@/views/UsersView.vue"),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: "notifications",
+        name: "Notifications",
+        component: () => import("@/views/NotificationsView.vue"),
         meta: { requiresAuth: true },
       },
       {
