@@ -63,8 +63,9 @@ ion-toast::part(button):hover {
     border-radius: 20px !important;
 }
 
+/* Espacio para el menú flotante: su alto + su separación inferior (safe area) + aire */
 ion-tabs.layout-with-tabs ion-content {
-  --padding-bottom: calc(70px + env(safe-area-inset-bottom));
+  --padding-bottom: calc(clamp(65px, 8vw, 76px) + max(10px, env(safe-area-inset-bottom)) + 12px);
 }
 
 /* .pt-safe-top {
@@ -151,16 +152,3 @@ ion-searchbar::part(search-input) {
     caret-color: #8A2BE2 !important;
 }
 
-/* =======================================================
-   ANIMACIÓN PARA OCULTAR EL MENÚ DE TABS FLOTANTE
-   ======================================================= */
-ion-tab-bar.floating-tabs.hide-tabs-animated {
-    transform: translateY(120px) !important; /* Lo empuja hacia abajo */
-    opacity: 0 !important; /* Lo hace transparente */
-    pointer-events: none !important; /* Evita que se pueda hacer clic invisible */
-}
-
-.tabs-gradient-mask.hide-tabs-animated {
-    opacity: 0 !important;
-    pointer-events: none !important;
-}

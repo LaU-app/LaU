@@ -283,8 +283,7 @@ import {
     IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, 
     IonButton, IonIcon, IonAvatar, IonText, IonImg, IonSpinner, 
     IonTextarea, IonCard, IonCardHeader, IonCardContent, IonCardTitle,
-    IonFooter, toastController, alertController, 
-    onIonViewWillEnter, onIonViewWillLeave
+    IonFooter, toastController, alertController
 } from '@ionic/vue';
 import {
     arrowBack, personCircle, alertCircle, send, chatbubbleOutline, 
@@ -391,24 +390,12 @@ const showToast = async (message, color = 'dark') => {
 };
 
 // ==========================================
-// 4. NAVEGACIÓN Y TABS VISUALES
+// 4. NAVEGACIÓN
 // ==========================================
-const toggleGlobalTabs = (show) => {
-    requestAnimationFrame(() => {
-        const tabBar = document.querySelector('ion-tab-bar.floating-tabs-redesign'); // 👈 corregido
-        const tabGradient = document.querySelector('.tabs-gradient-mask');
-        if (tabBar) show ? tabBar.classList.remove('hide-tabs-animated') : tabBar.classList.add('hide-tabs-animated');
-        if (tabGradient) show ? tabGradient.classList.remove('hide-tabs-animated') : tabGradient.classList.add('hide-tabs-animated');
-    });
-};
-
+// El menú inferior se oculta solo en esta ruta (lo decide TabsPage).
 const goBack = () => {
-    toggleGlobalTabs(true);
     window.history.length > 2 ? router.back() : router.push('/tabs/tab1');
 };
-
-onIonViewWillEnter(() => toggleGlobalTabs(false));
-onIonViewWillLeave(() => toggleGlobalTabs(true));
 
 const handleScroll = (event) => {
     showUserInHeader.value = event.detail.scrollTop > 120;
