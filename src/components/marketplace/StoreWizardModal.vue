@@ -70,7 +70,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { IonPage, IonContent, IonIcon, modalController } from '@ionic/vue'
 import { arrowBackOutline, storefrontOutline, imageOutline, bulbOutline, checkmarkOutline, checkmarkCircleOutline, addOutline } from 'ionicons/icons'
-import PublishProductModal from '@/components/marketplace/PublishProductModal.vue'
+import { openProductForm } from '@/utils/productForm'
 import { categoryIcon } from '@/utils/categoryIcon'
 import marketplaceService, { marketplaceError } from '@/services/marketplaceService'
 import { optimizeImageToWebP } from '@/utils/imageOptimizer'
@@ -155,9 +155,7 @@ async function save() {
 }
 
 async function publishFirst() {
-  const modal = await modalController.create({ component: PublishProductModal })
-  await modal.present()
-  await modal.onDidDismiss()
+  await openProductForm()
   await modalController.dismiss({ saved: true })
 }
 

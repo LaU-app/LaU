@@ -128,11 +128,11 @@ import {
 import AppHeader from '@/components/AppHeader.vue'
 import StudyAvatar from '@/components/study/StudyAvatar.vue'
 import MarketplaceBottomNav from '@/components/marketplace/MarketplaceBottomNav.vue'
-import PublishProductModal from '@/components/marketplace/PublishProductModal.vue'
 import StoreWizardModal from '@/components/marketplace/StoreWizardModal.vue'
 import marketplaceService, { marketplaceError } from '@/services/marketplaceService'
 import { useDarkMode } from '@/utils/useDarkMode'
 import { useStudyScreen } from '@/utils/useStudyScreen'
+import { openProductForm } from '@/utils/productForm'
 import { studyDate } from '@/utils/studyPresentation'
 import type { Store, StoreDashboard } from '@/types/marketplace'
 import '@/theme/study.css'
@@ -182,9 +182,7 @@ async function openWizard(store?: Store | null) {
 }
 
 async function publish() {
-  const modal = await modalController.create({ component: PublishProductModal })
-  await modal.present()
-  const { data: result } = await modal.onDidDismiss()
+  const { data: result } = await openProductForm()
   if (result?.created) await load()
 }
 

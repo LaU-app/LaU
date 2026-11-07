@@ -1,47 +1,51 @@
 <template>
-  <div>
-    <div class="photo-grid">
-      <button
-        v-for="(slot, index) in slots"
-        :key="index"
-        type="button"
-        class="photo-slot"
-        :class="{ primary: index === 0, filled: !!slot }"
-        :aria-label="slot ? `Cambiar foto ${index + 1}` : `Agregar foto ${index + 1}`"
-        @click="pick(index)"
-      >
-        <template v-if="slot">
-          <img :src="slot.preview" :alt="`Foto ${index + 1}`"/>
+  <div class="photo-picker">
+    <!-- Sin fotos: una sola tarjeta compacta en vez de seis huecos vacíos -->
+    <button v-if="!items.length" type="button" class="photo-empty" :disabled="disabled" aria-describedby="photo-hint" @click="pick(0)">
+      <span class="photo-empty-icon"><ion-icon :icon="cameraOutline"/></span>
+      <span><b>Agregar fotos</b><small>Cámara, galería o archivo</small></span>
+    </button>
+
+    <!-- Con fotos: portada + miniaturas desplazables -->
+    <ul v-else class="photo-strip" aria-label="Fotos del producto">
+      <li v-for="(item, index) in items" :key="item.id" class="photo-tile" :class="{ cover: index === 0 }">
+        <!-- Toda la miniatura es un solo botón: sustituir, usar como portada o quitar -->
+        <button type="button" class="photo-tile-main" :disabled="disabled" :aria-label="index === 0 ? 'Portada: sustituir o quitar' : `Foto ${index + 1}: sustituir, usar como portada o quitar`" @click="options(index)">
+          <img :src="item.preview" alt=""/>
           <span v-if="index === 0" class="photo-cover">PORTADA</span>
-          <span class="photo-remove" role="button" :aria-label="`Quitar foto ${index + 1}`" @click.stop="remove(index)">
-            <ion-icon :icon="closeOutline"/>
-          </span>
-        </template>
-        <template v-else>
-          <ion-icon :icon="index === 0 ? cameraOutline : addOutline"/>
-          <span v-if="index === 0">Foto principal</span>
-        </template>
-      </button>
-    </div>
-    <small class="photo-hint">Hasta {{ max }} fotos · la primera es la portada</small>
+        </button>
+      </li>
+      <li v-if="items.length < max" class="photo-tile">
+        <button type="button" class="photo-add" :disabled="disabled" :aria-label="`Agregar foto, ${items.length} de ${max}`" @click="pick(items.length)">
+          <ion-icon :icon="addOutline"/><span>Agregar</span>
+        </button>
+      </li>
+    </ul>
+    <small id="photo-hint" class="photo-hint">{{ items.length }} de {{ max }} fotos · la primera es la portada{{ items.length ? ' · tocá una para cambiarla' : '' }}</small>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import { IonIcon, actionSheetController, toastController } from '@ionic/vue'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
-import { addOutline, cameraOutline, closeOutline, imagesOutline } from 'ionicons/icons'
+import { addOutline, cameraOutline, closeOutline, imagesOutline, documentOutline, starOutline, trashOutline } from 'ionicons/icons'
 import { optimizeImageToWebP } from '@/utils/imageOptimizer'
+import type { PhotoItem } from '@/types/marketplace'
 
-interface Slot { blob: Blob; preview: string }
+const props = withDefaults(defineProps<{
+  max?: number
+  initial?: { filename: string; url: string }[]
+  disabled?: boolean
+}>(), { max: 6, initial: () => [], disabled: false })
+const emit = defineEmits<{ (event: 'change', items: PhotoItem[]): void }>()
 
-const props = withDefaults(defineProps<{ max?: number }>(), { max: 6 })
-const emit = defineEmits<{ (event: 'change', blobs: Blob[]): void }>()
+let nextId = 0
+const items = ref<PhotoItem[]>(props.initial.slice(0, props.max).map(image => ({ id: `remote-${nextId++}`, preview: image.url, filename: image.filename })))
 
-const slots = ref<(Slot | null)[]>(Array.from({ length: props.max }, () => null))
+watch(items, value => emit('change', [...value]), { deep: true, immediate: true })
 
-watch(slots, value => emit('change', value.filter(Boolean).map(slot => (slot as Slot).blob)), { deep: true })
+const release = (item?: PhotoItem) => { if (item?.blob) URL.revokeObjectURL(item.preview) }
 
 async function toast(message: string, color?: string) {
   await (await toastController.create({ message, duration: 2200, position: 'top', color })).present()
@@ -72,6 +76,7 @@ function fromFile(index: number) {
   input.click()
 }
 
+/** index < cantidad actual = sustituir; index === cantidad = agregar al final. */
 async function place(index: number, file: Blob) {
   if (file.size > 20 * 1024 * 1024) {
     await toast('La imagen no debe superar 20 MB.', 'warning')
@@ -80,29 +85,50 @@ async function place(index: number, file: Blob) {
   try {
     // Se sube siempre en WebP ≤1080 px: mucho menos datos móviles.
     const blob = await optimizeImageToWebP(file)
-    const previous = slots.value[index]
-    if (previous) URL.revokeObjectURL(previous.preview)
-    slots.value[index] = { blob, preview: URL.createObjectURL(blob) }
+    const item: PhotoItem = { id: `local-${nextId++}`, blob, preview: URL.createObjectURL(blob) }
+    if (index < items.value.length) {
+      release(items.value[index])
+      items.value.splice(index, 1, item)
+    } else if (items.value.length < props.max) {
+      items.value.push(item)
+    }
   } catch {
     await toast('No pudimos procesar esa imagen.', 'danger')
   }
 }
 
 function remove(index: number) {
-  const slot = slots.value[index]
-  if (slot) URL.revokeObjectURL(slot.preview)
-  // Se compacta para que nunca queden huecos antes de la portada.
-  const rest = slots.value.filter((entry, position) => position !== index && entry)
-  slots.value = [...rest, ...Array.from({ length: props.max - rest.length }, () => null)] as (Slot | null)[]
+  release(items.value[index])
+  // Al quitarla, la siguiente sube de posición: nunca quedan huecos antes de la portada.
+  items.value.splice(index, 1)
 }
+
+function makeCover(index: number) {
+  const [item] = items.value.splice(index, 1)
+  items.value.unshift(item)
+}
+
+const sources = (index: number, verb: string) => [
+  { text: `${verb} con la cámara`, icon: cameraOutline, handler: () => { void fromCamera(CameraSource.Camera, index) } },
+  { text: `${verb} desde la galería`, icon: imagesOutline, handler: () => { void fromCamera(CameraSource.Photos, index) } },
+  { text: `${verb} desde un archivo`, icon: documentOutline, handler: () => fromFile(index) },
+]
 
 async function pick(index: number) {
   const sheet = await actionSheetController.create({
     header: 'Agregar foto',
+    buttons: [...sources(index, 'Agregar'), { text: 'Cancelar', icon: closeOutline, role: 'cancel' }],
+  })
+  await sheet.present()
+}
+
+async function options(index: number) {
+  const sheet = await actionSheetController.create({
+    header: index === 0 ? 'Portada' : `Foto ${index + 1}`,
     buttons: [
-      { text: 'Tomar foto', icon: cameraOutline, handler: () => { void fromCamera(CameraSource.Camera, index) } },
-      { text: 'Elegir de la galería', icon: imagesOutline, handler: () => { void fromCamera(CameraSource.Photos, index) } },
-      { text: 'Buscar archivo', icon: addOutline, handler: () => fromFile(index) },
+      ...(index > 0 ? [{ text: 'Usar como portada', icon: starOutline, handler: () => makeCover(index) }] : []),
+      ...sources(index, 'Sustituir'),
+      { text: 'Quitar foto', icon: trashOutline, role: 'destructive', handler: () => remove(index) },
       { text: 'Cancelar', icon: closeOutline, role: 'cancel' },
     ],
   })
@@ -110,13 +136,11 @@ async function pick(index: number) {
 }
 
 function reset() {
-  slots.value.forEach(slot => slot && URL.revokeObjectURL(slot.preview))
-  slots.value = Array.from({ length: props.max }, () => null)
+  items.value.forEach(release)
+  items.value = []
 }
+
+onBeforeUnmount(() => items.value.forEach(release))
 
 defineExpose({ reset })
 </script>
-
-<style scoped>
-.photo-hint { display: block; margin-top: 10px; font-size: 11px; line-height: 16px; color: var(--study-faint); }
-</style>

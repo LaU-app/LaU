@@ -331,7 +331,8 @@ ion-tab-bar.lau-nav {
   --ion-safe-area-right: 0px;
   --ion-safe-area-bottom: 0px;
 
-  --nav-h: clamp(65px, 8vw, 76px);
+  /* Medidas compartidas con el resto de la app (src/theme/variables.css) */
+  --nav-h: var(--lau-nav-height);
   --nav-gap: 12px;
   --nav-ease: cubic-bezier(0.32, 0.72, 0, 1);
   --nav-dur: 380ms;
@@ -344,7 +345,7 @@ ion-tab-bar.lau-nav {
   position: absolute;
   left: 15px;
   right: 15px;
-  bottom: max(10px, env(safe-area-inset-bottom));
+  bottom: var(--lau-nav-offset);
   margin: 0 auto;
   max-width: 700px;
   height: var(--nav-h);

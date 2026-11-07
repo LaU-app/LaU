@@ -72,7 +72,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { IonPage, IonContent, IonIcon, modalController, toastController } from '@ionic/vue'
+import { IonPage, IonContent, IonIcon, toastController } from '@ionic/vue'
 import { Share } from '@capacitor/share'
 import {
   arrowBackOutline, arrowForwardOutline, createOutline, shareOutline, imageOutline, cubeOutline,
@@ -81,7 +81,7 @@ import {
 import AppHeader from '@/components/AppHeader.vue'
 import StudyAvatar from '@/components/study/StudyAvatar.vue'
 import MarketplaceBottomNav from '@/components/marketplace/MarketplaceBottomNav.vue'
-import PublishProductModal from '@/components/marketplace/PublishProductModal.vue'
+import { openProductForm } from '@/utils/productForm'
 import marketplaceService, { marketplaceError } from '@/services/marketplaceService'
 import { useDarkMode } from '@/utils/useDarkMode'
 import { cart } from '@/utils/useCart'
@@ -153,9 +153,7 @@ async function share() {
 }
 
 async function edit() {
-  const modal = await modalController.create({ component: PublishProductModal, componentProps: { product: product.value } })
-  await modal.present()
-  const { data } = await modal.onDidDismiss()
+  const { data } = await openProductForm(product.value)
   if (data?.updated) await load()
 }
 
