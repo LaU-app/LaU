@@ -12,7 +12,7 @@ function stubApi() {
   cy.intercept('POST', '**/api/realtime/auth', { statusCode: 403, body: { message: 'e2e' } })
   // Estudio: mismas formas que devuelve la API real (src/types/study.ts)
   const weekly = Array.from({ length: 7 }, (_, i) => ({ date: `2026-10-${String(10 + i).padStart(2, '0')}`, seconds: 0 }))
-  cy.intercept('GET', '**/api/pomodoro/stats', { statusCode: 200, body: { success: true, data: { timezone: 'America/El_Salvador', today_seconds: 0, week_seconds: 0, month_seconds: 0, sessions_completed: 0, pomodoros_completed: 0, current_streak: 0, best_streak: 0, daily_average_seconds: 0, streak_minimum_seconds: 1500, weekly } } })
+  cy.intercept('GET', '**/api/pomodoro/stats', { statusCode: 200, body: { success: true, data: { timezone: 'America/El_Salvador', today_seconds: 0, week_seconds: 0, month_seconds: 0, sessions_completed: 0, pomodoros_completed: 0, current_streak: 0, best_streak: 0, daily_average_seconds: 0, streak_minimum_seconds: 1500, weekly } } }).as('stats')
   cy.intercept('GET', '**/api/pomodoro/leaderboard*', { statusCode: 200, body: { success: true, data: { entries: [], me: null, ranking_public: false, available_scopes: ['global'], timezone: 'America/El_Salvador' } } })
   cy.intercept('GET', '**/api/pomodoro/preferences', { statusCode: 200, body: { success: true, data: { focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, cycles_before_long_break: 4, ranking_public: false } } })
   cy.intercept('GET', '**/api/pomodoro/active', { statusCode: 200, body: { success: true, data: null } })
@@ -61,22 +61,25 @@ const tap = (label: string) => button(label).should('have.length', 1).click()
 // Accesos del AppHeader (ion-button mueve su aria-label al botón interno, así que se buscan por clase)
 const headerSelectors = { tasks: 'ion-button:has(svg.header-hourglass)', notifications: 'ion-button.chat-button-wrapper', market: 'ion-button.market-button-wrapper' }
 const headerButton = (kind: keyof typeof headerSelectors) => cy.get(headerSelectors[kind]).filter(':visible').should('have.length', 1).click()
-const visiblePage = () => cy.get('ion-tabs ion-router-outlet > .ion-page:not(.ion-page-hidden)').should('have.length', 1)
+// Página visible del outlet de tabs. Cada pantalla se consulta con UN selector completo para que
+// Cypress reintente todo (con transiciones instantáneas la página saliente es visible un instante).
+const VISIBLE = 'ion-tabs ion-router-outlet > .ion-page:not(.ion-page-hidden):not(.ion-page-invisible)'
 
-const screens: Record<string, (p: Cypress.Chainable) => void> = {
-  home: p => p.find('.programmatic-refresher').should('exist'),
-  study: p => p.find('.study-shell').should('exist'),
-  tasks: p => p.should('have.class', 'tasks-page'),
-  users: p => p.contains('ion-title', 'Miembros de LaU'),
-  notifications: p => p.contains('ion-title', 'Notificaciones'),
-  chat: p => p.contains('ion-title', 'Mensajes'),
-  create: p => p.find('ion-segment.segmento-personalizado').should('exist'),
-  profile: p => p.find('.username-title').should('exist'),
+const screens: Record<string, () => Cypress.Chainable> = {
+  home: () => cy.get(`${VISIBLE} .programmatic-refresher`),
+  study: () => cy.get(`${VISIBLE} .study-shell`),
+  tasks: () => cy.get(`${VISIBLE}.tasks-page`),
+  users: () => cy.contains(`${VISIBLE} ion-title`, 'Miembros de LaU'),
+  notifications: () => cy.contains(`${VISIBLE} ion-title`, 'Notificaciones'),
+  chat: () => cy.contains(`${VISIBLE} ion-title`, 'Mensajes'),
+  create: () => cy.get(`${VISIBLE} ion-segment.segmento-personalizado`),
+  profile: () => cy.get(`${VISIBLE} .username-title`),
 }
 
 function expectScreen(path: string, screen: keyof typeof screens) {
   cy.location('pathname').should('eq', path)
-  screens[screen](visiblePage())
+  screens[screen]().should('exist')
+  cy.get(VISIBLE).should('have.length', 1)
 }
 
 function expectActive(label: string | null) {
@@ -212,6 +215,9 @@ describe('Menú inferior', () => {
 
   it('rutas antiguas redirigen a /tabs y el detalle de post oculta el menú', () => {
     open('/study?tab=progress')
+    // Esperar la respuesta de Estudio antes del siguiente open(): si sigue en vuelo, el stub genérico
+    // recién registrado la respondería con otra forma y StudyProgress fallaría (carrera del test)
+    cy.wait('@stats')
     cy.location('pathname').should('eq', '/tabs/study')
     cy.location('search').should('eq', '?tab=progress')
     expectActive('Progreso')

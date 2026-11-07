@@ -17,6 +17,14 @@ export interface ProductImage {
     url: string;
 }
 
+/** Foto en el formulario de publicar: nueva (blob WebP) o ya publicada (filename del backend). */
+export interface PhotoItem {
+    id: string;
+    preview: string;
+    blob?: Blob;
+    filename?: string;
+}
+
 export interface MarketplaceUser {
     id: number;
     name: string;

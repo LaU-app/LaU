@@ -63,9 +63,24 @@ ion-toast::part(button):hover {
     border-radius: 20px !important;
 }
 
-/* Espacio para el menú flotante: su alto + su separación inferior (safe area) + aire */
+/* Menú inferior flotante (TabsPage). Única fuente de sus medidas:
+   --lau-nav-height  alto del menú
+   --lau-nav-offset  separación del borde inferior (incluye la safe area)
+   --lau-nav-space   espacio vertical total que ocupa desde el borde inferior */
+:root {
+  --lau-nav-height: clamp(65px, 8vw, 76px);
+  --lau-nav-offset: max(10px, env(safe-area-inset-bottom));
+  --lau-nav-space: calc(var(--lau-nav-height) + var(--lau-nav-offset));
+}
+
+/* Ionic oculta el menú mientras el teclado está abierto: ya no ocupa espacio */
+ion-tabs.layout-with-tabs:has(> ion-tab-bar.tab-bar-hidden) {
+  --lau-nav-space: 0px;
+}
+
+/* Espacio para el menú flotante: lo que ocupa + aire */
 ion-tabs.layout-with-tabs ion-content {
-  --padding-bottom: calc(clamp(65px, 8vw, 76px) + max(10px, env(safe-area-inset-bottom)) + 12px);
+  --padding-bottom: calc(var(--lau-nav-space) + 12px);
 }
 
 /* .pt-safe-top {

@@ -59,14 +59,14 @@ import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   IonPage, IonContent, IonIcon, IonRefresher, IonRefresherContent, IonInfiniteScroll,
-  IonInfiniteScrollContent, IonFab, IonFabButton, actionSheetController, modalController, toastController,
+  IonInfiniteScrollContent, IonFab, IonFabButton, actionSheetController, toastController,
 } from '@ionic/vue'
 import { searchOutline, swapVerticalOutline, storefrontOutline, addOutline } from 'ionicons/icons'
 import AppHeader from '@/components/AppHeader.vue'
 import CategoryScroller from '@/components/marketplace/CategoryScroller.vue'
 import ProductCard from '@/components/marketplace/ProductCard.vue'
 import MarketplaceBottomNav from '@/components/marketplace/MarketplaceBottomNav.vue'
-import PublishProductModal from '@/components/marketplace/PublishProductModal.vue'
+import { openProductForm } from '@/utils/productForm'
 import marketplaceService, { marketplaceError } from '@/services/marketplaceService'
 import { useDarkMode } from '@/utils/useDarkMode'
 import { useStudyScreen } from '@/utils/useStudyScreen'
@@ -146,9 +146,7 @@ async function add(product: Product) {
 }
 
 async function publish() {
-  const modal = await modalController.create({ component: PublishProductModal })
-  await modal.present()
-  const { data } = await modal.onDidDismiss()
+  const { data } = await openProductForm()
   if (data?.created) await load()
 }
 
@@ -175,6 +173,25 @@ useStudyScreen(load, ['marketplace'])
 </script>
 
 <style scoped>
-.market-fab { margin-bottom: 12px; }
-.market-fab ion-fab-button { --background: var(--study-cta); --background-activated: var(--study-cta); --color: var(--study-on-cta); --box-shadow: 0 6px 18px -4px rgba(20,20,22,.35); }
+/*
+ * El FAB vive en el ion-content, debajo del menú flotante (z-index 910). Se coloca
+ * encima de él con el espacio compartido --lau-nav-space (alto + separación + safe area,
+ * variables.css), que vale 0 cuando Ionic oculta el menú por el teclado.
+ */
+.marketplace-page { --market-fab-size: 56px; --market-fab-gap: 16px; }
+.market-fab {
+  bottom: calc(var(--lau-nav-space, 0px) + var(--market-fab-gap));
+  right: calc(15px + var(--ion-safe-area-right, 0px));
+}
+.market-fab ion-fab-button {
+  --background: var(--study-cta); --background-activated: var(--study-cta); --color: var(--study-on-cta);
+  --box-shadow: 0 6px 18px -4px rgba(20,20,22,.35);
+  width: var(--market-fab-size); height: var(--market-fab-size);
+  transition: transform .15s ease;
+}
+.market-fab ion-fab-button.ion-activated { transform: scale(.92); }
+/* La última tarjeta y el infinite scroll siempre quedan por encima del FAB y del menú */
+.marketplace-page ion-content { --padding-bottom: calc(var(--lau-nav-space, 0px) + var(--market-fab-gap) * 2 + var(--market-fab-size)); }
+.marketplace-page .study-shell.study-body { padding-bottom: 0; }
+@media (prefers-reduced-motion: reduce) { .market-fab ion-fab-button { transition: none; } }
 </style>
