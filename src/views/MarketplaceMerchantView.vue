@@ -8,7 +8,6 @@
         </div>
 
         <header class="market-welcome">
-          <span class="eyebrow"><i/>COMERCIO VERIFICADO</span>
           <h1>Vendé con el respaldo de LaU</h1>
           <p class="study-muted intro">Verificamos tu comercio, conectás tu cuenta de PayPal y los estudiantes pagan en línea con total confianza.</p>
         </header>
@@ -127,7 +126,7 @@
             <section v-if="store.accepts_paypal" class="state-card study-card success">
               <span class="study-symbol tone-green"><ion-icon :icon="shieldCheckmarkOutline"/></span>
               <h2>Tu comercio está verificado y cobra con PayPal</h2>
-              <p>Los estudiantes ven el distintivo en tu tienda y pueden pagar en línea. Jev también puede recomendar tus productos cuando coincidan con lo que buscan.</p>
+              <p>Los estudiantes ven el distintivo en tu tienda y pueden pagar en línea. El asistente de compras de LaU también recomienda tus productos cuando coinciden con lo que buscan.</p>
               <VerifiedBadge paypal/>
               <div class="actions-2">
                 <button class="study-button" @click="router.push(`/tabs/marketplace/store/${store.slug}`)"><ion-icon :icon="eyeOutline"/>Ver mi tienda</button>

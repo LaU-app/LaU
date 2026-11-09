@@ -35,7 +35,8 @@ const capture = {
 // La primera transformación de los componentes (Ionic + ionicons) puede tardar varios segundos.
 beforeAll(async () => {
   await import('@/components/marketplace/PayPalCheckoutSheet.vue')
-  await import('@/views/MarketplaceSmartShoppingView.vue')
+  await import('@/components/marketplace/ShoppingAgent.vue')
+  await import('@/components/marketplace/ProductLinkPreview.vue')
 }, 60000)
 
 beforeEach(() => {
@@ -188,50 +189,126 @@ describe('hoja de pago', () => {
   })
 })
 
-describe('compra inteligente con Jev', () => {
-  const plan = {
+describe('asistente de compras', () => {
+  const recommendation = {
+    product: { id: 7, name: 'Calculadora científica 417 funciones', description: 'Ideal para Cálculo', price: '18.50', currency: 'USD', stock: 8, image_url: null, category: 'Electrónica' },
+    store: { name: 'Papelería Campus Central', slug: 'papeleria-campus-central', logo_url: null, is_verified: true, accepts_paypal: true },
+    match_probability: 0.95, fit: { score: 2.8, label: '' }, academic: { score: 1.9, label: '' }, within_budget: true, recommended: true,
+  }
+  const plan = (overrides: Record<string, unknown> = {}) => ({
     decision_id: 42, outcome: 'recommendation', model: 'jev-1.14.0',
     budget: { amount: '25.00', source: 'field', unclear_amounts: [] },
-    interpretation: { purchase_intent: 0.96, item_named: 0.93, category: { slug: 'electronica', name: 'Electrónica', probability: 0.88 } },
-    recommendations: [{
-      product: { id: 7, name: 'Calculadora científica 417 funciones', description: 'Ideal para Cálculo', price: '18.50', currency: 'USD', stock: 8, image_url: null, category: 'Electrónica' },
-      store: { name: 'Papelería Campus Central', slug: 'papeleria-campus-central', logo_url: null, is_verified: true, accepts_paypal: true },
-      match_probability: 0.95, fit: { score: 2.8, label: 'Cubre la necesidad por completo' },
-      academic: { score: 1.9, label: 'Directamente útil para la materia' }, within_budget: true, recommended: true,
-    }],
-    message: { title: 'Te recomendamos Calculadora científica 417 funciones', body: ['Jev estima un 95 % de probabilidad de que sea lo que buscás.'], clarification: null },
+    interpretation: { purchase_intent: 0.96, item_named: 0.93, category: null },
+    recommendations: [recommendation],
+    message: { title: 'Encontré lo que buscás', body: ['Calculadora científica 417 funciones es la mejor opción entre comercios verificados.'], clarification: null },
+    ...overrides,
+  })
+
+  async function mountAgent() {
+    const Agent = (await import('@/components/marketplace/ShoppingAgent.vue')).default
+    return mount(Agent, { attachTo: document.body })
   }
 
-  it('envía la consulta y el presupuesto de la sesión, y muestra las probabilidades de Jev', async () => {
-    api.post.mockResolvedValueOnce(ok(plan))
-    const View = (await import('@/views/MarketplaceSmartShoppingView.vue')).default
-    const wrapper = mount(View)
+  it('envía la consulta con el presupuesto de la sesión y muestra la coincidencia con sentido', async () => {
+    api.post.mockResolvedValueOnce(ok(plan()))
+    const wrapper = await mountAgent()
 
-    await wrapper.find('textarea').setValue('Necesito una calculadora para Cálculo')
+    expect(wrapper.text()).toContain('Contanos qué necesitás')
+    await wrapper.find('.budget-toggle').trigger('click')
     await wrapper.find('input[type="number"]').setValue('25')
+    await wrapper.find('textarea').setValue('Necesito una calculadora para Cálculo')
     await wrapper.find('form').trigger('submit')
     await flushPromises()
 
     expect(api.post).toHaveBeenCalledWith('/marketplace/smart-shopping', { query: 'Necesito una calculadora para Cálculo', max_budget: 25 }, expect.any(Object))
-    expect(wrapper.text()).toContain('Te recomendamos Calculadora científica 417 funciones')
-    expect(wrapper.text()).toContain('95 %')
-    expect(wrapper.text()).toContain('Dentro de tu presupuesto')
-    expect(wrapper.text()).toContain('Recomendado')
-    expect(wrapper.text()).toContain('No conoce tu saldo ni tus gastos')
+    const text = wrapper.text()
+    expect(text).toContain('Encontré lo que buscás')
+    expect(text).toContain('Mejor opción')
+    expect(text).toContain('Muy alta coincidencia con lo que pediste')
+    expect(text).toContain('Cubre todo lo que pediste')
+    expect(text).toContain('Ideal para tu materia')
+    expect(text).toContain('Dentro de tu presupuesto de $25.00')
+    expect(wrapper.find('.match-ring').attributes('aria-label')).toBe('95 % de coincidencia')
+    // No se expone qué modelo de IA se usa.
+    expect(text).not.toMatch(/jev|typesafe/i)
     wrapper.unmount()
   })
 
-  it('si Jev no está disponible muestra el error y ninguna recomendación', async () => {
-    api.post.mockRejectedValueOnce({ response: { status: 503, data: { success: false, code: 'assistant_unavailable', message: 'La compra inteligente no está disponible en este momento.' } } })
-    const View = (await import('@/views/MarketplaceSmartShoppingView.vue')).default
-    const wrapper = mount(View)
+  it('muestra cuánto excede el presupuesto', async () => {
+    api.post.mockResolvedValueOnce(ok(plan({
+      outcome: 'over_budget',
+      budget: { amount: '15.00', source: 'message', unclear_amounts: [] },
+      recommendations: [{ ...recommendation, within_budget: false, recommended: false, match_probability: 0.8 }],
+      message: { title: 'Lo encontré, pero se pasa de tu presupuesto', body: ['La opción más económica cuesta $18.50.'], clarification: null },
+    })))
+    const wrapper = await mountAgent()
+
+    await wrapper.find('textarea').setValue('Calculadora para Cálculo, máximo $15')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('$3.50 más que tu presupuesto')
+    expect(wrapper.text()).toContain('Alta coincidencia con lo que pediste')
+    wrapper.unmount()
+  })
+
+  it('cuando pide más detalles, la respuesta completa la consulta anterior', async () => {
+    api.post
+      .mockResolvedValueOnce(ok(plan({ outcome: 'needs_clarification', recommendations: [], message: { title: 'Contame un poco más', body: ['¿Qué producto necesitás?'], clarification: null } })))
+      .mockResolvedValueOnce(ok(plan()))
+    const wrapper = await mountAgent()
+
+    await wrapper.find('textarea').setValue('quiero comprar algo')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+    await wrapper.find('textarea').setValue('una calculadora científica')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(api.post).toHaveBeenLastCalledWith('/marketplace/smart-shopping', { query: 'quiero comprar algo. una calculadora científica', max_budget: null }, expect.any(Object))
+    wrapper.unmount()
+  })
+
+  it('si el asistente no está disponible muestra el error y ninguna recomendación', async () => {
+    api.post.mockRejectedValueOnce({ response: { status: 503, data: { success: false, code: 'assistant_unavailable', message: 'El asistente no está disponible en este momento.' } } })
+    const wrapper = await mountAgent()
 
     await wrapper.find('textarea').setValue('Necesito una calculadora')
     await wrapper.find('form').trigger('submit')
     await flushPromises()
 
-    expect(wrapper.text()).toContain('La compra inteligente no está disponible en este momento.')
-    expect(wrapper.text()).not.toContain('Recomendado')
+    expect(wrapper.text()).toContain('El asistente no está disponible en este momento.')
+    expect(wrapper.find('.agent-card').exists()).toBe(false)
+    wrapper.unmount()
+  })
+})
+
+describe('producto citado en el chat', () => {
+  it('genera el enlace público y lo reconoce dentro de un mensaje', async () => {
+    const { productUrl, extractProductLink } = await import('@/utils/productLink')
+    const url = productUrl(7)
+    expect(url).toMatch(/\/tabs\/marketplace\/product\/7$/)
+
+    expect(extractProductLink(`Hola, me interesa este producto.\n${url}`)).toEqual({ id: 7, rest: 'Hola, me interesa este producto.' })
+    expect(extractProductLink('https://lauapp.es/tabs/marketplace/product/12')).toEqual({ id: 12, rest: '' })
+    expect(extractProductLink('Hola, ¿cómo estás?')).toBeNull()
+  })
+
+  it('muestra la tarjeta del producto con precio y comercio verificado', async () => {
+    api.get.mockResolvedValueOnce(ok({
+      id: 7, name: 'Calculadora científica 417 funciones', price: '18.50', images: [],
+      store: { id: 1, name: 'Papelería Campus Central', slug: 'p', logo: null, is_verified: true, accepts_paypal: true },
+    }))
+    const Preview = (await import('@/components/marketplace/ProductLinkPreview.vue')).default
+    const wrapper = mount(Preview, { props: { productId: 7, variant: 'composer', removable: true } })
+    await flushPromises()
+
+    expect(api.get).toHaveBeenCalledWith('/marketplace/products/7')
+    expect(wrapper.text()).toContain('Calculadora científica 417 funciones')
+    expect(wrapper.text()).toContain('$18.50')
+    expect(wrapper.text()).toContain('Papelería Campus Central')
+    await wrapper.find('.preview-remove').trigger('click')
+    expect(wrapper.emitted('remove')).toHaveLength(1)
     wrapper.unmount()
   })
 })

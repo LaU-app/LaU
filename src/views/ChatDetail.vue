@@ -50,8 +50,12 @@
                             <img :src="msg.localImage || getAttachmentUrl(msg)" @load="scrollToBottom(0)" />
                         </div>
 
-                        <div v-if="msg.body" class="message-text">
-                            {{ msg.body }}
+                        <!-- Producto citado: el enlace se muestra como tarjeta encima del texto -->
+                        <ProductLinkPreview v-if="productIn(msg)" :product-id="productIn(msg).id" variant="bubble"
+                            @open="openProduct" />
+
+                        <div v-if="productIn(msg) ? productIn(msg).rest : msg.body" class="message-text">
+                            {{ productIn(msg) ? productIn(msg).rest : msg.body }}
                         </div>
 
                         <div class="message-meta">
@@ -136,6 +140,10 @@
                 />
 
                 <div class="chat-input-content">
+                    <!-- Producto del Marketplace sobre el que se va a preguntar -->
+                    <ProductLinkPreview v-if="attachedProductId" :product-id="attachedProductId" variant="composer"
+                        removable @remove="detachProduct" @open="openProduct" />
+
                     <div v-if="filePreview" class="upload-preview-bar">
                         <img :src="filePreview" class="preview-thumb" />
                         <ion-button fill="clear" color="danger" @click="clearFile">
@@ -242,6 +250,8 @@ import { useDarkMode } from '@/utils/useDarkMode';
 import { personCircle, arrowBack } from 'ionicons/icons'; 
 
 import LiquidGlassBox from '@/components/LiquidGlassBox.vue';
+import ProductLinkPreview from '@/components/marketplace/ProductLinkPreview.vue';
+import { extractProductLink, productUrl } from '@/utils/productLink';
 import { useGlassMode } from '@/utils/useGlassMode';
 import { computed } from 'vue'; // Asegúrate de importar 'computed'
 
@@ -373,9 +383,21 @@ const loadData = async () => {
     } catch (e) { console.error(e); isLoading.value = false; }
 };
 
+// Producto del Marketplace adjunto al mensaje (viene de "Escribir al vendedor").
+const attachedProductId = ref(Number(route.query.product) > 0 ? Number(route.query.product) : null);
+const productIn = (msg) => extractProductLink(msg && msg.body);
+const openProduct = (id) => router.push(`/tabs/marketplace/product/${id}`);
+const detachProduct = () => {
+    attachedProductId.value = null;
+    router.replace({ query: {} });
+};
+
 const sendMessage = async () => {
-    if (!newMessage.value.trim() && !fileToUpload.value) return;
-    const textToSend = newMessage.value;
+    if (!newMessage.value.trim() && !fileToUpload.value && !attachedProductId.value) return;
+    // El enlace del producto va al final del texto; la app lo dibuja como vista previa.
+    const textToSend = [newMessage.value.trim(), attachedProductId.value ? productUrl(attachedProductId.value) : '']
+        .filter(Boolean).join('\n');
+    if (attachedProductId.value) detachProduct();
     const fileToSend = fileToUpload.value;
     const localPreviewUrl = filePreview.value;
     newMessage.value = '';
@@ -423,8 +445,14 @@ onMounted(async () => {
     myId.value = user.id; 
     subscribe(); 
   } 
-  await loadData(); 
-  
+  await loadData();
+
+  // Al llegar desde un producto se propone un primer mensaje; el estudiante puede editarlo.
+  if (attachedProductId.value && !newMessage.value) {
+    newMessage.value = 'Hola, me interesa este producto. ¿Sigue disponible?';
+    autoGrowTextarea();
+  }
+
   // Listener para notificaciones push de mensajes recibidos
   window.addEventListener('pushNotificationReceived', handlePushNotification);
 });

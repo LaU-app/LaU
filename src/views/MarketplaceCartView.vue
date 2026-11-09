@@ -9,7 +9,6 @@
         </div>
 
         <div class="market-welcome">
-          <span class="eyebrow"><i/>TU CARRITO</span>
           <h1>{{ cart.isEmpty.value ? 'Todavía está vacío' : `${cart.count.value} artículo${cart.count.value === 1 ? '' : 's'}` }}</h1>
         </div>
 

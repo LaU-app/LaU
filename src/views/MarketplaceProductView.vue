@@ -163,8 +163,8 @@ async function add() {
   })).present()
 }
 
-/** El chat real de LaU sustituye al chat simulado del prototipo. */
-const chat = () => router.push(`/chat/${product.value?.user_id}`)
+/** Abre el chat con el vendedor citando este producto (se envía como vista previa encima del mensaje). */
+const chat = () => router.push({ path: `/chat/${product.value?.user_id}`, query: { product: String(product.value?.id) } })
 
 async function share() {
   try {

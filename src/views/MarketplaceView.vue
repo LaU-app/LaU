@@ -5,30 +5,27 @@
       <ion-refresher slot="fixed" @ionRefresh="refresh"><ion-refresher-content/></ion-refresher>
       <main class="study-shell study-body">
         <div class="market-welcome">
-          <span class="eyebrow"><i/>MARKETPLACE LaU</span>
           <h1>{{ greeting }}</h1>
           <div class="market-search">
             <label>
               <ion-icon :icon="searchOutline"/>
               <span class="sr-only">Buscar productos</span>
               <input v-model="search" type="search" placeholder="Libros, calculadora, apuntes…" enterkeyhint="search"/>
+              <!-- El asistente vive dentro de la búsqueda: lo escrito pasa a ser su primera consulta. -->
+              <button type="button" class="agent-trigger" aria-label="Pedile al asistente que encuentre lo que necesitás" @click.prevent="openAgent">
+                <span class="agent-trigger-orb" aria-hidden="true"/>
+                <span>Asistente</span>
+              </button>
             </label>
             <button class="market-filter-btn" aria-label="Ordenar resultados" @click="openSort"><ion-icon :icon="swapVerticalOutline"/></button>
           </div>
         </div>
 
-        <div class="market-entries">
-          <button class="market-entry smart study-card" @click="router.push('/tabs/marketplace/compra-inteligente')">
-            <span class="study-symbol tone-purple"><ion-icon :icon="sparklesOutline"/></span>
-            <span><b>Compra inteligente con Jev</b><small class="study-muted">Decinos qué necesitás y elegí entre comercios verificados</small></span>
-            <ion-icon :icon="chevronForwardOutline" aria-hidden="true"/>
-          </button>
-          <button class="market-entry study-card" @click="router.push('/tabs/marketplace/empresa')">
-            <span class="study-symbol tone-green"><ion-icon :icon="shieldCheckmarkOutline"/></span>
-            <span><b>¿Tenés un comercio?</b><small class="study-muted">Verificalo en LaU y cobrá con PayPal</small></span>
-            <ion-icon :icon="chevronForwardOutline" aria-hidden="true"/>
-          </button>
-        </div>
+        <button class="market-entry study-card" @click="router.push('/tabs/marketplace/empresa')">
+          <span class="study-symbol tone-green"><ion-icon :icon="shieldCheckmarkOutline"/></span>
+          <span><b>¿Tenés un comercio?</b><small class="study-muted">Verificalo en LaU y cobrá con PayPal</small></span>
+          <ion-icon :icon="chevronForwardOutline" aria-hidden="true"/>
+        </button>
 
         <CategoryScroller v-model:selected="category"/>
 
@@ -64,6 +61,9 @@
       </ion-fab>
     </ion-content>
 
+    <ion-modal class="agent-modal" :is-open="agentOpen" @willDismiss="agentClosing = true" @didDismiss="onAgentDismissed">
+      <ShoppingAgent v-if="agentOpen" :initial-query="agentQuery" @close="closeAgent"/>
+    </ion-modal>
   </ion-page>
 </template>
 
@@ -72,10 +72,11 @@ import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   IonPage, IonContent, IonIcon, IonRefresher, IonRefresherContent, IonInfiniteScroll,
-  IonInfiniteScrollContent, IonFab, IonFabButton, actionSheetController, toastController,
+  IonInfiniteScrollContent, IonFab, IonFabButton, IonModal, actionSheetController, toastController,
 } from '@ionic/vue'
-import { searchOutline, swapVerticalOutline, storefrontOutline, addOutline, shieldCheckmarkOutline, chevronForwardOutline, sparklesOutline } from 'ionicons/icons'
+import { searchOutline, swapVerticalOutline, storefrontOutline, addOutline, shieldCheckmarkOutline, chevronForwardOutline } from 'ionicons/icons'
 import AppHeader from '@/components/AppHeader.vue'
+import ShoppingAgent from '@/components/marketplace/ShoppingAgent.vue'
 import CategoryScroller from '@/components/marketplace/CategoryScroller.vue'
 import ProductCard from '@/components/marketplace/ProductCard.vue'
 import MarketplaceBottomNav from '@/components/marketplace/MarketplaceBottomNav.vue'
@@ -100,6 +101,30 @@ const sort = ref<{ sort_by: 'created_at' | 'price'; sort_order: 'asc' | 'desc' }
 const page = ref(1)
 const lastPage = ref(1)
 const total = ref<number | null>(null)
+
+// Asistente de compras: se abre desde la búsqueda con lo que el estudiante ya escribió.
+const agentOpen = ref(false)
+const agentQuery = ref('')
+// Si se reabre mientras termina la animación de cierre, se espera a que termine.
+let agentClosing = false
+let agentReopen = false
+function openAgent() {
+  agentQuery.value = search.value.trim()
+  if (agentClosing) agentReopen = true
+  else agentOpen.value = true
+}
+function closeAgent() {
+  agentClosing = true
+  agentOpen.value = false
+}
+function onAgentDismissed() {
+  agentClosing = false
+  agentOpen.value = false
+  if (agentReopen) {
+    agentReopen = false
+    agentOpen.value = true
+  }
+}
 
 const greeting = computed(() => {
   const hour = new Date().getHours()
@@ -207,10 +232,20 @@ useStudyScreen(load, ['marketplace'])
 .marketplace-page ion-content { --padding-bottom: calc(var(--lau-nav-space, 0px) + var(--market-fab-gap) * 2 + var(--market-fab-size)); }
 .marketplace-page .study-shell.study-body { padding-bottom: 0; }
 @media (prefers-reduced-motion: reduce) { .market-fab ion-fab-button { transition: none; } }
-/* Accesos: compra inteligente con Jev y comercios verificados con PayPal */
-.market-entries { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-bottom: 20px; }
-.market-entry { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 20px; color: var(--study-text); text-align: left; font: inherit; cursor: pointer; }
-.market-entry.smart { background: linear-gradient(120deg, var(--study-purple-soft), var(--study-blue-soft)), var(--study-surface); }
+/* Acceso para comercios verificados con PayPal */
+.market-entry { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-bottom: 20px; border-radius: 20px; color: var(--study-text); text-align: left; font: inherit; cursor: pointer; }
+/* Botón del asistente dentro de la búsqueda */
+.agent-trigger { position: relative; display: inline-flex; align-items: center; gap: 7px; margin: 5px -9px 5px 0; padding: 0 13px 0 6px; height: 38px; border: 0; border-radius: 999px; overflow: hidden; flex-shrink: 0;
+  background: linear-gradient(135deg, #8b45ec, #2853e0); color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 6px 16px -8px rgba(91, 33, 182, .8); transition: transform .2s ease; }
+.agent-trigger::after { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.35) 50%, transparent 70%); transform: translateX(-120%); animation: agent-shine 4s ease-in-out infinite 1.2s; }
+.agent-trigger:active { transform: scale(.95); }
+.agent-trigger-orb { width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  background: radial-gradient(circle at 32% 30%, #fff 0%, #e9d5ff 22%, #a875f5 55%, #6d28d9 100%);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); animation: agent-breathe 2.8s ease-in-out infinite; }
+@keyframes agent-shine { 0%, 60% { transform: translateX(-120%); } 85%, 100% { transform: translateX(120%); } }
+@keyframes agent-breathe { 50% { transform: scale(.86); } }
+@media (prefers-reduced-motion: reduce) { .agent-trigger::after, .agent-trigger-orb { animation: none; } }
 .market-entry > span:nth-child(2) { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .market-entry b { font-size: 14px; line-height: 18px; }
 .market-entry > ion-icon { color: var(--study-faint); font-size: 18px; }

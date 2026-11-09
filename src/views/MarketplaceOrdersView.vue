@@ -4,7 +4,6 @@
     <ion-content>
       <main class="study-shell study-body">
         <div class="market-welcome">
-          <span class="eyebrow"><i/>TUS APARTADOS</span>
           <h1>{{ tab === 'purchases' ? 'Lo que apartaste' : 'Lo que te apartaron' }}</h1>
         </div>
 
