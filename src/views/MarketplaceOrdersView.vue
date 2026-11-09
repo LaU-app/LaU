@@ -34,7 +34,10 @@
               <h3>${{ Number(order.total).toFixed(2) }}</h3>
               <span class="study-muted">{{ counterpartLabel(order) }} · {{ studyDate(order.created_at) }}</span>
             </div>
-            <span class="status-chip" :class="statusClass(order.status)"><i/>{{ STATUS[order.status] }}</span>
+            <div class="order-chips">
+              <span class="status-chip" :class="statusClass(order.status)"><i/>{{ STATUS[order.status] }}</span>
+              <span v-if="isPaid(order)" class="paid-chip"><ion-icon :icon="logoPaypal"/>Pagado</span>
+            </div>
           </header>
 
           <div class="order-items">
@@ -53,14 +56,17 @@
             <button v-if="tab === 'sales' && order.status === 'pending'" class="study-button" :disabled="busy === order.id" @click="deliver(order)">
               <ion-icon :icon="checkmarkCircleOutline"/>Marcar como entregado
             </button>
-            <button v-else-if="order.status === 'pending'" class="study-button secondary-button" :disabled="busy === order.id" @click="cancel(order)">
+            <button v-else-if="order.status === 'pending' && !isPaid(order)" class="study-button secondary-button" :disabled="busy === order.id" @click="cancel(order)">
               <ion-icon :icon="closeCircleOutline"/>Cancelar apartado
+            </button>
+            <button v-else-if="order.status === 'pending'" class="study-button secondary-button" @click="openChat(order)">
+              <ion-icon :icon="chatbubbleEllipsesOutline"/>Coordinar entrega
             </button>
             <button v-else class="study-button secondary-button" @click="openChat(order)">
               <ion-icon :icon="chatbubbleEllipsesOutline"/>Abrir chat
             </button>
             <button v-if="order.status === 'pending'" class="order-icon-btn" aria-label="Abrir chat" @click="openChat(order)"><ion-icon :icon="chatbubbleEllipsesOutline"/></button>
-            <button v-if="tab === 'sales' && order.status === 'pending'" class="order-icon-btn" aria-label="Cancelar apartado" @click="cancel(order)"><ion-icon :icon="closeCircleOutline"/></button>
+            <button v-if="tab === 'sales' && order.status === 'pending' && !isPaid(order)" class="order-icon-btn" aria-label="Cancelar apartado" @click="cancel(order)"><ion-icon :icon="closeCircleOutline"/></button>
           </footer>
         </article>
 
@@ -77,7 +83,7 @@ import { useRouter } from 'vue-router'
 import { IonPage, IonContent, IonIcon, alertController, toastController } from '@ionic/vue'
 import {
   receiptOutline, locationOutline, chatboxOutline, alertCircleOutline,
-  checkmarkCircleOutline, closeCircleOutline, chatbubbleEllipsesOutline,
+  checkmarkCircleOutline, closeCircleOutline, chatbubbleEllipsesOutline, logoPaypal,
 } from 'ionicons/icons'
 import AppHeader from '@/components/AppHeader.vue'
 import MarketplaceBottomNav from '@/components/marketplace/MarketplaceBottomNav.vue'
@@ -109,6 +115,8 @@ const busy = ref<number | null>(null)
 const page = ref(1)
 const lastPage = ref(1)
 
+// Pagado en línea con PayPal: ya no se cancela como un apartado (requeriría un reembolso).
+const isPaid = (order: Order) => order.payment_status === 'paid'
 const statusClass = (value: string) => value === 'delivered' ? 'status-completed' : value === 'pending' ? 'status-in_progress' : ''
 const counterpartLabel = (order: Order) => tab.value === 'purchases'
   ? `Vendé: ${order.seller?.name ?? 'vendedor'}`.replace('Vendé:', 'Vende:')
@@ -184,6 +192,8 @@ useStudyScreen(load, ['marketplace'])
 </script>
 
 <style scoped>
+.order-chips { display: grid; gap: 6px; justify-items: end; }
+.paid-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; background: #ffc439; color: #003087; font-size: 11px; font-weight: 800; }
 .orders-tabs { width: 100%; margin-bottom: 10px; }
 .orders-tabs button { flex: 1; }
 .status-tabs { width: 100%; margin-bottom: 20px; overflow-x: auto; scrollbar-width: none; }

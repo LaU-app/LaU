@@ -39,6 +39,48 @@ export interface StoreSummary {
     slug: string;
     logo: string | null;
     logo_url?: string | null;
+    /** Verificado por LaU (revisión legal aprobada). */
+    is_verified?: boolean;
+    /** Verificado y con PayPal habilitado: se puede pagar en línea. */
+    accepts_paypal?: boolean;
+}
+
+export type VerificationStatus = 'none' | 'submitted' | 'approved' | 'rejected' | 'suspended';
+export type PayPalConnection = 'not_connected' | 'pending' | 'enabled';
+
+export interface StoreVerification {
+    id: number;
+    legal_name: string;
+    business_type: 'persona_natural' | 'sociedad';
+    nit: string;
+    nrc: string | null;
+    legal_representative: string;
+    contact_email: string;
+    contact_phone: string;
+    address: string;
+    website: string | null;
+    offer_description: string;
+    document_original_name: string | null;
+    has_document: boolean;
+    status: Exclude<VerificationStatus, 'none'>;
+    status_label: string;
+    submitted_at: string | null;
+    reviewed_at: string | null;
+    review_notes: string | null;
+}
+
+export interface MerchantStatus {
+    store: (StoreSummary & {
+        verification_status: VerificationStatus;
+        verified_at: string | null;
+        paypal_status: PayPalConnection;
+        paypal_checked_at: string | null;
+        is_verified: boolean;
+        accepts_paypal: boolean;
+    }) | null;
+    verification: StoreVerification | null;
+    business_types: Record<string, string>;
+    paypal?: { state: 'habilitado' | 'pendiente' | 'error'; checks: { label: string; ok: boolean }[]; reasons: string[] };
 }
 
 export interface Store extends StoreSummary {
@@ -98,6 +140,10 @@ export interface Order {
     store_id: number | null;
     total: string;
     status: OrderStatus;
+    /** in_person: apartado que se paga al entregar · paypal: pagado en línea. */
+    payment_method?: 'in_person' | 'paypal';
+    payment_status?: 'unpaid' | 'paid';
+    paid_at?: string | null;
     meeting_point: string | null;
     meeting_at: string | null;
     note: string | null;

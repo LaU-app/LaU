@@ -39,7 +39,9 @@
 
           <button v-if="product.store" class="seller-card study-card" @click="router.push(`/tabs/marketplace/store/${product.store.slug}`)">
             <span class="store-logo"><img v-if="product.store.logo_url" :src="product.store.logo_url" :alt="product.store.name"/><ion-icon v-else :icon="storefrontOutline"/></span>
-            <div><b>{{ product.store.name }}</b><span class="study-muted">Ver la tienda</span></div>
+            <div><b>{{ product.store.name }}</b>
+              <VerifiedBadge v-if="product.store.is_verified" :paypal="product.store.accepts_paypal"/>
+              <span v-else class="study-muted">Ver la tienda</span></div>
             <span class="round-arrow"><ion-icon :icon="arrowForwardOutline"/></span>
           </button>
           <div v-else-if="product.user" class="seller-card study-card">
@@ -53,9 +55,12 @@
           </section>
 
           <div class="product-cta-bar">
-            <button v-if="!mine" class="study-button" :disabled="!product.is_available || busy" @click="add">
+            <button v-if="!mine && payable" class="study-button paypal-buy" :disabled="!product.is_available" @click="checkoutOpen = true">
+              <ion-icon :icon="logoPaypal"/>{{ product.is_available ? 'Comprar con PayPal' : 'Agotado' }}
+            </button>
+            <button v-if="!mine" class="study-button" :class="{ 'secondary-button': payable }" :disabled="!product.is_available || busy" @click="add">
               <ion-icon :icon="inCart ? checkmarkOutline : cartOutline"/>
-              {{ !product.is_available ? 'Agotado' : inCart ? 'En tu carrito' : 'Agregar al carrito' }}
+              {{ !product.is_available ? 'Agotado' : inCart ? 'En tu carrito' : payable ? 'Al carrito' : 'Agregar al carrito' }}
             </button>
             <p v-else class="study-muted mine-note">Este producto es tuyo.</p>
             <button v-if="!mine && product.user" class="order-icon-btn" aria-label="Escribir al vendedor" @click="chat">
@@ -66,18 +71,25 @@
       </main>
     </ion-content>
 
+    <ion-modal :is-open="checkoutOpen" :initial-breakpoint="1" :breakpoints="[0, 1]" @didDismiss="checkoutOpen = false">
+      <PayPalCheckoutSheet v-if="checkoutOpen && product" :product-id="product.id"
+        @close="checkoutOpen = false" @paid="load" @orders="goToOrders"/>
+    </ion-modal>
   </ion-page>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { IonPage, IonContent, IonIcon, toastController } from '@ionic/vue'
+import { IonPage, IonContent, IonIcon, IonModal, toastController } from '@ionic/vue'
 import { Share } from '@capacitor/share'
 import {
   arrowBackOutline, arrowForwardOutline, createOutline, shareOutline, imageOutline, cubeOutline,
   chevronBackOutline, chevronForwardOutline, cartOutline, checkmarkOutline, storefrontOutline, chatbubbleEllipsesOutline,
+  logoPaypal,
 } from 'ionicons/icons'
+import VerifiedBadge from '@/components/marketplace/VerifiedBadge.vue'
+import PayPalCheckoutSheet from '@/components/marketplace/PayPalCheckoutSheet.vue'
 import AppHeader from '@/components/AppHeader.vue'
 import StudyAvatar from '@/components/study/StudyAvatar.vue'
 import MarketplaceBottomNav from '@/components/marketplace/MarketplaceBottomNav.vue'
@@ -110,6 +122,14 @@ const price = computed(() => Number(product.value?.price ?? 0).toFixed(2))
 const conditionLabel = computed(() => product.value?.condition ? CONDITIONS[product.value.condition] : null)
 const mine = computed(() => product.value?.user_id === AuthService.getUser()?.id)
 const inCart = computed(() => !!product.value && cart.has(product.value.id))
+// Comercio verificado por LaU con PayPal habilitado: se puede pagar en línea.
+const payable = computed(() => !!product.value?.store?.accepts_paypal)
+const checkoutOpen = ref(false)
+
+function goToOrders() {
+  checkoutOpen.value = false
+  router.push('/tabs/marketplace/orders')
+}
 
 function step(direction: number) {
   const total = product.value?.images.length ?? 0
@@ -162,4 +182,7 @@ watch(() => route.params.id, load, { immediate: true })
 
 <style scoped>
 .mine-note { flex: 1; text-align: center; }
+.paypal-buy { background: #ffc439; color: #003087; }
+.product-cta-bar .study-button { font-size: 13px; padding-inline: 12px; }
+.seller-card > div :deep(.verified-badge) { margin-top: 2px; }
 </style>

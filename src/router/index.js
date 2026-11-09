@@ -32,6 +32,12 @@ const routes = [
     component: () => import("@/views/RegisterView.vue"),
     meta: { requiresGuest: true },
   },
+  // Página pública para comercios: cómo vender en LaU Marketplace como comercio verificado.
+  {
+    path: "/empresas",
+    name: "BusinessLanding",
+    component: () => import("@/views/BusinessLandingView.vue"),
+  },
   // Rutas antiguas: ahora viven dentro de /tabs (con el menú inferior visible).
   // Se redirigen para que enlaces, notificaciones push y pantallas que aún las usan sigan funcionando.
   { path: "/users", redirect: "/tabs/users" },
@@ -162,6 +168,20 @@ const routes = [
         path: "marketplace/dashboard",
         name: "MarketplaceDashboard",
         component: () => import("@/views/MarketplaceDashboardView.vue"),
+        meta: { requiresAuth: true },
+      },
+      {
+        // Compra inteligente con Jev (TypeSafe AI) sobre comercios verificados
+        path: "marketplace/compra-inteligente",
+        name: "MarketplaceSmartShopping",
+        component: () => import("@/views/MarketplaceSmartShoppingView.vue"),
+        meta: { requiresAuth: true },
+      },
+      {
+        // Comercio verificado: solicitud legal y conexión con PayPal
+        path: "marketplace/empresa",
+        name: "MarketplaceMerchant",
+        component: () => import("@/views/MarketplaceMerchantView.vue"),
         meta: { requiresAuth: true },
       },
       {

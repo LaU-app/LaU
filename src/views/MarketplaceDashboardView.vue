@@ -34,6 +34,17 @@
               <button class="study-button secondary-button" @click="router.push(`/tabs/marketplace/store/${data.store.slug}`)"><ion-icon :icon="eyeOutline"/>Ver vitrina</button>
             </div>
 
+            <button class="verify-card study-card" @click="router.push('/tabs/marketplace/empresa')">
+              <span class="study-symbol" :class="data.store.accepts_paypal ? 'tone-green' : 'tone-purple'">
+                <ion-icon :icon="data.store.accepts_paypal ? shieldCheckmarkOutline : ribbonOutline"/>
+              </span>
+              <span>
+                <b>{{ data.store.accepts_paypal ? 'Comercio verificado · cobrás con PayPal' : 'Verificá tu comercio y cobrá con PayPal' }}</b>
+                <small class="study-muted">{{ data.store.accepts_paypal ? 'Tus productos muestran el distintivo de LaU.' : 'Enviá tus datos legales y conectá tu cuenta PayPal.' }}</small>
+              </span>
+              <ion-icon :icon="arrowForwardOutline" aria-hidden="true"/>
+            </button>
+
             <!-- El hero del mockup era una tarjeta morada a sangre; aquí es la misma
                  today-card del módulo de Estudio: número grande en negro. -->
             <div class="today-card study-card">
@@ -123,7 +134,7 @@ import { IonPage, IonContent, IonIcon, IonRefresher, IonRefresherContent, modalC
 import {
   storefrontOutline, addOutline, createOutline, eyeOutline, trendingUpOutline, trendingDownOutline,
   checkmarkCircleOutline, checkmarkDoneOutline, timeOutline, cubeOutline, receiptOutline,
-  arrowForwardOutline, imageOutline,
+  arrowForwardOutline, imageOutline, shieldCheckmarkOutline, ribbonOutline,
 } from 'ionicons/icons'
 import AppHeader from '@/components/AppHeader.vue'
 import StudyAvatar from '@/components/study/StudyAvatar.vue'
@@ -193,6 +204,10 @@ useStudyScreen(load, ['marketplace'])
 .hero-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px; }
 .hero-actions .study-button { min-height: 46px; font-size: 13px; }
 .create-store { max-width: 260px; margin-top: 8px; }
+.verify-card { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-bottom: 24px; border-radius: 20px; color: var(--study-text); text-align: left; font: inherit; cursor: pointer; }
+.verify-card > span:nth-child(2) { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.verify-card b { font-size: 14px; line-height: 18px; }
+.verify-card > ion-icon { color: var(--study-faint); font-size: 18px; }
 .history-right { flex: 0 0 auto !important; display: grid !important; gap: 5px; justify-items: end; text-align: right; }
 .history-right .status-chip { font-size: 10px; padding: 2px 8px; }
 .store-logo.small { width: 44px; height: 44px; border-radius: 12px; font-size: 18px; }

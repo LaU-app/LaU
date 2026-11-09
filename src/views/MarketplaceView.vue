@@ -17,6 +17,19 @@
           </div>
         </div>
 
+        <div class="market-entries">
+          <button class="market-entry smart study-card" @click="router.push('/tabs/marketplace/compra-inteligente')">
+            <span class="study-symbol tone-purple"><ion-icon :icon="sparklesOutline"/></span>
+            <span><b>Compra inteligente con Jev</b><small class="study-muted">Decinos qué necesitás y elegí entre comercios verificados</small></span>
+            <ion-icon :icon="chevronForwardOutline" aria-hidden="true"/>
+          </button>
+          <button class="market-entry study-card" @click="router.push('/tabs/marketplace/empresa')">
+            <span class="study-symbol tone-green"><ion-icon :icon="shieldCheckmarkOutline"/></span>
+            <span><b>¿Tenés un comercio?</b><small class="study-muted">Verificalo en LaU y cobrá con PayPal</small></span>
+            <ion-icon :icon="chevronForwardOutline" aria-hidden="true"/>
+          </button>
+        </div>
+
         <CategoryScroller v-model:selected="category"/>
 
         <div class="section-title">
@@ -61,7 +74,7 @@ import {
   IonPage, IonContent, IonIcon, IonRefresher, IonRefresherContent, IonInfiniteScroll,
   IonInfiniteScrollContent, IonFab, IonFabButton, actionSheetController, toastController,
 } from '@ionic/vue'
-import { searchOutline, swapVerticalOutline, storefrontOutline, addOutline } from 'ionicons/icons'
+import { searchOutline, swapVerticalOutline, storefrontOutline, addOutline, shieldCheckmarkOutline, chevronForwardOutline, sparklesOutline } from 'ionicons/icons'
 import AppHeader from '@/components/AppHeader.vue'
 import CategoryScroller from '@/components/marketplace/CategoryScroller.vue'
 import ProductCard from '@/components/marketplace/ProductCard.vue'
@@ -194,4 +207,11 @@ useStudyScreen(load, ['marketplace'])
 .marketplace-page ion-content { --padding-bottom: calc(var(--lau-nav-space, 0px) + var(--market-fab-gap) * 2 + var(--market-fab-size)); }
 .marketplace-page .study-shell.study-body { padding-bottom: 0; }
 @media (prefers-reduced-motion: reduce) { .market-fab ion-fab-button { transition: none; } }
+/* Accesos: compra inteligente con Jev y comercios verificados con PayPal */
+.market-entries { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-bottom: 20px; }
+.market-entry { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 20px; color: var(--study-text); text-align: left; font: inherit; cursor: pointer; }
+.market-entry.smart { background: linear-gradient(120deg, var(--study-purple-soft), var(--study-blue-soft)), var(--study-surface); }
+.market-entry > span:nth-child(2) { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.market-entry b { font-size: 14px; line-height: 18px; }
+.market-entry > ion-icon { color: var(--study-faint); font-size: 18px; }
 </style>
