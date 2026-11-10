@@ -3,17 +3,22 @@
     <ion-content :scroll-y="!mapOn">
       <div class="campus-page" :class="mapOn ? 'has-map' : 'no-map'">
         <div v-if="mapOn && data" class="map-stage">
-          <CampusMap3D ref="mapRef" :campuses="data.campuses" :selected-id="selectedId" :me="me"
+          <CampusMap3D ref="mapRef" :campuses="data.campuses" :selected-id="selectedId" :me="me" :mode="mapMode"
             @select="select" @ready="(mode) => (mapState = mode)" @unavailable="mapState = 'off'"/>
         </div>
 
         <div class="campus-ui">
+          <div class="top-row">
           <header class="campus-top">
             <button type="button" class="campus-back" aria-label="Volver al Marketplace" @click="router.push('/tabs/marketplace')">
               <ion-icon :icon="arrowBackOutline"/>
             </button>
             <h1>Campus</h1>
           </header>
+          <button v-if="mapOn" type="button" class="mode-btn" :aria-pressed="mapMode === 'satelite'" @click="mapMode = mapMode === 'satelite' ? 'estructuras' : 'satelite'">
+            <ion-icon :icon="mapMode === 'satelite' ? cubeOutline : globeOutline"/>{{ mapMode === 'satelite' ? 'Estructuras' : 'Satélite' }}
+          </button>
+          </div>
 
           <template v-if="!data">
             <template v-if="loading">
@@ -105,6 +110,7 @@ import { IonPage, IonContent, IonIcon } from '@ionic/vue'
 import {
   arrowBackOutline, locateOutline, closeOutline, locationOutline, calendarOutline, storefrontOutline, mapOutline,
   schoolOutline, navigateOutline, checkmarkCircle, shieldCheckmarkOutline, cloudOfflineOutline, alertCircleOutline,
+  cubeOutline, globeOutline,
 } from 'ionicons/icons'
 import CampusMap3D from '@/components/marketplace/CampusMap3D.vue'
 import campusService, { campusLabel, type Campus, type CampusMap, type Feria } from '@/services/campusService'
@@ -126,6 +132,8 @@ const mapState = ref<'pending' | '3d' | '2d' | 'off'>(hasMapsKey() ? 'pending' :
 const mapRef = ref<InstanceType<typeof CampusMap3D> | null>(null)
 const chipsEl = ref<HTMLElement | null>(null)
 const me = ref<LatLng | null>(null)
+// Estructuras 3D (bloques, por defecto) o satélite 3D.
+const mapMode = ref<'estructuras' | 'satelite'>('estructuras')
 const geoNote = ref<{ text: string; inside: boolean; campusId: number } | null>(null)
 const { locating, error: geoError, locate } = useGeolocation()
 const reduceMotion = !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -193,6 +201,8 @@ async function whereAmI() {
     geoNote.value = { text: `Estás en ${name}`, inside: true, campusId: near.campus.id }
   } else {
     geoNote.value = { text: `Estás a ${formatDistance(near.meters)} de ${name}`, inside: false, campusId: near.campus.id }
+    // Fuera de un campus: la cámara te muestra a vos.
+    mapRef.value?.flyToPoint(me.value)
   }
 }
 
@@ -270,6 +280,11 @@ onMounted(() => {
 
 /* ---------- ¿Dónde estoy? ---------- */
 .campus-bottom { display: grid; gap: 10px; }
+.top-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.has-map .top-row { pointer-events: none; }
+.has-map .top-row > * { pointer-events: auto; }
+.mode-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--study-border); background: var(--study-surface); color: var(--study-text); font: inherit; font-size: 13px; font-weight: 700; box-shadow: 0 4px 14px -6px rgba(20,20,22,.3); cursor: pointer; }
+.mode-btn ion-icon { font-size: 16px; color: var(--study-purple); }
 .geo-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
 .geo-chip { display: inline-flex; align-items: center; gap: 6px; min-width: 0; margin: 0; padding: 8px 12px; border: 1px solid var(--study-border); border-radius: 999px; background: var(--study-surface); color: var(--study-text); font-size: 12px; font-weight: 700; line-height: 16px; text-align: left; box-shadow: 0 6px 16px -8px rgba(20,20,22,.35); }
 .geo-chip ion-icon { font-size: 16px; color: var(--study-blue); }

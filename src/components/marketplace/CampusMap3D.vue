@@ -11,7 +11,9 @@
 
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// Mapa de los campus: 3D (Map3DElement, vista previa de Google) con alternativa 2D (mapa vectorial).
+// Mapa de los campus. Dos estilos:
+// - "estructuras" (por defecto): mapa vectorial inclinado; los edificios se ven como bloques 3D lisos.
+// - "satelite": 3D fotorrealista (Map3DElement, vista previa de Google), con relieve.
 // Las APIs de Google cambian entre versiones: cada propiedad se revisa antes de usarla y cualquier
 // fallo termina en el mapa 2D o en "unavailable", nunca en una pantalla rota.
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -21,7 +23,12 @@ import { EL_SALVADOR, MAP_ID, hasMapsKey, importLibrary, loadGoogleMaps, support
 import { campusCenter, nearestCampus, type LatLng } from '@/utils/campusGeo'
 import { campusLabel, type Campus } from '@/services/campusService'
 
-const props = defineProps<{ campuses: Campus[]; selectedId: number | null; me?: { lat: number; lng: number } | null }>()
+const props = withDefaults(defineProps<{
+  campuses: Campus[]
+  selectedId: number | null
+  me?: { lat: number; lng: number } | null
+  mode?: 'estructuras' | 'satelite'
+}>(), { me: null, mode: 'estructuras' })
 const emit = defineEmits<{ select: [id: number]; ready: [mode: '3d' | '2d']; unavailable: [] }>()
 
 type Entry = { dispose: () => void; highlight?: (on: boolean) => void }
@@ -112,7 +119,7 @@ function ring(center: LatLng, meters: number, steps = 48) {
 const markerLabel = (c: Campus) => ((c.products_count ?? 0) > 0 ? `${campusLabel(c)} · ${c.products_count}` : campusLabel(c))
 
 // Zoom 2D según el radio: el área completa cabe en un teléfono.
-const zoomFor = (radius: number) => Math.max(13, Math.min(18, Math.round(16 - Math.log2(radius / 300))))
+const zoomFor = (radius: number) => Math.max(16.5, Math.min(18.5, 17.6 - Math.log2(radius / 250)))
 
 function overviewRange() {
   const box = host.value?.getBoundingClientRect()
@@ -161,7 +168,7 @@ async function start() {
     await loadGoogleMaps()
     if (disposed) return
     let ok3d = false
-    if (supportsWebGL2()) {
+    if (props.mode === 'satelite' && supportsWebGL2()) {
       try { ok3d = await start3D() } catch { ok3d = false }
     }
     if (ok3d || disposed) return
@@ -464,8 +471,11 @@ function camera2D(target: Camera2D) {
     map.setZoom(target.zoom)
     return
   }
+  // La tarjeta del campus tapa la parte de abajo: al llegar, el punto sube a la zona visible.
+  const settle = () => { if (map === map2d) map.panBy?.(0, Math.round((host.value?.clientHeight ?? 0) * 0.14)) }
   if (reduceMotion) {
     map.moveCamera(target)
+    settle()
     return
   }
   const from = {
@@ -488,6 +498,7 @@ function camera2D(target: Camera2D) {
       heading: mix(from.heading, target.heading, k),
     })
     if (t < 1) frame = requestAnimationFrame(step)
+    else settle()
   }
   frame = requestAnimationFrame(step)
 }
@@ -497,8 +508,17 @@ function flyTo(id: number) {
   const center = campus ? campusCenter(campus) : null
   if (!campus || !center) return
   const radius = radiusOf(campus)
-  if (map3d) camera3D({ center: { ...center, altitude: 0 }, range: Math.min(6000, Math.max(650, radius * 3.4)), tilt: 60, heading: 18 }, 2400)
-  else if (map2d) camera2D({ center, zoom: zoomFor(radius), tilt: 45, heading: 0 })
+  // En satélite la cámara mira de frente (poca inclinación): con mucha inclinación el punto se desplaza
+  // porque el relieve de El Salvador está a cientos de metros sobre el nivel del mar.
+  if (map3d) camera3D({ center: { ...center, altitude: 0 }, range: Math.min(4000, Math.max(500, radius * 4.5)), tilt: 25, heading: 0 }, 2200)
+  else if (map2d) camera2D({ center, zoom: zoomFor(radius), tilt: 60, heading: 20 })
+}
+
+/** Lleva la cámara a un punto (por ejemplo, la ubicación del estudiante). */
+function flyToPoint(point: LatLng) {
+  if (!Number.isFinite(point?.lat) || !Number.isFinite(point?.lng)) return
+  if (map3d) camera3D({ center: { ...point, altitude: 0 }, range: 900, tilt: 20, heading: 0 }, 1800)
+  else if (map2d) camera2D({ center: point, zoom: 17.5, tilt: 55, heading: 0 })
 }
 
 function flyHome() {
@@ -556,13 +576,20 @@ watch(signature, () => {
 
 watch(() => props.me, drawMe, { deep: true })
 
+// Cambiar de estilo (estructuras ↔ satélite) vuelve a crear el mapa en el campus elegido.
+watch(() => props.mode, () => {
+  teardown()
+  state.value = 'loading'
+  void start()
+})
+
 onMounted(() => { void start() })
 onBeforeUnmount(() => {
   disposed = true
   teardown()
 })
 
-defineExpose({ flyTo })
+defineExpose({ flyTo, flyToPoint })
 </script>
 
 <style scoped>
