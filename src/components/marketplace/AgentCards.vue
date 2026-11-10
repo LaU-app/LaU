@@ -85,7 +85,7 @@ const tone = (p: number) => p >= 0.9 ? 'tone-high' : p >= 0.7 ? 'tone-good' : p 
 .store { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--study-muted); }
 .price { font-size: 15px; font-weight: 800; }
 .price small, .qty { font-size: 12px; font-weight: 600; color: var(--study-muted); }
-.match { flex-shrink: 0; min-width: 46px; height: 30px; padding: 0 8px; border-radius: 999px; display: grid; place-items: center; font-size: 13px; font-weight: 800; background: var(--study-bg); }
+.match { flex-shrink: 0; min-width: 50px; height: 30px; padding: 0 10px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; font-size: 13px; font-weight: 800; background: var(--study-bg); }
 .match small { font-size: 9px; }
 .tone-high { color: var(--study-green-ink); } .tone-good { color: var(--study-green); } .tone-mid { color: var(--study-orange); } .tone-low { color: var(--study-faint); }
 .quote { display: flex; gap: 6px; align-items: flex-start; margin: 0; font-size: 13px; line-height: 18px; font-style: italic; color: var(--study-muted); }

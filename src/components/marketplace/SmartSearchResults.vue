@@ -8,7 +8,7 @@
           <span :key="subtitle">{{ subtitle }}</span>
         </Transition>
       </div>
-      <button type="button" class="ai-close" aria-label="Tus chats con el asistente" @click="$emit('history')"><ion-icon :icon="timeOutline"/></button>
+      <button type="button" class="ai-close" aria-label="Tus chats con el asistente" @click="router.push('/asistente')"><ion-icon :icon="timeOutline"/></button>
       <button type="button" class="ai-close" aria-label="Ocultar búsqueda inteligente" @click="$emit('dismiss')"><ion-icon :icon="closeOutline"/></button>
     </header>
 
@@ -101,7 +101,7 @@
       </TransitionGroup>
 
       <!-- Seguir con el asistente: mismo resultado, ahora en conversación -->
-      <button type="button" class="ai-chat" @click="$emit('chat', plan.decision_id)">
+      <button type="button" class="ai-chat" @click="openChat(plan.decision_id)">
         <span class="ai-chat-icon"><ion-icon :icon="chatbubblesOutline"/></span>
         <span class="ai-chat-text"><b>¿Querés comparar o preguntar algo?</b><small>Seguí con el asistente</small></span>
         <span class="ai-chat-go">Abrir chat<ion-icon :icon="arrowForwardOutline"/></span>
@@ -112,6 +112,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { IonIcon } from '@ionic/vue'
 import {
   sparkles, closeOutline, cubeOutline, logoPaypal, chatbubbleEllipsesOutline, checkmarkCircle, ribbonOutline,
@@ -122,7 +123,11 @@ import smartShoppingService, { type ProductVideos, type SmartPlan } from '@/serv
 import { CheckoutError } from '@/services/paypalCheckoutService'
 
 const props = defineProps<{ status: 'thinking' | 'done' | 'error'; plan: SmartPlan | null; error?: string }>()
-defineEmits<{ dismiss: []; retry: []; open: [id: number]; buy: [productId: number, decisionId: number]; chat: [decisionId: number]; history: [] }>()
+defineEmits<{ dismiss: []; retry: []; open: [id: number]; buy: [productId: number, decisionId: number] }>()
+
+// El chat con el asistente arranca con los resultados de esta búsqueda (sin repetirla).
+const router = useRouter()
+const openChat = (decisionId: number) => router.push({ path: '/asistente', query: { decision: String(decisionId) } })
 
 // Etapas reales del trabajo (se muestran mientras responde el servidor).
 const STAGES = ['Entendiendo lo que necesitás…', 'Buscando en comercios verificados…', 'Comparando opciones…']
