@@ -6,20 +6,22 @@
       <main class="study-shell study-body">
         <div class="market-welcome">
           <h1>{{ greeting }}</h1>
-          <div class="market-search">
-            <label>
+          <!-- Al escribir se filtra el catálogo; al buscar (Enter o ✨) la IA evalúa lo que necesitás. -->
+          <form class="market-search" role="search" @submit.prevent="smartSearch()">
+            <label class="smart-search-box" :class="{ 'ai-busy': ai.status === 'thinking' }">
               <ion-icon :icon="searchOutline"/>
-              <span class="sr-only">Buscar productos</span>
-              <input v-model="search" type="search" placeholder="Libros, calculadora, apuntes…" enterkeyhint="search"/>
-              <!-- El asistente vive dentro de la búsqueda: lo escrito pasa a ser su primera consulta. -->
-              <button type="button" class="agent-trigger" aria-label="Pedile al asistente que encuentre lo que necesitás" @click.prevent="openAgent">
-                <span class="agent-trigger-orb" aria-hidden="true"/>
-                <span>Asistente</span>
+              <span class="sr-only">Buscá o describí lo que necesitás</span>
+              <input ref="searchInput" v-model="search" type="search" placeholder="Buscá o describí lo que necesitás…" enterkeyhint="search"/>
+              <button type="submit" class="ai-trigger" :disabled="search.trim().length < 3 || ai.status === 'thinking'" aria-label="Buscar con inteligencia artificial">
+                <ion-icon :icon="sparkles"/>
               </button>
             </label>
-            <button class="market-filter-btn" aria-label="Ordenar resultados" @click="openSort"><ion-icon :icon="swapVerticalOutline"/></button>
-          </div>
+            <button type="button" class="market-filter-btn" aria-label="Ordenar resultados" @click="openSort"><ion-icon :icon="swapVerticalOutline"/></button>
+          </form>
         </div>
+
+        <SmartSearchResults v-if="ai.status !== 'idle'" :status="ai.status" :plan="ai.plan" :error="ai.error"
+          @dismiss="dismissSmartSearch" @retry="smartSearch(ai.query)" @open="openById" @buy="buy"/>
 
         <button class="market-entry study-card" @click="router.push('/tabs/marketplace/empresa')">
           <span class="study-symbol tone-green"><ion-icon :icon="shieldCheckmarkOutline"/></span>
@@ -30,7 +32,7 @@
         <CategoryScroller v-model:selected="category"/>
 
         <div class="section-title">
-          <h2>{{ category ? 'En esta categoría' : 'Lo más reciente' }}</h2>
+          <h2>{{ search.trim() ? 'Resultados' : category ? 'En esta categoría' : 'Lo más reciente' }}</h2>
           <span v-if="total !== null" class="total-chip">{{ total }}</span>
         </div>
 
@@ -61,22 +63,26 @@
       </ion-fab>
     </ion-content>
 
-    <ion-modal class="agent-modal" :is-open="agentOpen" @willDismiss="agentClosing = true" @didDismiss="onAgentDismissed">
-      <ShoppingAgent v-if="agentOpen" :initial-query="agentQuery" @close="closeAgent"/>
+    <ion-modal :is-open="checkout !== null" :initial-breakpoint="1" :breakpoints="[0, 1]" @didDismiss="checkout = null">
+      <PayPalCheckoutSheet v-if="checkout" :product-id="checkout.productId" :decision-id="checkout.decisionId"
+        @close="checkout = null" @orders="goToOrders"/>
     </ion-modal>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
   IonPage, IonContent, IonIcon, IonRefresher, IonRefresherContent, IonInfiniteScroll,
   IonInfiniteScrollContent, IonFab, IonFabButton, IonModal, actionSheetController, toastController,
 } from '@ionic/vue'
-import { searchOutline, swapVerticalOutline, storefrontOutline, addOutline, shieldCheckmarkOutline, chevronForwardOutline } from 'ionicons/icons'
+import { searchOutline, swapVerticalOutline, storefrontOutline, addOutline, shieldCheckmarkOutline, chevronForwardOutline, sparkles } from 'ionicons/icons'
 import AppHeader from '@/components/AppHeader.vue'
-import ShoppingAgent from '@/components/marketplace/ShoppingAgent.vue'
+import SmartSearchResults from '@/components/marketplace/SmartSearchResults.vue'
+import PayPalCheckoutSheet from '@/components/marketplace/PayPalCheckoutSheet.vue'
+import smartShoppingService, { type SmartPlan } from '@/services/smartShoppingService'
+import { CheckoutError } from '@/services/paypalCheckoutService'
 import CategoryScroller from '@/components/marketplace/CategoryScroller.vue'
 import ProductCard from '@/components/marketplace/ProductCard.vue'
 import MarketplaceBottomNav from '@/components/marketplace/MarketplaceBottomNav.vue'
@@ -102,29 +108,49 @@ const page = ref(1)
 const lastPage = ref(1)
 const total = ref<number | null>(null)
 
-// Asistente de compras: se abre desde la búsqueda con lo que el estudiante ya escribió.
-const agentOpen = ref(false)
-const agentQuery = ref('')
-// Si se reabre mientras termina la animación de cierre, se espera a que termine.
-let agentClosing = false
-let agentReopen = false
-function openAgent() {
-  agentQuery.value = search.value.trim()
-  if (agentClosing) agentReopen = true
-  else agentOpen.value = true
-}
-function closeAgent() {
-  agentClosing = true
-  agentOpen.value = false
-}
-function onAgentDismissed() {
-  agentClosing = false
-  agentOpen.value = false
-  if (agentReopen) {
-    agentReopen = false
-    agentOpen.value = true
+// Búsqueda inteligente: al buscar, la IA evalúa productos de comercios verificados y su
+// resultado aparece arriba de los resultados normales del catálogo.
+const route = useRoute()
+const searchInput = ref<HTMLInputElement | null>(null)
+const ai = reactive<{ status: 'idle' | 'thinking' | 'done' | 'error'; query: string; plan: SmartPlan | null; error: string }>({
+  status: 'idle', query: '', plan: null, error: '',
+})
+const checkout = ref<{ productId: number; decisionId: number } | null>(null)
+let aiRequest = 0
+
+async function smartSearch(text?: string) {
+  const query = (text ?? search.value).trim()
+  if (query.length < 3) return
+  searchInput.value?.blur()
+  const id = ++aiRequest
+  Object.assign(ai, { status: 'thinking', query, plan: null, error: '' })
+  try {
+    const plan = await smartShoppingService.plan(query)
+    if (id === aiRequest) Object.assign(ai, { status: 'done', plan })
+  } catch (e) {
+    if (id === aiRequest) Object.assign(ai, { status: 'error', error: e instanceof CheckoutError ? e.message : 'No pudimos completar la búsqueda.' })
   }
 }
+
+function dismissSmartSearch() {
+  aiRequest++
+  Object.assign(ai, { status: 'idle', plan: null, error: '' })
+}
+
+const buy = (productId: number, decisionId: number) => { checkout.value = { productId, decisionId } }
+function goToOrders() {
+  checkout.value = null
+  router.push('/tabs/marketplace/orders')
+}
+
+onMounted(() => {
+  // Enlaces con ?q= (p. ej. desde la ruta anterior del asistente) inician la búsqueda inteligente.
+  const q = typeof route.query.q === 'string' ? route.query.q.trim() : ''
+  if (q.length >= 3) {
+    search.value = q
+    void smartSearch(q)
+  }
+})
 
 const greeting = computed(() => {
   const hour = new Date().getHours()
@@ -171,6 +197,7 @@ async function refresh(event: CustomEvent) {
 
 const clearFilters = () => { search.value = ''; category.value = null }
 const open = (product: Product) => router.push(`/tabs/marketplace/product/${product.id}`)
+const openById = (id: number) => router.push(`/tabs/marketplace/product/${id}`)
 
 async function add(product: Product) {
   const added = await cart.add(product)
@@ -201,9 +228,11 @@ async function openSort() {
   await sheet.present()
 }
 
-watch(search, () => {
+watch(search, (value) => {
   clearTimeout(debounce)
   debounce = setTimeout(() => { void load() }, 350)
+  // Al borrar la búsqueda desaparece también la sección inteligente.
+  if (!value.trim() && ai.status !== 'idle') dismissSmartSearch()
 })
 watch([category, sort], () => { void load() })
 
@@ -235,17 +264,21 @@ useStudyScreen(load, ['marketplace'])
 /* Acceso para comercios verificados con PayPal */
 .market-entry { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-bottom: 20px; border-radius: 20px; color: var(--study-text); text-align: left; font: inherit; cursor: pointer; }
 /* Botón del asistente dentro de la búsqueda */
-.agent-trigger { position: relative; display: inline-flex; align-items: center; gap: 7px; margin: 5px -9px 5px 0; padding: 0 13px 0 6px; height: 38px; border: 0; border-radius: 999px; overflow: hidden; flex-shrink: 0;
-  background: linear-gradient(135deg, #8b45ec, #2853e0); color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
-  box-shadow: 0 6px 16px -8px rgba(91, 33, 182, .8); transition: transform .2s ease; }
-.agent-trigger::after { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.35) 50%, transparent 70%); transform: translateX(-120%); animation: agent-shine 4s ease-in-out infinite 1.2s; }
-.agent-trigger:active { transform: scale(.95); }
-.agent-trigger-orb { width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
-  background: radial-gradient(circle at 32% 30%, #fff 0%, #e9d5ff 22%, #a875f5 55%, #6d28d9 100%);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); animation: agent-breathe 2.8s ease-in-out infinite; }
-@keyframes agent-shine { 0%, 60% { transform: translateX(-120%); } 85%, 100% { transform: translateX(120%); } }
-@keyframes agent-breathe { 50% { transform: scale(.86); } }
-@media (prefers-reduced-motion: reduce) { .agent-trigger::after, .agent-trigger-orb { animation: none; } }
+/* Buscador inteligente: brillo al enfocar y borde animado mientras la IA busca */
+.smart-search-box { position: relative; transition: border-color .3s ease, box-shadow .3s ease; }
+.smart-search-box:focus-within { border-color: var(--study-purple) !important; box-shadow: 0 0 0 4px var(--study-purple-soft) !important; }
+.smart-search-box.ai-busy::before { content: ''; position: absolute; inset: -1.5px; border-radius: inherit; padding: 1.5px; pointer-events: none;
+  background: linear-gradient(90deg, #8b45ec, #2853e0, #76d26b, #8b45ec); background-size: 300% 100%; animation: search-glow 2s linear infinite;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+@keyframes search-glow { to { background-position: 300% 0; } }
+.ai-trigger { width: 36px; height: 36px; margin: 6px -8px 6px 0; border: 0; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; cursor: pointer;
+  background: linear-gradient(135deg, #8b45ec, #2853e0); color: #fff; font-size: 17px; box-shadow: 0 6px 16px -8px rgba(91, 33, 182, .8); transition: transform .2s ease, opacity .2s ease; }
+.ai-trigger ion-icon { color: #fff !important; }
+.ai-trigger:disabled { opacity: .45; cursor: default; box-shadow: none; }
+.ai-trigger:not(:disabled):active { transform: scale(.92); }
+.ai-busy .ai-trigger ion-icon { animation: search-twinkle 1.2s ease-in-out infinite; }
+@keyframes search-twinkle { 50% { transform: scale(.8) rotate(12deg); } }
+@media (prefers-reduced-motion: reduce) { .smart-search-box.ai-busy::before, .ai-busy .ai-trigger ion-icon { animation: none; } }
 .market-entry > span:nth-child(2) { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .market-entry b { font-size: 14px; line-height: 18px; }
 .market-entry > ion-icon { color: var(--study-faint); font-size: 18px; }

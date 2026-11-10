@@ -35,7 +35,7 @@ const capture = {
 // La primera transformación de los componentes (Ionic + ionicons) puede tardar varios segundos.
 beforeAll(async () => {
   await import('@/components/marketplace/PayPalCheckoutSheet.vue')
-  await import('@/components/marketplace/ShoppingAgent.vue')
+  await import('@/components/marketplace/SmartSearchResults.vue')
   await import('@/components/marketplace/ProductLinkPreview.vue')
 }, 60000)
 
@@ -189,97 +189,95 @@ describe('hoja de pago', () => {
   })
 })
 
-describe('asistente de compras', () => {
-  const recommendation = {
-    product: { id: 7, name: 'Calculadora científica 417 funciones', description: 'Ideal para Cálculo', price: '18.50', currency: 'USD', stock: 8, image_url: null, category: 'Electrónica' },
+describe('búsqueda inteligente', () => {
+  const rec = {
+    product: {
+      id: 7, name: 'Calculadora científica 417 funciones', description: 'Pantalla de dos líneas. Ideal para Cálculo I y Física.',
+      price: '18.50', currency: 'USD', stock: 2, image_url: null, category: 'Electrónica', condition: 'nuevo', delivery_point: 'Entrega en tu campus',
+    },
     store: { name: 'Papelería Campus Central', slug: 'papeleria-campus-central', logo_url: null, is_verified: true, accepts_paypal: true },
-    match_probability: 0.95, fit: { score: 2.8, label: '' }, academic: { score: 1.9, label: '' }, within_budget: true, recommended: true,
+    match_probability: 0.98,
+    highlight: 'Ideal para Cálculo I y Física.',
+    reasons: ['Es la que mejor coincide entre 2 productos de comercios verificados.', 'Entra en tu presupuesto de $20.00 y te sobran $1.50.', 'Quedan solo 2 unidades.'],
+    within_budget: true, recommended: true,
   }
-  const plan = (overrides: Record<string, unknown> = {}) => ({
+  const plan = {
     decision_id: 42, outcome: 'recommendation', model: 'jev-1.14.0',
-    budget: { amount: '25.00', source: 'field', unclear_amounts: [] },
+    budget: { amount: '20.00', source: 'message', unclear_amounts: [] },
     interpretation: { purchase_intent: 0.96, item_named: 0.93, category: null },
-    recommendations: [recommendation],
+    recommendations: [rec],
     message: { title: 'Encontré lo que buscás', body: ['Calculadora científica 417 funciones es la mejor opción entre comercios verificados.'], clarification: null },
-    ...overrides,
-  })
-
-  async function mountAgent() {
-    const Agent = (await import('@/components/marketplace/ShoppingAgent.vue')).default
-    return mount(Agent, { attachTo: document.body })
   }
 
-  it('envía la consulta con el presupuesto de la sesión y muestra la coincidencia con sentido', async () => {
-    api.post.mockResolvedValueOnce(ok(plan()))
-    const wrapper = await mountAgent()
+  async function mountResults(props: Record<string, unknown>) {
+    const Results = (await import('@/components/marketplace/SmartSearchResults.vue')).default
+    return mount(Results, { props, attachTo: document.body })
+  }
 
-    expect(wrapper.text()).toContain('Contanos qué necesitás')
-    await wrapper.find('.budget-toggle').trigger('click')
-    await wrapper.find('input[type="number"]').setValue('25')
-    await wrapper.find('textarea').setValue('Necesito una calculadora para Cálculo')
-    await wrapper.find('form').trigger('submit')
-    await flushPromises()
-
-    expect(api.post).toHaveBeenCalledWith('/marketplace/smart-shopping', { query: 'Necesito una calculadora para Cálculo', max_budget: 25 }, expect.any(Object))
+  it('muestra el porqué de la recomendación con datos reales del producto', async () => {
+    const wrapper = await mountResults({ status: 'done', plan })
     const text = wrapper.text()
-    expect(text).toContain('Encontré lo que buscás')
+
+    expect(text).toContain('Búsqueda inteligente')
     expect(text).toContain('Mejor opción')
-    expect(text).toContain('Muy alta coincidencia con lo que pediste')
-    expect(text).toContain('Cubre todo lo que pediste')
-    expect(text).toContain('Ideal para tu materia')
-    expect(text).toContain('Dentro de tu presupuesto de $25.00')
-    expect(wrapper.find('.match-ring').attributes('aria-label')).toBe('95 % de coincidencia')
-    // No se expone qué modelo de IA se usa.
+    expect(text).toContain('Por qué te lo recomiendo')
+    expect(text).toContain('«Ideal para Cálculo I y Física.»')
+    expect(text).toContain('Entra en tu presupuesto de $20.00 y te sobran $1.50.')
+    expect(text).toContain('2 disponibles')
+    expect(text).toContain('Nuevo')
+    expect(text).toContain('Entrega en tu campus')
+    expect(text).toContain('Muy alta coincidencia con tu búsqueda')
+    expect(wrapper.find('.match-ring').attributes('aria-label')).toBe('98 % de coincidencia')
+    // Sin chips genéricos ni nombre del modelo.
+    expect(text).not.toContain('Cubre todo lo que pediste')
     expect(text).not.toMatch(/jev|typesafe/i)
+
+    await wrapper.find('.pay').trigger('click')
+    expect(wrapper.emitted('buy')?.[0]).toEqual([7, 42])
     wrapper.unmount()
   })
 
-  it('muestra cuánto excede el presupuesto', async () => {
-    api.post.mockResolvedValueOnce(ok(plan({
-      outcome: 'over_budget',
-      budget: { amount: '15.00', source: 'message', unclear_amounts: [] },
-      recommendations: [{ ...recommendation, within_budget: false, recommended: false, match_probability: 0.8 }],
-      message: { title: 'Lo encontré, pero se pasa de tu presupuesto', body: ['La opción más económica cuesta $18.50.'], clarification: null },
-    })))
-    const wrapper = await mountAgent()
-
-    await wrapper.find('textarea').setValue('Calculadora para Cálculo, máximo $15')
-    await wrapper.find('form').trigger('submit')
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('$3.50 más que tu presupuesto')
-    expect(wrapper.text()).toContain('Alta coincidencia con lo que pediste')
+  it('muestra un estado de búsqueda mientras piensa', async () => {
+    const wrapper = await mountResults({ status: 'thinking', plan: null })
+    expect(wrapper.text()).toContain('Entendiendo lo que necesitás')
+    expect(wrapper.find('.ai-skeleton').exists()).toBe(true)
+    expect(wrapper.find('.ai-card').exists()).toBe(false)
     wrapper.unmount()
   })
 
-  it('cuando pide más detalles, la respuesta completa la consulta anterior', async () => {
-    api.post
-      .mockResolvedValueOnce(ok(plan({ outcome: 'needs_clarification', recommendations: [], message: { title: 'Contame un poco más', body: ['¿Qué producto necesitás?'], clarification: null } })))
-      .mockResolvedValueOnce(ok(plan()))
-    const wrapper = await mountAgent()
+  it('carga reseñas y videos al abrirlas', async () => {
+    api.get.mockResolvedValueOnce(ok({
+      status: 'found', search_url: 'https://www.youtube.com/results?search_query=x', message: '',
+      videos: [{ id: 'abc', title: 'Reseña calculadora científica', channel: 'Canal', thumbnail: null, url: 'https://www.youtube.com/watch?v=abc' }],
+    }))
+    const wrapper = await mountResults({ status: 'done', plan })
 
-    await wrapper.find('textarea').setValue('quiero comprar algo')
-    await wrapper.find('form').trigger('submit')
-    await flushPromises()
-    await wrapper.find('textarea').setValue('una calculadora científica')
-    await wrapper.find('form').trigger('submit')
+    await wrapper.find('.videos-toggle').trigger('click')
     await flushPromises()
 
-    expect(api.post).toHaveBeenLastCalledWith('/marketplace/smart-shopping', { query: 'quiero comprar algo. una calculadora científica', max_budget: null }, expect.any(Object))
+    expect(api.get).toHaveBeenCalledWith('/marketplace/products/7/videos', expect.any(Object))
+    expect(wrapper.find('a.video').attributes('href')).toBe('https://www.youtube.com/watch?v=abc')
+    expect(wrapper.text()).toContain('Reseña calculadora científica')
     wrapper.unmount()
   })
 
-  it('si el asistente no está disponible muestra el error y ninguna recomendación', async () => {
-    api.post.mockRejectedValueOnce({ response: { status: 503, data: { success: false, code: 'assistant_unavailable', message: 'El asistente no está disponible en este momento.' } } })
-    const wrapper = await mountAgent()
+  it('aclara cuando no hay videos ni reseñas', async () => {
+    api.get.mockResolvedValueOnce(ok({ status: 'none', videos: [], search_url: 'https://www.youtube.com/results?search_query=x', message: 'No encontramos videos ni reseñas de este producto.' }))
+    const wrapper = await mountResults({ status: 'done', plan })
 
-    await wrapper.find('textarea').setValue('Necesito una calculadora')
-    await wrapper.find('form').trigger('submit')
+    await wrapper.find('.videos-toggle').trigger('click')
     await flushPromises()
 
-    expect(wrapper.text()).toContain('El asistente no está disponible en este momento.')
-    expect(wrapper.find('.agent-card').exists()).toBe(false)
+    expect(wrapper.text()).toContain('No encontramos videos ni reseñas de este producto.')
+    expect(wrapper.find('a.video').exists()).toBe(false)
     wrapper.unmount()
+  })
+
+  it('el servicio solo envía la consulta del buscador', async () => {
+    api.post.mockResolvedValueOnce(ok(plan))
+    const { smartShoppingService } = await import('@/services/smartShoppingService')
+    await smartShoppingService.plan('calculadora para Cálculo, máximo $20')
+    expect(api.post).toHaveBeenCalledWith('/marketplace/smart-shopping', { query: 'calculadora para Cálculo, máximo $20', max_budget: null }, expect.any(Object))
   })
 })
 

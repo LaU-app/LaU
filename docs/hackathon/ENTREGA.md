@@ -50,7 +50,7 @@ Hacer una compra completa con las cuentas demo (ver la sección 2) y aprobar des
 ### Cómo deben probar los jurados
 
 Con **dos navegadores a la vez**, o una ventana normal y otra privada:
-- **A = estudiante:** compra con el asistente y paga con la cuenta Personal de Sandbox.
+- **A = estudiante:** busca con la búsqueda inteligente y paga con la cuenta Personal de Sandbox.
 - **B = comercio:** ve la venta como "Pagado" y recibe el mensaje en el chat con la vista previa del producto.
 
 Si quieren probar el alta de un comercio nuevo, usan una tercera cuenta de LaU, y el equipo la aprueba desde el panel durante el periodo de evaluación.
@@ -84,8 +84,8 @@ Antes de cambiar la visibilidad, resolvé esto. El **historial de Git** también
 | Criterio | Evidencia |
 |---|---|
 | Implementación técnica | PayPal: Partner Referrals, Merchant Integrations, Orders v2 con *payee* e idempotencia, y JS SDK. IA: preguntas tipadas a Jev, tabla de decisión y bitácora. Pruebas automatizadas en backend y frontend. |
-| Diseño | Experiencia completa: landing de comercios, verificación, asistente, hoja de pago, comprobante, pedidos, chat con vista previa y panel admin. |
+| Diseño | Experiencia completa: landing de comercios, verificación, búsqueda inteligente con razones y reseñas, panel de ventas personal, hoja de pago, comprobante, pedidos, chat con vista previa y panel admin. |
 | Impacto potencial | Comercio de campus confiable para estudiantes y pequeños negocios de El Salvador, dentro de una app que ya usan. |
-| Innovación | Asistente que decide con probabilidades auditables sobre inventario real verificado y luego delega el pago a PayPal. No es un chatbot que inventa respuestas. |
+| Innovación | Búsqueda con IA que decide con probabilidades auditables sobre inventario real verificado y luego delega el pago a PayPal. No es un chatbot que inventa respuestas. |
 | Presentación | Pendiente: el video. Debe mostrar el flujo de punta a punta en menos de 3 minutos. |
 | Premios a los que apunta | *Best Use of PayPal + AI*, *Best Use of Agentic Commerce*, *Most Impactful* y los generales. |

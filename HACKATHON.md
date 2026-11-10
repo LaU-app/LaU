@@ -1,4 +1,4 @@
-# LaU Marketplace: verified campus commerce with PayPal and an AI shopping agent
+# LaU Marketplace: verified campus commerce with PayPal and AI-powered search
 
 > Submission for **Build What's Next with PayPal and AI**.
 >
@@ -27,7 +27,13 @@ Students constantly need study supplies: calculators, lab coats, drafting kits, 
 
 1. **Verified merchants.** A business applies inside the app with its legal data: legal name, NIT (tax ID), NRC for companies, legal representative and a supporting document. The LaU team reviews the application in our admin panel and approves it, requests changes or suspends the business. Approval sends an email from LaU.
 2. **PayPal onboarding for each merchant.** The approved merchant connects their PayPal Business account with **Partner Referrals**. LaU then asks PayPal for the seller status and treats PayPal as the source of truth. It checks that the account can receive payments, that the primary email is confirmed and that our platform has OAuth permissions. Only then does the store get the **"Verified by LaU · PayPal"** badge and accept online payments.
-3. **AI shopping agent ("Asistente LaU").** The student opens it from the Marketplace search bar and describes a need in natural language, for example *"Necesito una calculadora científica para Cálculo, máximo $25"*. The agent evaluates **only real products from verified merchants** with **Jev by TypeSafe AI**, a typed-decision model. It explains its pick with a match score and simple signals, and hands off to PayPal. The student always confirms explicitly before paying.
+3. **AI-powered search.** The Marketplace search box understands needs, not just keywords. For example: *"calculadora científica para Cálculo II, máximo $20"* or *"algo para mis clases de matemáticas"*. A *Búsqueda inteligente* (smart search) section appears above the normal results. There, **Jev by TypeSafe AI**, a typed-decision model, evaluates **only real products from verified merchants**. Each pick shows:
+   - a match score;
+   - the **sentence from the product description that Jev selected as evidence**;
+   - reasons computed in code (rank, budget, stock) and product facts;
+   - **YouTube reviews that Jev confirmed are about that kind of product**, or a clear "no videos or reviews" message.
+
+   The student always confirms explicitly before paying with PayPal.
 4. **PayPal checkout to the right merchant.** The backend computes price and total and creates an **Orders v2** order with the merchant as `payee`. The student approves it with the **PayPal JS SDK**. The backend then verifies the order with PayPal and captures it. A paid LaU order exists only after PayPal confirms the capture as `COMPLETED`.
 5. **After the sale.** The order shows as **"Pagado"** for both buyer and seller. The buyer can message the seller, and the product is quoted as a rich preview above the message.
 
@@ -55,7 +61,7 @@ Safety rules:
 | Who | Responsibility |
 |---|---|
 | **Laravel** | Validates input, extracts money amounts from the text, loads **only active products from verified merchants that accept PayPal**, compares prices with the budget, computes totals and applies an explicit **decision table** |
-| **Jev** | *Does the student want to buy something?* · *Do they say what item they need?* · *Which category?* · *What does each amount in the message mean (max price, money to keep aside, other)?* · per real candidate: *Is this the kind of item asked for?* (noul), *How well does it cover the need?* (score 0–3), *How useful is it for the course?* (score 0–2) · *Which candidate fits best?* (choice) |
+| **Jev** | *Does the student want to buy something?* · *Do they say what item they need?* · *Do they say what it is for (a class, a project)?* · *Which category?* · *What does each amount in the message mean (max price, money to keep aside, other)?* · per real candidate: *Is this the kind of item asked for?* (noul), *How well does it cover the need?* (score 0–3), *How useful is it for the course?* (score 0–2) · *Which candidate fits best?* (choice) · *Which sentence of the real product description best shows it fits?* (choice; quoted to the student as evidence) · for reviews: *Is this YouTube video about this kind of product?* (noul per video) |
 | **Student** | Picks a product, confirms the summary (merchant, product, price, total) and approves in PayPal |
 
 Decision table, using conservative thresholds (≥ 0.7 counts as yes, ≤ 0.3 as no, and anything in between as unclear):
@@ -63,7 +69,7 @@ Decision table, using conservative thresholds (≥ 0.7 counts as yes, ≤ 0.3 as
 - `recommendation`: a candidate is what was asked for, covers the need and fits the budget.
 - `over_budget`: matching candidates exist, but none fits the budget.
 - `confirm_choice`: only uncertain matches; the student confirms.
-- `needs_clarification`: the request doesn't name an item yet, so the agent asks before searching.
+- `needs_clarification`: the request names neither an item nor what it is for, so the search asks for details first.
 - `not_a_purchase` and `no_match`.
 
 What the AI **never** does:
@@ -81,7 +87,7 @@ A failed AI call is an error, never a fallback answer. Every decision is stored 
 ```mermaid
 flowchart LR
   subgraph Student["Student (Vue 3 + Ionic, lauapp.es)"]
-    A[Search bar → Asistente LaU] --> B[Recommendations]
+    A[Search box → smart search] --> B[Recommendations + reviews]
     B --> C[Payment sheet: confirm + PayPal JS SDK]
   end
   subgraph API["LaU API (Laravel 12, api.lauapp.es)"]
@@ -122,9 +128,12 @@ Use **two browsers, or one normal window and one private window**, so you can be
 
 1. Open https://lauapp.es → **Iniciar sesión** (log in) with the student account.
 2. Go to **Marketplace** (shop icon in the bottom bar).
-3. In the search bar, tap **Asistente**, the purple button inside the search field.
-4. Tap the wallet button next to the text box and set a max budget of `25`. Then type `Necesito una calculadora científica para Cálculo` and send.
-5. Watch the agent work. It recommends **"Calculadora científica 417 funciones"** with a match score and signals ("Cubre todo lo que pediste" = covers everything you asked; "Dentro de tu presupuesto" = within budget).
+3. In the search box, type `calculadora científica para Cálculo II, máximo $20`. Press **Enter**, or the ✨ button inside the field.
+4. The **Búsqueda inteligente** section appears above the normal results while the AI works. It recommends **"Calculadora científica 417 funciones"** and shows:
+   - a match ring;
+   - **"Por qué te lo recomiendo"** (why I recommend it): a sentence quoted from the product description, plus the reasons;
+   - stock and the other product facts.
+5. Open **Reseñas y videos** (reviews and videos). You'll see YouTube reviews the AI judged relevant, or a clear "no videos or reviews" message.
 6. Tap **Comprar** (Buy). Review the summary (merchant, product, price, total), tick the confirmation box, and click the **PayPal** button.
 7. In the PayPal popup, log in with the **PayPal Sandbox buyer** account and pay.
 8. You get a receipt with a LaU order code. **Ver mis compras** shows the order as **"Pagado"** (paid).
@@ -165,7 +174,7 @@ Use **two browsers, or one normal window and one private window**, so you can be
 | Requirement | How LaU meets it |
 |---|---|
 | Meaningful PayPal integration (Sandbox) | Partner Referrals onboarding, Merchant Integrations seller status, Orders v2 create/show/capture with payee, PayPal JS SDK, all on Sandbox |
-| Meaningful AI | Jev (TypeSafe AI) drives the shopping agent's understanding, candidate evaluation and selection, with an auditable decision log |
+| Meaningful AI | Jev (TypeSafe AI) drives the smart search's understanding, candidate evaluation and selection, with an auditable decision log |
 | Working prototype | Hosted at lauapp.es; end-to-end purchase with real PayPal Sandbox payments |
 | Documentation | This file, `docs/paypal-marketplace.md` (backend) and inline code docs |
 | Tools disclosed | PayPal APIs and JS SDK; Jev by TypeSafe AI; Claude Code for development |
@@ -176,9 +185,10 @@ Use **two browsers, or one normal window and one private window**, so you can be
 
 | UI | Meaning |
 |---|---|
-| Asistente | AI shopping assistant |
-| Contanos qué necesitás | Tell us what you need |
-| Presupuesto máximo | Max budget |
+| Búsqueda inteligente | Smart (AI) search |
+| Por qué te lo recomiendo | Why I recommend it |
+| Reseñas y videos | Reviews and videos |
+| Tu panel de ventas | Your seller dashboard |
 | Comprar / Comprar con PayPal | Buy / Buy with PayPal |
 | Confirmo que quiero comprar… | I confirm I want to buy… |
 | Pagado | Paid |

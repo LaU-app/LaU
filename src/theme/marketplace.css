@@ -189,6 +189,3 @@ ion-modal.lau-sheet-modal{
   .store-logo{width:54px;height:54px}
 }
 
-/* Asistente de compras: pantalla completa en móvil, tarjeta centrada en escritorio */
-ion-modal.agent-modal{--background:var(--study-bg,#f7f7f4)}
-@media (min-width:768px){ion-modal.agent-modal{--width:560px;--height:min(860px,92vh);--border-radius:28px}}

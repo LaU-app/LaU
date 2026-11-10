@@ -171,11 +171,9 @@ const routes = [
         meta: { requiresAuth: true },
       },
       {
-        // Compra inteligente con Jev (TypeSafe AI) sobre comercios verificados
+        // Enlaces antiguos: la búsqueda inteligente ahora vive en el buscador del Marketplace (?q=)
         path: "marketplace/compra-inteligente",
-        name: "MarketplaceSmartShopping",
-        component: () => import("@/views/MarketplaceSmartShoppingView.vue"),
-        meta: { requiresAuth: true },
+        redirect: (to) => ({ path: "/tabs/marketplace", query: to.query.q ? { q: to.query.q } : {} }),
       },
       {
         // Comercio verificado: solicitud legal y conexión con PayPal
