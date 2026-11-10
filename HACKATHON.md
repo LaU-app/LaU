@@ -1,4 +1,4 @@
-# LaU Marketplace: verified campus commerce with PayPal and AI-powered search
+# LaU Marketplace: verified campus commerce with PayPal, AI search and an AI shopping agent
 
 > Submission for **Build What's Next with PayPal and AI**.
 >
@@ -8,8 +8,8 @@
 |---|---|
 | Live app | https://lauapp.es (Marketplace: https://lauapp.es/tabs/marketplace) |
 | Merchant landing page | https://lauapp.es/empresas |
-| Frontend repository (Vue 3 + Ionic) | this repository |
-| Backend repository (Laravel 12) | `LaU-app/LaUapi` (see `docs/paypal-marketplace.md`) |
+| Frontend repository (Vue 3 + Ionic) | https://github.com/LaU-app/LaU |
+| Backend repository (Laravel 12: PayPal, Jev, agent) | https://github.com/LaU-app/LaUapi (technical detail in `docs/paypal-marketplace.md`) |
 | Test accounts | see [Test accounts](#test-accounts) (passwords are in the Devpost *testing instructions*) |
 
 ---
@@ -35,7 +35,23 @@ Students constantly need study supplies: calculators, lab coats, drafting kits, 
 
    The student always confirms explicitly before paying with PayPal.
 4. **PayPal checkout to the right merchant.** The backend computes price and total and creates an **Orders v2** order with the merchant as `payee`. The student approves it with the **PayPal JS SDK**. The backend then verifies the order with PayPal and captures it. A paid LaU order exists only after PayPal confirms the capture as `COMPLETED`.
-5. **After the sale.** The order shows as **"Pagado"** for both buyer and seller. The buyer can message the seller, and the product is quoted as a rich preview above the message.
+5. **AI shopping agent with chat history.** From the smart search, the student opens a chat with an agent. The agent is an open-weight LLM with tools, and Jev supplies typed judgments and checks each reply against real data. It searches, compares, finds reviews, checks orders and prepares a purchase that the student confirms in PayPal. See [Agentic commerce](#agentic-commerce-an-open-llm-agent-with-jev-as-its-judgment-layer).
+6. **After the sale.** The order shows as **"Pagado"** for both buyer and seller. The buyer can message the seller, and the product is quoted as a rich preview above the message.
+7. **Students sell too.** A student without a registered business still gets a personal seller dashboard under their own name. Verification is what unlocks a store name and PayPal payments.
+8. **LaU team panel inside the app** (`/equipo`). LaU staff log in with a separate, short-lived admin session that only works on the review API. They approve, request changes, suspend or re-check PayPal for each merchant. It shows only merchant applications, never other users' data.
+
+## What we built during the hackathon
+
+LaU existed before the Submission Period (Oct 1, 2026). It had the social feed, profiles, chat, study tools and a basic peer-to-peer marketplace with cash-on-delivery orders. Everything in this document was built **during the Submission Period**:
+
+- verified-merchant onboarding with LaU review and PayPal Partner Referrals;
+- PayPal checkout (Orders v2 with the merchant as payee, JS SDK, server-side capture);
+- AI-powered search with Jev;
+- the AI shopping agent with chat history;
+- YouTube reviews filtered by Jev;
+- the merchant landing page and the LaU team panel.
+
+The commit history of both repositories shows this work.
 
 ## How we use PayPal
 
@@ -80,6 +96,21 @@ What the AI **never** does:
 
 A failed AI call is an error, never a fallback answer. Every decision is stored with its probabilities and shown in the admin panel (*Compra inteligente*) for auditability.
 
+## Agentic commerce: an open LLM agent with Jev as its judgment layer
+
+From the smart search, the student taps **Abrir chat** (open chat) and keeps going in a conversation with the **Asistente de compras** (shopping assistant). Chats are saved in a per-student **history**. The assistant can search, compare, check reviews, look up the student's orders and **prepare a purchase**. The student still confirms and pays in PayPal.
+
+**Model:** [Qwen 3.5](https://ollama.com/library/qwen3.5), an open-weight LLM with native tool calling and reasoning. During development it runs locally with [Ollama](https://ollama.com) (`qwen3.5:9b`, or `qwen3.5:4b` on smaller GPUs). Our server has no GPU, so on the hosted demo the same kind of open-weight model is served through an OpenAI-compatible provider (for example `openai/gpt-oss-120b` on Groq). Switching takes three environment variables, with no code changes.
+
+The agent loop lives in `app/Services/Agent/ShoppingAgent.php`:
+
+1. **Gate (Jev).** *Is the student's message about finding, comparing or buying products, or about their orders?* (noul). If the answer is clearly no (≤ 0.3), code replies with a fixed message and the LLM is never called.
+2. **Plan and act (LLM).** The LLM decides which tool to call: `search_products` (the smart search above, so Jev ranks real products), `get_product_details`, `get_product_reviews`, `propose_purchase` or `get_my_orders`. Code caps the loop at 5 steps and 8 tool calls.
+3. **Verify (Jev).** Each sentence of the draft reply is checked against `facts`, the real data the tools returned. Jev answers two Nouls per sentence: *does it state a product or order fact?* and *is every fact it states found in `facts`?*. A sentence that makes a claim (≥ 0.7) that isn't supported (≤ 0.3) is sent back to the LLM once for correction. If it still fails, code removes it. Every probability is stored for audit.
+4. **Act safely (code).** `propose_purchase` validates stock, store status and quantity, and computes the total in integer cents. The student gets a **"Confirmar y pagar"** (confirm and pay) card that opens the normal PayPal checkout. The agent never calls PayPal.
+
+So the LLM brings planning and conversation, Jev brings calibrated judgments, and code makes every decision about money.
+
 **Tools used during development:** Claude Code (Anthropic) as a coding assistant.
 
 ## Architecture
@@ -88,9 +119,14 @@ A failed AI call is an error, never a fallback answer. Every decision is stored 
 flowchart LR
   subgraph Student["Student (Vue 3 + Ionic, lauapp.es)"]
     A[Search box → smart search] --> B[Recommendations + reviews]
+    B --> CH[Chat with the shopping agent]
     B --> C[Payment sheet: confirm + PayPal JS SDK]
+    CH --> C
   end
   subgraph API["LaU API (Laravel 12, api.lauapp.es)"]
+    AG[ShoppingAgent<br/>tool loop · gate · verify] -->|tools| D
+    AG -->|chat + tool calls| L[(Open LLM · Qwen 3.5 / gpt-oss)]
+    AG -->|gate + grounding checks| J
     D[SmartShoppingService<br/>decision table] -->|typed questions| J[(Jev · TypeSafe AI)]
     E[PayPalCheckoutService<br/>quote · create · capture]
     F[MerchantVerificationService<br/>KYB review · PayPal onboarding]
@@ -102,6 +138,7 @@ flowchart LR
     P3[Orders v2]
   end
   A --> D
+  CH --> AG
   C --> E --> P3
   E --> P2
   F --> P1
@@ -134,10 +171,16 @@ Use **two browsers, or one normal window and one private window**, so you can be
    - **"Por qué te lo recomiendo"** (why I recommend it): a sentence quoted from the product description, plus the reasons;
    - stock and the other product facts.
 5. Open **Reseñas y videos** (reviews and videos). You'll see YouTube reviews the AI judged relevant, or a clear "no videos or reviews" message.
-6. Tap **Comprar** (Buy). Review the summary (merchant, product, price, total), tick the confirmation box, and click the **PayPal** button.
-7. In the PayPal popup, log in with the **PayPal Sandbox buyer** account and pay.
-8. You get a receipt with a LaU order code. **Ver mis compras** shows the order as **"Pagado"** (paid).
-9. Open the product again → tap the chat icon (**Escribir al vendedor**). The message comes pre-filled with the **product preview card** above it. Send it.
+6. Tap **Abrir chat** (open chat) below the results. The **Asistente de compras** opens with the same results. Try:
+   - `Compará las opciones` (compare the options);
+   - `¿Tiene reseñas?` (does it have reviews?);
+   - `Quiero comprarla` (I want to buy it): the agent prepares a **"Confirmar y pagar"** card.
+
+   The chips above each reply show which tools the agent used. Your chats stay in the history (clock icon).
+7. Tap **Comprar** (Buy) or **Confirmar y pagar**. Review the summary (merchant, product, price, total), tick the confirmation box, and click the **PayPal** button.
+8. In the PayPal popup, log in with the **PayPal Sandbox buyer** account and pay.
+9. You get a receipt with a LaU order code. **Ver mis compras** shows the order as **"Pagado"** (paid). Back in the chat, ask `¿Cómo va mi último pedido?` (how is my last order?).
+10. Open the product again → tap the chat icon (**Escribir al vendedor**). The message comes pre-filled with the **product preview card** above it. Send it.
 
 **Browser B: merchant**
 
@@ -155,7 +198,7 @@ Use **two browsers, or one normal window and one private window**, so you can be
 
 1. **Backend (`LaUapi`).** Follow `docs/paypal-marketplace.md`:
    1. `composer install && npm ci && npm run build`
-   2. copy `.env.example` to `.env`, then set the `PAYPAL_*` and `TYPESAFE_API_KEY` variables
+   2. copy `.env.example` to `.env`, then set the `PAYPAL_*` and `TYPESAFE_API_KEY` variables. For the chat agent, install [Ollama](https://ollama.com), run `ollama pull qwen3.5:9b` (or `qwen3.5:4b` on GPUs under 8 GB), and set `AGENT_LLM_BASE_URL=http://127.0.0.1:11434/v1` and `AGENT_LLM_MODEL=qwen3.5:9b`. Any OpenAI-compatible endpoint also works, for example Groq with `AGENT_LLM_API_KEY`.
    3. `php artisan migrate`
    4. `php artisan db:seed --class=MarketplaceShowcaseSeeder`
    5. `php artisan paypal:link-store papeleria-campus-central <your sandbox tracking_id>`
@@ -166,18 +209,19 @@ Use **two browsers, or one normal window and one private window**, so you can be
    2. create `.env.development.local` with `VITE_API_URL=http://127.0.0.1:8000/api` and `VITE_PAYPAL_CLIENT_ID=<your sandbox client ID>`
    3. `npm run dev`
 3. **Tests.**
-   - Backend: `php artisan test --filter='PayPal|SmartShopping|JevClient|MerchantVerification|MarketplaceShowcase'`. PayPal and TypeSafe are mocked with `Http::fake`; an optional live Jev test is included.
-   - Frontend: `npx vitest run tests/unit/paypalCheckout.spec.ts`.
+   - Backend: `php artisan test --filter='PayPal|SmartShopping|ShoppingAgent|ProductVideos|JevClient|MerchantVerification|AdminMerchantApi|MarketplaceShowcase'`. PayPal, TypeSafe and the LLM are mocked with `Http::fake`; an optional live Jev test is included.
+   - Frontend: `npx vitest run tests/unit/paypalCheckout.spec.ts tests/unit/shoppingAgent.spec.ts`.
 
 ## Requirements checklist
 
 | Requirement | How LaU meets it |
 |---|---|
 | Meaningful PayPal integration (Sandbox) | Partner Referrals onboarding, Merchant Integrations seller status, Orders v2 create/show/capture with payee, PayPal JS SDK, all on Sandbox |
-| Meaningful AI | Jev (TypeSafe AI) drives the smart search's understanding, candidate evaluation and selection, with an auditable decision log |
+| Meaningful AI | Jev (TypeSafe AI) drives the smart search: understanding, candidate evaluation, selection and evidence. An open-weight LLM agent (Qwen 3.5 / gpt-oss) plans and uses tools, with Jev gating and fact-checking every reply. All of it has an auditable log |
 | Working prototype | Hosted at lauapp.es; end-to-end purchase with real PayPal Sandbox payments |
 | Documentation | This file, `docs/paypal-marketplace.md` (backend) and inline code docs |
-| Tools disclosed | PayPal APIs and JS SDK; Jev by TypeSafe AI; Claude Code for development |
+| Tools disclosed | PayPal APIs and JS SDK; Jev by TypeSafe AI (judgments); Qwen 3.5 via Ollama, or an open-weight model via Groq on the hosted demo (agent LLM); YouTube Data API v3 (reviews); Claude Code (development assistant) |
+| Existing project, significant update | See [What we built during the hackathon](#what-we-built-during-the-hackathon) |
 | Public repo + license | MIT license (see `LICENSE`) |
 | Demo video | Pending (under 3 minutes, YouTube) |
 
@@ -186,6 +230,8 @@ Use **two browsers, or one normal window and one private window**, so you can be
 | UI | Meaning |
 |---|---|
 | Búsqueda inteligente | Smart (AI) search |
+| Asistente de compras · Abrir chat | Shopping assistant (agent) · Open chat |
+| Confirmar y pagar | Confirm and pay |
 | Por qué te lo recomiendo | Why I recommend it |
 | Reseñas y videos | Reviews and videos |
 | Tu panel de ventas | Your seller dashboard |

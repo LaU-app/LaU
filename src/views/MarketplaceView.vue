@@ -21,7 +21,8 @@
         </div>
 
         <SmartSearchResults v-if="ai.status !== 'idle'" :status="ai.status" :plan="ai.plan" :error="ai.error"
-          @dismiss="dismissSmartSearch" @retry="smartSearch(ai.query)" @open="openById" @buy="buy"/>
+          @dismiss="dismissSmartSearch" @retry="smartSearch(ai.query)" @open="openById" @buy="buy"
+          @chat="(id: number) => router.push({ path: '/asistente', query: { decision: String(id) } })" @history="router.push('/asistente')"/>
 
         <button class="market-entry study-card" @click="router.push('/tabs/marketplace/empresa')">
           <span class="study-symbol tone-green"><ion-icon :icon="shieldCheckmarkOutline"/></span>

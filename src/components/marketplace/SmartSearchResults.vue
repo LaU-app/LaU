@@ -8,6 +8,7 @@
           <span :key="subtitle">{{ subtitle }}</span>
         </Transition>
       </div>
+      <button type="button" class="ai-close" aria-label="Tus chats con el asistente" @click="$emit('history')"><ion-icon :icon="timeOutline"/></button>
       <button type="button" class="ai-close" aria-label="Ocultar búsqueda inteligente" @click="$emit('dismiss')"><ion-icon :icon="closeOutline"/></button>
     </header>
 
@@ -98,6 +99,13 @@
           </div>
         </article>
       </TransitionGroup>
+
+      <!-- Seguir con el asistente: mismo resultado, ahora en conversación -->
+      <button type="button" class="ai-chat" @click="$emit('chat', plan.decision_id)">
+        <span class="ai-chat-icon"><ion-icon :icon="chatbubblesOutline"/></span>
+        <span class="ai-chat-text"><b>¿Querés comparar o preguntar algo?</b><small>Seguí con el asistente</small></span>
+        <span class="ai-chat-go">Abrir chat<ion-icon :icon="arrowForwardOutline"/></span>
+      </button>
     </template>
   </section>
 </template>
@@ -107,14 +115,14 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { IonIcon } from '@ionic/vue'
 import {
   sparkles, closeOutline, cubeOutline, logoPaypal, chatbubbleEllipsesOutline, checkmarkCircle, ribbonOutline,
-  pricetagOutline, locationOutline, logoYoutube, chevronDownOutline,
+  pricetagOutline, locationOutline, logoYoutube, chevronDownOutline, chatbubblesOutline, arrowForwardOutline, timeOutline,
 } from 'ionicons/icons'
 import VerifiedBadge from '@/components/marketplace/VerifiedBadge.vue'
 import smartShoppingService, { type ProductVideos, type SmartPlan } from '@/services/smartShoppingService'
 import { CheckoutError } from '@/services/paypalCheckoutService'
 
 const props = defineProps<{ status: 'thinking' | 'done' | 'error'; plan: SmartPlan | null; error?: string }>()
-defineEmits<{ dismiss: []; retry: []; open: [id: number]; buy: [productId: number, decisionId: number] }>()
+defineEmits<{ dismiss: []; retry: []; open: [id: number]; buy: [productId: number, decisionId: number]; chat: [decisionId: number]; history: [] }>()
 
 // Etapas reales del trabajo (se muestran mientras responde el servidor).
 const STAGES = ['Entendiendo lo que necesitás…', 'Buscando en comercios verificados…', 'Comparando opciones…']
@@ -251,6 +259,13 @@ async function toggleVideos(productId: number) {
 
 .card-enter-active { transition: opacity .5s ease, transform .5s cubic-bezier(.2, .8, .2, 1); transition-delay: calc(var(--i) * 110ms); }
 .card-enter-from { opacity: 0; transform: translateY(14px); }
+.ai-chat { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border-radius: 18px; border: 1px dashed color-mix(in srgb, var(--study-purple) 45%, var(--study-border)); background: var(--study-surface); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: transform .15s ease; }
+.ai-chat:active { transform: scale(.98); }
+.ai-chat-icon { width: 36px; height: 36px; border-radius: 12px; flex-shrink: 0; display: grid; place-items: center; background: var(--study-purple-soft); color: var(--study-purple); font-size: 19px; }
+.ai-chat-text { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.ai-chat-text b { font-size: 14px; }
+.ai-chat-text small { font-size: 12px; color: var(--study-muted); }
+.ai-chat-go { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; padding: 8px 12px; border-radius: 999px; background: linear-gradient(135deg, #8b45ec, #2853e0); color: #fff; font-size: 12px; font-weight: 800; }
 .swap-enter-active, .swap-leave-active { transition: opacity .2s ease, transform .2s ease; }
 .swap-enter-from { opacity: 0; transform: translateY(5px); }
 .swap-leave-to { opacity: 0; transform: translateY(-5px); }

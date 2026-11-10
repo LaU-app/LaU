@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "@ionic/vue-router";
 import TabsPage from "../views/TabsPage.vue";
 import { AuthService } from "@/services/auth";
+import { AdminService } from "@/services/adminService";
 
 const routes = [
   {
@@ -192,6 +193,13 @@ const routes = [
   },
   // Rutas que cubren pantalla completa sin menús
   {
+    // Agente de compras: chat con historial (también se abre desde la búsqueda inteligente)
+    path: "/asistente/:id?",
+    name: "MarketplaceAgent",
+    component: () => import("@/views/MarketplaceAgentView.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/chat/:id",
     name: "ChatDetail",
     component: () => import("@/views/ChatDetail.vue"),
@@ -219,6 +227,28 @@ const routes = [
     name: "CreatePoll",
     component: () => import("@/views/CreatePollView.vue"),
     meta: { requiresAuth: true },
+  },
+  // Panel del equipo de LaU (superusuarios): revisión de comercios. Sesión propia, separada de la del estudiante.
+  {
+    path: "/equipo",
+    redirect: "/equipo/comercios",
+  },
+  {
+    path: "/equipo/login",
+    name: "AdminLogin",
+    component: () => import("@/views/admin/AdminLoginView.vue"),
+  },
+  {
+    path: "/equipo/comercios",
+    name: "AdminMerchants",
+    component: () => import("@/views/admin/AdminMerchantsView.vue"),
+    meta: { requiresAdmin: true },
+  },
+  {
+    path: "/equipo/comercios/:id",
+    name: "AdminMerchant",
+    component: () => import("@/views/admin/AdminMerchantView.vue"),
+    meta: { requiresAdmin: true },
   },
 ];
 
@@ -253,6 +283,11 @@ window.addEventListener("pushNotificationAction", (event) => {
 // Navigation Guard
 router.beforeEach(async (to, from, next) => {
   const isAuthenticated = AuthService.isAuthenticated();
+
+  if (to.meta.requiresAdmin) {
+    next(AdminService.isAuthenticated() ? undefined : { path: "/equipo/login", query: { next: to.fullPath } });
+    return;
+  }
 
   if (to.meta.requiresAuth) {
     if (!isAuthenticated) {
