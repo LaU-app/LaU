@@ -28,7 +28,8 @@ Sin claves, la app **sigue funcionando**: los mapas muestran una lista y las bú
 ## 1. Proyecto y facturación
 
 1. Entrá a https://console.cloud.google.com con la cuenta dueña de Firebase.
-2. Arriba, en el selector de proyecto, elegí **`lauapp-81f4d`**. El proyecto de Firebase es un proyecto de Google Cloud, así que todo queda junto.
+2. Arriba, en el selector de proyecto, elegí **LaU-app** (id `lau-app-f3312`), el que ya tiene las credenciales de Firebase y OAuth. Un proyecto de Firebase es un proyecto de Google Cloud, así que todo queda junto.
+   - No modifiques las claves que creó Firebase («Android key» y «Browser key (auto created by Firebase)»): crea claves nuevas para LaU.
 3. Menú ☰ → **Facturación** → vinculá una cuenta de facturación.
    - Google Maps Platform y Cloud Vision **exigen facturación activa**, aunque el uso de LaU va a estar muy por debajo de los niveles gratis mensuales.
    - Desde marzo de 2025, Maps no da un crédito único: cada producto tiene su cupo gratis mensual. Los precios están en https://mapsplatform.google.com/pricing y https://cloud.google.com/vision/pricing.
