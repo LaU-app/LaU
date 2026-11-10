@@ -12,6 +12,8 @@ export interface SmartRecommendation {
     product: {
         id: number; name: string; description: string; price: string; currency: string; stock: number
         image_url: string | null; category: string | null; condition: string | null; delivery_point: string | null
+        /** Campus donde se entrega (siglas o nombre). */
+        campus?: string | null
     }
     store: { name: string; slug: string; logo_url: string | null; is_verified: boolean; accepts_paypal: boolean }
     match_probability: number

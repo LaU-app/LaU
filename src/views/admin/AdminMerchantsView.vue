@@ -8,6 +8,11 @@
             <b>Panel de LaU</b>
             <span>Comercios verificados</span>
           </div>
+          <nav class="admin-nav" aria-label="Secciones del panel">
+            <router-link to="/equipo/comercios" replace class="is-current">Comercios</router-link>
+            <router-link to="/equipo/campus" replace>Campus</router-link>
+            <router-link to="/equipo/ferias" replace>Ferias</router-link>
+          </nav>
           <div class="admin-session">
             <span v-if="admin" class="admin-name" :title="admin.email">{{ admin.name }}</span>
             <button type="button" class="admin-logout" :disabled="loggingOut" aria-label="Cerrar sesión" @click="logout">
@@ -289,6 +294,14 @@ onBeforeUnmount(() => clearTimeout(debounce))
 .admin-name { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; color: var(--study-muted); }
 .admin-logout { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; padding: 0 14px; border: 1px solid var(--study-border); border-radius: 999px; background: var(--study-surface); color: var(--study-text); font-size: 13px; font-weight: 600; box-shadow: var(--study-shadow); }
 .admin-logout ion-icon { font-size: 17px; }
+/* Secciones del panel: segunda fila en teléfono, en la barra en pantallas grandes */
+.admin-bar { flex-wrap: wrap; }
+.admin-nav { order: 3; flex: 1 0 100%; display: flex; gap: 2px; padding: 3px; border: 1px solid var(--study-border); border-radius: 999px; background: var(--study-tray); }
+.admin-nav a { flex: 1; display: inline-flex; align-items: center; justify-content: center; min-height: 34px; padding: 6px 14px; border-radius: 999px; color: var(--study-muted); font-size: 13px; font-weight: 600; line-height: 18px; white-space: nowrap; transition: background-color .2s ease, color .2s ease; }
+.admin-nav a:hover { color: var(--study-text); }
+.admin-nav a.is-current { background: var(--study-surface); color: var(--study-text); box-shadow: var(--study-shadow); }
+@media (max-width: 899px) { .admin-bar { padding: 10px 0; } }
+@media (min-width: 900px) { .admin-nav { order: 0; flex: 0 0 auto; } .admin-nav a { flex: 0 0 auto; } }
 
 /* Contenido */
 .admin-shell.study-shell { max-width: 1040px; padding: 20px 16px 40px; }

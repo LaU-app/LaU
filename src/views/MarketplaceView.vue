@@ -29,6 +29,19 @@
           <ion-icon :icon="chevronForwardOutline" aria-hidden="true"/>
         </button>
 
+        <!-- Campus de entrega: todo se entrega dentro de un campus -->
+        <div class="campus-bar">
+          <button type="button" class="campus-chip" @click="chooseCampus">
+            <ion-icon :icon="schoolOutline"/>
+            <span>{{ currentCampus ? campusLabel(currentCampus) : 'Todos los campus' }}</span>
+            <small v-if="currentCampus && currentCampus.id === myCampusId">tu campus</small>
+            <ion-icon class="chev" :icon="chevronDownOutline"/>
+          </button>
+          <button type="button" class="campus-map-btn" @click="router.push('/tabs/marketplace/mapa')">
+            <ion-icon :icon="mapOutline"/>Mapa
+          </button>
+        </div>
+
         <CategoryScroller v-model:selected="category"/>
 
         <div class="section-title">
@@ -42,10 +55,10 @@
 
         <div v-else-if="!products.length && !error" class="study-empty">
           <span class="study-symbol tone-blue"><ion-icon :icon="storefrontOutline"/></span>
-          <h2>{{ search || category ? 'Nada por aquí' : 'Todavía no hay nada a la venta' }}</h2>
+          <h2>{{ search || category ? 'Nada por aquí' : currentCampus ? `Todavía no hay nada en ${campusLabel(currentCampus)}` : 'Todavía no hay nada a la venta' }}</h2>
           <p>{{ search || category ? 'Probá con otra búsqueda o categoría.' : 'Sé el primero en publicar algo para tu campus.' }}</p>
-          <button class="study-link" @click="search || category ? clearFilters() : publish()">
-            {{ search || category ? 'Ver todo' : 'Publicar algo' }}
+          <button class="study-link" @click="search || category || currentCampus ? clearFilters() : publish()">
+            {{ search || category || currentCampus ? 'Ver todos los campus' : 'Publicar algo' }}
           </button>
         </div>
 
@@ -77,7 +90,11 @@ import {
   IonPage, IonContent, IonIcon, IonRefresher, IonRefresherContent, IonInfiniteScroll,
   IonInfiniteScrollContent, IonFab, IonFabButton, IonModal, actionSheetController, toastController,
 } from '@ionic/vue'
-import { searchOutline, swapVerticalOutline, storefrontOutline, addOutline, shieldCheckmarkOutline, chevronForwardOutline, sparkles } from 'ionicons/icons'
+import {
+  searchOutline, swapVerticalOutline, storefrontOutline, addOutline, shieldCheckmarkOutline, chevronForwardOutline, sparkles,
+  schoolOutline, chevronDownOutline, mapOutline,
+} from 'ionicons/icons'
+import campusService, { campusLabel, type Campus } from '@/services/campusService'
 import AppHeader from '@/components/AppHeader.vue'
 import SmartSearchResults from '@/components/marketplace/SmartSearchResults.vue'
 import PayPalCheckoutSheet from '@/components/marketplace/PayPalCheckoutSheet.vue'
@@ -170,6 +187,7 @@ async function load(append = false) {
     const result = await marketplaceService.products({
       search: search.value || undefined,
       category: category.value || undefined,
+      universidad_id: campusId.value ?? undefined,
       page: append ? page.value + 1 : 1,
       ...sort.value,
     })
@@ -195,7 +213,43 @@ async function refresh(event: CustomEvent) {
   await (event.target as HTMLIonRefresherElement).complete()
 }
 
-const clearFilters = () => { search.value = ''; category.value = null }
+const clearFilters = () => { search.value = ''; category.value = null; campusId.value = null }
+
+// Campus: en LaU todo se entrega dentro de un campus. Por defecto se ve el campus del estudiante.
+const campuses = ref<Campus[]>([])
+const myCampusId = ref<number | null>(null)
+const campusId = ref<number | null>(null)
+const currentCampus = computed(() => campuses.value.find(c => c.id === campusId.value) ?? null)
+const campusFromRoute = () => {
+  const value = Number(route.query.campus)
+  return Number.isInteger(value) && value > 0 ? value : null
+}
+
+async function loadCampuses() {
+  try {
+    const map = await campusService.map()
+    campuses.value = map.campuses
+    myCampusId.value = map.my_campus_id
+    const initial = campusFromRoute() ?? map.my_campus_id
+    if (initial !== campusId.value) campusId.value = initial
+  } catch { /* sin campus se muestra todo el catálogo */ }
+}
+
+async function chooseCampus() {
+  const sheet = await actionSheetController.create({
+    header: 'Campus de entrega',
+    buttons: [
+      ...campuses.value.map(c => ({
+        text: `${campusLabel(c)}${c.id === myCampusId.value ? ' · tu campus' : ''}${c.products_count ? ` (${c.products_count})` : ''}`,
+        handler: () => { campusId.value = c.id },
+      })),
+      { text: 'Todos los campus', handler: () => { campusId.value = null } },
+      { text: 'Ver en el mapa', handler: () => { router.push('/tabs/marketplace/mapa') } },
+      { text: 'Cancelar', role: 'cancel' },
+    ],
+  })
+  await sheet.present()
+}
 const open = (product: Product) => router.push(`/tabs/marketplace/product/${product.id}`)
 const openById = (id: number) => router.push(`/tabs/marketplace/product/${id}`)
 
@@ -234,7 +288,13 @@ watch(search, (value) => {
   // Al borrar la búsqueda desaparece también la sección inteligente.
   if (!value.trim() && ai.status !== 'idle') dismissSmartSearch()
 })
-watch([category, sort], () => { void load() })
+watch([category, sort, campusId], () => { void load() })
+// Desde el mapa: /tabs/marketplace?campus=ID (la vista sigue montada en las pestañas).
+watch(() => route.query.campus, () => {
+  const fromRoute = campusFromRoute()
+  if (fromRoute) campusId.value = fromRoute
+})
+void loadCampuses()
 
 useStudyScreen(load, ['marketplace'])
 </script>
@@ -246,6 +306,13 @@ useStudyScreen(load, ['marketplace'])
  * variables.css), que vale 0 cuando Ionic oculta el menú por el teclado.
  */
 .marketplace-page { --market-fab-size: 56px; --market-fab-gap: 16px; }
+.campus-bar { display: flex; gap: 8px; margin: 0 0 12px; }
+.campus-chip, .campus-map-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--study-border); background: var(--study-surface); color: var(--study-text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.campus-chip { flex: 1; min-width: 0; }
+.campus-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.campus-chip > ion-icon:first-child, .campus-map-btn ion-icon { color: var(--study-purple); font-size: 17px; flex-shrink: 0; }
+.campus-chip small { padding: 2px 8px; border-radius: 999px; background: var(--study-purple-soft); color: var(--study-purple); font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.campus-chip .chev { margin-left: auto; color: var(--study-faint); font-size: 15px; }
 .market-fab {
   bottom: calc(var(--lau-nav-space, 0px) + var(--market-fab-gap));
   right: calc(15px + var(--ion-safe-area-right, 0px));

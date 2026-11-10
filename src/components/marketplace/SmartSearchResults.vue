@@ -65,6 +65,7 @@
             <li :class="{ low: rec.product.stock <= 3 }"><ion-icon :icon="cubeOutline"/>{{ stockText(rec.product.stock) }}</li>
             <li v-if="conditionText(rec.product.condition)"><ion-icon :icon="ribbonOutline"/>{{ conditionText(rec.product.condition) }}</li>
             <li v-if="rec.product.category"><ion-icon :icon="pricetagOutline"/>{{ rec.product.category }}</li>
+            <li v-if="rec.product.campus" class="campus"><ion-icon :icon="schoolOutline"/>Se entrega en {{ rec.product.campus }}</li>
             <li v-if="rec.product.delivery_point"><ion-icon :icon="locationOutline"/>{{ rec.product.delivery_point }}</li>
           </ul>
           <p v-if="rec.product.description" class="desc">{{ rec.product.description }}</p>
@@ -72,7 +73,7 @@
           <!-- Reseñas y videos (YouTube filtrado por el modelo) -->
           <div class="videos">
             <button type="button" class="videos-toggle" :aria-expanded="openVideos === rec.product.id" @click="toggleVideos(rec.product.id)">
-              <ion-icon :icon="logoYoutube"/>Reseñas y videos
+              <ion-icon :icon="logoYoutube"/>Reseñas, videos y web
               <ion-icon class="chev" :class="{ open: openVideos === rec.product.id }" :icon="chevronDownOutline"/>
             </button>
             <div v-if="openVideos === rec.product.id" class="videos-body">
@@ -88,6 +89,22 @@
                 </p>
               </template>
               <p v-else-if="videoState[rec.product.id]?.error" class="study-muted">{{ videoState[rec.product.id]!.error }}</p>
+
+              <!-- El producto en otros sitios, encontrado por su foto -->
+              <div class="web-block">
+                <span class="web-title"><ion-icon :icon="globeOutline"/>En la web, por su foto</span>
+                <p v-if="webState[rec.product.id]?.loading" class="study-muted"><span class="mini-spin"/>Buscando la foto en la web…</p>
+                <template v-else-if="webState[rec.product.id]?.data">
+                  <a v-for="link in webState[rec.product.id]!.data!.links" :key="link.url" class="web-link" :href="link.url" target="_blank" rel="noopener noreferrer">
+                    <b>{{ link.title }}</b><small>{{ link.domain }}</small>
+                  </a>
+                  <p class="study-muted videos-msg">
+                    <template v-if="webState[rec.product.id]!.data!.status !== 'found'">{{ webState[rec.product.id]!.data!.message }} </template>
+                    <a :href="webState[rec.product.id]!.data!.search_url" target="_blank" rel="noopener noreferrer">Buscar en Google</a>
+                  </p>
+                </template>
+                <p v-else-if="webState[rec.product.id]?.error" class="study-muted">{{ webState[rec.product.id]!.error }}</p>
+              </div>
             </div>
           </div>
 
@@ -117,7 +134,9 @@ import { IonIcon } from '@ionic/vue'
 import {
   sparkles, closeOutline, cubeOutline, logoPaypal, chatbubbleEllipsesOutline, checkmarkCircle, ribbonOutline,
   pricetagOutline, locationOutline, logoYoutube, chevronDownOutline, chatbubblesOutline, arrowForwardOutline, timeOutline,
+  schoolOutline, globeOutline,
 } from 'ionicons/icons'
+import campusService, { type ProductWebLinks } from '@/services/campusService'
 import VerifiedBadge from '@/components/marketplace/VerifiedBadge.vue'
 import smartShoppingService, { type ProductVideos, type SmartPlan } from '@/services/smartShoppingService'
 import { CheckoutError } from '@/services/paypalCheckoutService'
@@ -164,12 +183,26 @@ const conditionText = (c: string | null) => (c ? CONDITIONS[c] ?? null : null)
 
 async function toggleVideos(productId: number) {
   openVideos.value = openVideos.value === productId ? null : productId
-  if (openVideos.value === null || videoState[productId]?.data || videoState[productId]?.loading) return
+  if (openVideos.value === null) return
+  void loadWeb(productId)
+  if (videoState[productId]?.data || videoState[productId]?.loading) return
   videoState[productId] = { loading: true }
   try {
     videoState[productId] = { loading: false, data: await smartShoppingService.videos(productId) }
   } catch (e) {
     videoState[productId] = { loading: false, error: e instanceof CheckoutError ? e.message : 'No pudimos buscar reseñas.' }
+  }
+}
+
+// Enlaces del producto en otros sitios (búsqueda por la foto, filtrada por la IA).
+const webState = reactive<Record<number, { loading: boolean; data?: ProductWebLinks; error?: string }>>({})
+async function loadWeb(productId: number) {
+  if (webState[productId]?.data || webState[productId]?.loading) return
+  webState[productId] = { loading: true }
+  try {
+    webState[productId] = { loading: false, data: await campusService.webLinks(productId) }
+  } catch (e) {
+    webState[productId] = { loading: false, error: e instanceof CheckoutError ? e.message : 'No pudimos buscar en la web.' }
   }
 }
 </script>
@@ -255,6 +288,13 @@ async function toggleVideos(productId: number) {
 .video b { font-size: 13px; line-height: 17px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .video small { font-size: 11px; color: var(--study-muted); }
 .videos-msg a { color: var(--study-purple); font-weight: 700; }
+.facts li.campus { color: var(--study-purple); background: var(--study-purple-soft); }
+.web-block { display: grid; gap: 6px; padding-top: 10px; margin-top: 4px; border-top: 1px dashed var(--study-border); }
+.web-title { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700; }
+.web-title ion-icon { color: var(--study-blue, #2853e0); font-size: 17px; }
+.web-link { display: grid; gap: 1px; padding: 8px 10px; border-radius: 12px; background: var(--study-bg); color: inherit; text-decoration: none; }
+.web-link b { font-size: 13px; line-height: 17px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.web-link small { font-size: 11px; color: var(--study-muted); }
 .mini-spin { display: inline-block; width: 12px; height: 12px; margin-right: 6px; border-radius: 50%; border: 2px solid var(--study-track); border-top-color: var(--study-purple); animation: spin .8s linear infinite; vertical-align: -2px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

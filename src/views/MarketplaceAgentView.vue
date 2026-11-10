@@ -111,7 +111,7 @@ import '@/theme/study.css'
 import '@/theme/marketplace.css'
 
 const SUGGESTIONS = ['Necesito una calculadora para Cálculo', 'Algo para mis clases de Química', '¿Cómo va mi último pedido?']
-const FOLLOW_UPS = ['Compará las opciones', '¿Tiene reseñas?', 'Quiero comprarla']
+const FOLLOW_UPS = ['Compará las opciones', '¿Tiene reseñas?', '¿Dónde se entrega?', 'Quiero comprarla']
 const STAGES = ['Pensando…', 'Buscando en comercios verificados…', 'Revisando los datos…', 'Preparando la respuesta…']
 
 const route = useRoute()

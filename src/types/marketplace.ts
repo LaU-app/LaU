@@ -109,6 +109,9 @@ export interface Product {
     status: ProductStatus;
     condition: ProductCondition | null;
     delivery_point: string | null;
+    /** Punto exacto de entrega dentro del campus (opcional). */
+    delivery_lat?: number | null;
+    delivery_lng?: number | null;
     is_available: boolean;
     created_at: string;
     updated_at: string;
@@ -116,6 +119,18 @@ export interface Product {
     category?: ProductCategory | null;
     user?: MarketplaceUser;
     store?: StoreSummary | null;
+    /** Campus donde se entrega: en LaU todo se entrega dentro de un campus. */
+    universidad?: ProductCampus | null;
+}
+
+export interface ProductCampus {
+    id: number;
+    nombre: string;
+    siglas: string | null;
+    color_primario: string | null;
+    latitud: number | null;
+    longitud: number | null;
+    radio_entrega_m: number;
 }
 
 export type OrderStatus = 'pending' | 'delivered' | 'cancelled';

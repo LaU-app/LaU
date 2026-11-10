@@ -1,6 +1,7 @@
 import { api } from './api'
 import { toCheckoutError } from './paypalCheckoutService'
 import type { ProductVideos, SmartRecommendation } from './smartShoppingService'
+import type { ProductWebLinks } from './campusService'
 
 // Agente de compras: chat con historial. El backend orquesta un modelo de lenguaje abierto con
 // herramientas (catálogo de comercios verificados, reseñas, pedidos) y verifica cada respuesta
@@ -12,6 +13,7 @@ export type AgentCard =
   | { type: 'products'; decision_id: number | null; items: AgentProduct[] }
   | ({ type: 'purchase'; decision_id: number | null; quantity: number; total: string } & AgentProduct)
   | ({ type: 'videos'; product: { id: number; name: string } } & ProductVideos)
+  | ({ type: 'links'; product: { id: number; name: string } } & ProductWebLinks)
 
 export interface AgentStep { tool: string; label: string; ok: boolean }
 

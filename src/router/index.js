@@ -177,6 +177,13 @@ const routes = [
         redirect: (to) => ({ path: "/tabs/marketplace", query: to.query.q ? { q: to.query.q } : {} }),
       },
       {
+        // Mapa 3D de los campus: dónde se vende y se entrega, ferias y "¿dónde estoy?" (GPS)
+        path: "marketplace/mapa",
+        name: "MarketplaceCampusMap",
+        component: () => import("@/views/MarketplaceCampusMapView.vue"),
+        meta: { requiresAuth: true },
+      },
+      {
         // Comercio verificado: solicitud legal y conexión con PayPal
         path: "marketplace/empresa",
         name: "MarketplaceMerchant",
@@ -248,6 +255,18 @@ const routes = [
     path: "/equipo/comercios/:id",
     name: "AdminMerchant",
     component: () => import("@/views/admin/AdminMerchantView.vue"),
+    meta: { requiresAdmin: true },
+  },
+  {
+    path: "/equipo/campus",
+    name: "AdminCampuses",
+    component: () => import("@/views/admin/AdminCampusesView.vue"),
+    meta: { requiresAdmin: true },
+  },
+  {
+    path: "/equipo/ferias",
+    name: "AdminFerias",
+    component: () => import("@/views/admin/AdminFeriasView.vue"),
     meta: { requiresAdmin: true },
   },
 ];

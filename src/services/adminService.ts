@@ -67,6 +67,46 @@ export interface MerchantList {
 
 export interface ActionResult { message: string; emailed?: boolean; data: MerchantDetail }
 
+export interface AdminCampus {
+  id: number
+  nombre: string
+  siglas: string | null
+  latitud: number | null
+  longitud: number | null
+  radio_entrega_m: number
+  direccion: string | null
+  products_count: number
+}
+
+export interface AdminFeria {
+  id: number
+  universidad_id: number
+  titulo: string
+  descripcion: string | null
+  lugar: string | null
+  inicia_en: string
+  termina_en: string
+  latitud: number | null
+  longitud: number | null
+  en_curso: boolean
+  banner_id: number | null
+  universidad: { id: number; nombre: string; siglas: string | null } | null
+}
+
+export interface FeriaInput {
+  universidad_id: number
+  titulo: string
+  descripcion?: string | null
+  lugar?: string | null
+  /** Fecha y hora local en formato ISO (YYYY-MM-DDTHH:mm). */
+  inicia_en: string
+  termina_en: string
+  latitud?: number | null
+  longitud?: number | null
+  /** Publica un anuncio para los estudiantes de ese campus durante la feria. */
+  crear_anuncio?: boolean
+}
+
 function readSession(): AdminSession | null {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY)
@@ -147,6 +187,32 @@ export const AdminService = {
 
   async refreshPayPal(id: number): Promise<ActionResult> {
     return (await http.post(`/merchants/${id}/paypal`)).data
+  },
+
+  // ── Campus: ubicación y área de entrega ─────────────────────────────
+  async campuses(): Promise<AdminCampus[]> {
+    return unwrap<AdminCampus[]>(await http.get('/universidades'))
+  },
+
+  async updateCampusLocation(id: number, input: { latitud: number; longitud: number; radio_entrega_m: number; direccion?: string | null }): Promise<{ message: string; data: AdminCampus }> {
+    return (await http.put(`/universidades/${id}/ubicacion`, input)).data
+  },
+
+  // ── Ferias en campus (con anuncio opcional) ─────────────────────────
+  async ferias(): Promise<AdminFeria[]> {
+    return unwrap<AdminFeria[]>(await http.get('/ferias'))
+  },
+
+  async createFeria(input: FeriaInput): Promise<{ message: string; data: AdminFeria }> {
+    return (await http.post('/ferias', input)).data
+  },
+
+  async updateFeria(id: number, input: FeriaInput): Promise<{ message: string; data: AdminFeria }> {
+    return (await http.put(`/ferias/${id}`, input)).data
+  },
+
+  async deleteFeria(id: number): Promise<{ message: string }> {
+    return (await http.delete(`/ferias/${id}`)).data
   },
 
   /**

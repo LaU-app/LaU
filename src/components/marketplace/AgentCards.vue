@@ -27,6 +27,7 @@
               <b>{{ item.product.name }}</b>
               <span class="store">{{ item.store.name }}<VerifiedBadge compact :paypal="item.store.accepts_paypal"/></span>
               <span class="price">${{ item.product.price }} <small>{{ stockText(item.product.stock) }}</small></span>
+              <span v-if="item.product.campus" class="campus"><ion-icon :icon="schoolOutline"/>Se entrega en {{ item.product.campus }}</span>
             </span>
             <span v-if="item.match_probability !== null" class="match" :class="tone(item.match_probability)">
               {{ Math.round(item.match_probability * 100) }}<small>%</small>
@@ -41,6 +42,18 @@
           </div>
         </article>
       </div>
+
+      <!-- El producto en otros sitios, encontrado por su foto -->
+      <article v-else-if="card.type === 'links'" class="a-card videos">
+        <span class="v-title web"><ion-icon :icon="globeOutline"/>{{ card.product.name }} en la web</span>
+        <a v-for="link in card.links" :key="link.url" class="video web-link" :href="link.url" target="_blank" rel="noopener noreferrer">
+          <span><b>{{ link.title }}</b><small>{{ link.domain }}</small></span>
+        </a>
+        <p class="study-muted">
+          <template v-if="card.status !== 'found'">{{ card.message }} </template>
+          <a :href="card.search_url" target="_blank" rel="noopener noreferrer">Buscar en Google</a>
+        </p>
+      </article>
 
       <!-- Reseñas y videos que encontró el agente -->
       <article v-else-if="card.type === 'videos'" class="a-card videos">
@@ -60,7 +73,7 @@
 
 <script setup lang="ts">
 import { IonIcon } from '@ionic/vue'
-import { bagCheckOutline, cubeOutline, logoPaypal, chatbubbleEllipsesOutline, logoYoutube } from 'ionicons/icons'
+import { bagCheckOutline, cubeOutline, logoPaypal, chatbubbleEllipsesOutline, logoYoutube, globeOutline, schoolOutline } from 'ionicons/icons'
 import VerifiedBadge from '@/components/marketplace/VerifiedBadge.vue'
 import type { AgentCard } from '@/services/agentService'
 
@@ -109,5 +122,8 @@ const tone = (p: number) => p >= 0.9 ? 'tone-high' : p >= 0.7 ? 'tone-good' : p 
 .video b { font-size: 13px; line-height: 17px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .video small { font-size: 11px; color: var(--study-muted); }
 .videos a:not(.video) { color: var(--study-purple); font-weight: 700; }
+.v-title.web ion-icon { color: var(--study-blue, #2853e0); }
+.web-link { padding: 8px 10px; }
+.campus { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: var(--study-purple); }
 @media (prefers-reduced-motion: reduce) { .a-card { animation: none; } }
 </style>

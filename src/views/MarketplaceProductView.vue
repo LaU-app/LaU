@@ -37,6 +37,15 @@
             <span v-if="product.delivery_point" class="status-chip"><i class="dot-orange"/>{{ product.delivery_point }}</span>
           </div>
 
+          <!-- Entrega dentro del campus (y punto exacto en el mapa, si el vendedor lo marcó) -->
+          <a v-if="product.universidad" class="campus-delivery study-card" :href="deliveryMapUrl ?? undefined" target="_blank" rel="noopener noreferrer"
+            :class="{ static: !deliveryMapUrl }" @click="!deliveryMapUrl && $event.preventDefault()">
+            <span class="campus-dot" :style="{ background: product.universidad.color_primario || 'var(--study-purple)' }"><ion-icon :icon="schoolOutline"/></span>
+            <span><b>Se entrega en {{ product.universidad.siglas || product.universidad.nombre }}</b>
+              <small class="study-muted">{{ deliveryMapUrl ? 'Ver el punto de entrega en el mapa' : 'Dentro del campus' }}</small></span>
+            <ion-icon v-if="deliveryMapUrl" :icon="mapOutline" aria-hidden="true"/>
+          </a>
+
           <button v-if="product.store" class="seller-card study-card" @click="router.push(`/tabs/marketplace/store/${product.store.slug}`)">
             <span class="store-logo"><img v-if="product.store.logo_url" :src="product.store.logo_url" :alt="product.store.name"/><ion-icon v-else :icon="storefrontOutline"/></span>
             <div><b>{{ product.store.name }}</b>
@@ -86,7 +95,7 @@ import { Share } from '@capacitor/share'
 import {
   arrowBackOutline, arrowForwardOutline, createOutline, shareOutline, imageOutline, cubeOutline,
   chevronBackOutline, chevronForwardOutline, cartOutline, checkmarkOutline, storefrontOutline, chatbubbleEllipsesOutline,
-  logoPaypal,
+  logoPaypal, schoolOutline, mapOutline,
 } from 'ionicons/icons'
 import VerifiedBadge from '@/components/marketplace/VerifiedBadge.vue'
 import PayPalCheckoutSheet from '@/components/marketplace/PayPalCheckoutSheet.vue'
@@ -120,6 +129,13 @@ const CONDITIONS: Record<string, string> = {
 const current = computed(() => product.value?.images?.[index.value] ?? null)
 const price = computed(() => Number(product.value?.price ?? 0).toFixed(2))
 const conditionLabel = computed(() => product.value?.condition ? CONDITIONS[product.value.condition] : null)
+// Punto exacto de entrega (si el vendedor lo marcó) en Google Maps; si no, el campus.
+const deliveryMapUrl = computed(() => {
+  const p = product.value
+  const lat = p?.delivery_lat ?? p?.universidad?.latitud
+  const lng = p?.delivery_lng ?? p?.universidad?.longitud
+  return lat != null && lng != null ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}` : null
+})
 const mine = computed(() => product.value?.user_id === AuthService.getUser()?.id)
 const inCart = computed(() => !!product.value && cart.has(product.value.id))
 // Comercio verificado por LaU con PayPal habilitado: se puede pagar en línea.
@@ -185,4 +201,10 @@ watch(() => route.params.id, load, { immediate: true })
 .paypal-buy { background: #ffc439; color: #003087; }
 .product-cta-bar .study-button { font-size: 13px; padding-inline: 12px; }
 .seller-card > div :deep(.verified-badge) { margin-top: 2px; }
+.campus-delivery { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin: 14px 0; border-radius: 20px; color: inherit; text-decoration: none; }
+.campus-delivery.static { cursor: default; }
+.campus-delivery > span:nth-child(2) { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.campus-delivery b { font-size: 14px; }
+.campus-delivery > ion-icon { color: var(--study-purple); font-size: 20px; }
+.campus-dot { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; color: #fff; font-size: 19px; flex-shrink: 0; }
 </style>

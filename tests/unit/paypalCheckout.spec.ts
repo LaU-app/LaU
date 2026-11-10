@@ -245,10 +245,16 @@ describe('búsqueda inteligente', () => {
     wrapper.unmount()
   })
 
-  it('carga reseñas y videos al abrirlas', async () => {
-    api.get.mockResolvedValueOnce(ok({
+  // Al abrir la sección se piden videos y enlaces web (por la foto) al mismo tiempo.
+  const webNone = ok({ status: 'none', links: [], best_guess: null, search_url: 'https://www.google.com/search?q=x', message: 'No encontramos este producto en otros sitios.' })
+
+  it('carga reseñas, videos y enlaces web al abrirlas', async () => {
+    api.get.mockImplementation(async (url: string) => url.endsWith('/videos') ? ok({
       status: 'found', search_url: 'https://www.youtube.com/results?search_query=x', message: '',
       videos: [{ id: 'abc', title: 'Reseña calculadora científica', channel: 'Canal', thumbnail: null, url: 'https://www.youtube.com/watch?v=abc' }],
+    }) : ok({
+      status: 'found', best_guess: 'casio', search_url: 'https://www.google.com/search?q=x', message: '',
+      links: [{ title: 'Calculadora Casio en tienda', url: 'https://tienda.example.com/casio', domain: 'tienda.example.com' }],
     }))
     const wrapper = await mountResults({ status: 'done', plan })
 
@@ -256,19 +262,24 @@ describe('búsqueda inteligente', () => {
     await flushPromises()
 
     expect(api.get).toHaveBeenCalledWith('/marketplace/products/7/videos', expect.any(Object))
+    expect(api.get).toHaveBeenCalledWith('/marketplace/products/7/web-links', expect.any(Object))
     expect(wrapper.find('a.video').attributes('href')).toBe('https://www.youtube.com/watch?v=abc')
     expect(wrapper.text()).toContain('Reseña calculadora científica')
+    expect(wrapper.find('a.web-link').attributes('href')).toBe('https://tienda.example.com/casio')
     wrapper.unmount()
   })
 
   it('aclara cuando no hay videos ni reseñas', async () => {
-    api.get.mockResolvedValueOnce(ok({ status: 'none', videos: [], search_url: 'https://www.youtube.com/results?search_query=x', message: 'No encontramos videos ni reseñas de este producto.' }))
+    api.get.mockImplementation(async (url: string) => url.endsWith('/videos')
+      ? ok({ status: 'none', videos: [], search_url: 'https://www.youtube.com/results?search_query=x', message: 'No encontramos videos ni reseñas de este producto.' })
+      : webNone)
     const wrapper = await mountResults({ status: 'done', plan })
 
     await wrapper.find('.videos-toggle').trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).toContain('No encontramos videos ni reseñas de este producto.')
+    expect(wrapper.text()).toContain('No encontramos este producto en otros sitios.')
     expect(wrapper.find('a.video').exists()).toBe(false)
     wrapper.unmount()
   })
