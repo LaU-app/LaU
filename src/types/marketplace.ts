@@ -39,6 +39,78 @@ export interface StoreSummary {
     slug: string;
     logo: string | null;
     logo_url?: string | null;
+    /** Verificado por LaU (revisión legal aprobada). */
+    is_verified?: boolean;
+    /** Verificado y con PayPal habilitado: se puede pagar en línea. */
+    accepts_paypal?: boolean;
+}
+
+export type VerificationStatus = 'none' | 'submitted' | 'approved' | 'rejected' | 'suspended';
+export type PayPalConnection = 'not_connected' | 'pending' | 'enabled';
+
+export interface StoreVerification {
+    id: number;
+    legal_name: string;
+    business_type: 'persona_natural' | 'sociedad';
+    nit: string;
+    nrc: string | null;
+    legal_representative: string;
+    contact_email: string;
+    contact_phone: string;
+    address: string;
+    website: string | null;
+    offer_description: string;
+    document_original_name: string | null;
+    has_document: boolean;
+    /** País del negocio (ISO alfa-2). En El Salvador se valida NIT/NRC. */
+    country?: string;
+    country_label?: string;
+    /** Documentos legales (sin rutas): cuáles ya se enviaron. */
+    documents?: VerificationDocument[];
+    status: Exclude<VerificationStatus, 'none'>;
+    status_label: string;
+    submitted_at: string | null;
+    reviewed_at: string | null;
+    review_notes: string | null;
+}
+
+export type VerificationDocumentKind = 'document' | 'registration_document' | 'id_document';
+
+export interface VerificationDocument {
+    kind: VerificationDocumentKind;
+    label: string;
+    sent: boolean;
+    name: string | null;
+}
+
+export interface PaymentGatewayRequest {
+    id: number;
+    gateway: 'paypal' | 'otra';
+    gateway_name: string | null;
+    label: string;
+    status: 'requested' | 'approved' | 'rejected';
+    status_label: string;
+    note: string | null;
+    requested_at: string | null;
+    review_notes: string | null;
+}
+
+export interface MerchantStatus {
+    store: (StoreSummary & {
+        verification_status: VerificationStatus;
+        verified_at: string | null;
+        paypal_status: PayPalConnection;
+        paypal_checked_at: string | null;
+        is_verified: boolean;
+        accepts_paypal: boolean;
+    }) | null;
+    verification: StoreVerification | null;
+    /** Pasarelas pedidas: aparte de la verificación y opcionales. */
+    gateways?: PaymentGatewayRequest[];
+    business_types: Record<string, string>;
+    countries?: Record<string, string>;
+    documents?: { kind: VerificationDocumentKind; label: string }[];
+    paypal?: { state: 'habilitado' | 'pendiente' | 'error'; checks: { label: string; ok: boolean }[]; reasons: string[] };
 }
 
 export interface Store extends StoreSummary {
@@ -67,6 +139,9 @@ export interface Product {
     status: ProductStatus;
     condition: ProductCondition | null;
     delivery_point: string | null;
+    /** Punto exacto de entrega dentro del campus (opcional). */
+    delivery_lat?: number | null;
+    delivery_lng?: number | null;
     is_available: boolean;
     created_at: string;
     updated_at: string;
@@ -74,6 +149,18 @@ export interface Product {
     category?: ProductCategory | null;
     user?: MarketplaceUser;
     store?: StoreSummary | null;
+    /** Campus donde se entrega: en LaU todo se entrega dentro de un campus. */
+    universidad?: ProductCampus | null;
+}
+
+export interface ProductCampus {
+    id: number;
+    nombre: string;
+    siglas: string | null;
+    color_primario: string | null;
+    latitud: number | null;
+    longitud: number | null;
+    radio_entrega_m: number;
 }
 
 export type OrderStatus = 'pending' | 'delivered' | 'cancelled';
@@ -98,6 +185,10 @@ export interface Order {
     store_id: number | null;
     total: string;
     status: OrderStatus;
+    /** in_person: apartado que se paga al entregar · paypal: pagado en línea. */
+    payment_method?: 'in_person' | 'paypal';
+    payment_status?: 'unpaid' | 'paid';
+    paid_at?: string | null;
     meeting_point: string | null;
     meeting_at: string | null;
     note: string | null;
@@ -139,6 +230,11 @@ export interface CartItem {
     seller_id: number;
     seller_name: string;
     delivery_point: string | null;
+    /** Tienda del producto: si cobra con PayPal, su grupo del carrito se paga en línea. */
+    store_id?: number | null;
+    store_name?: string | null;
+    store_logo_url?: string | null;
+    accepts_paypal?: boolean;
 }
 
 /** Diferencias detectadas al revalidar el carrito contra el servidor. */

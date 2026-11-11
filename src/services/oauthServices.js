@@ -1,6 +1,7 @@
 import { Capacitor } from "@capacitor/core";
 import { Browser } from '@capacitor/browser';
 import { App } from '@capacitor/app';
+import api from './api';
 
 const isWeb = Capacitor.getPlatform() === "web";
 const webCallback = window.location.origin + "/auth/callback";
@@ -22,14 +23,15 @@ const providers = {
       ? "620970885957-jo1cvl0a27eqo51vq5d5lt45i0sd6llo.apps.googleusercontent.com" // ID WEB 
       : "620970885957-eefuba02v7f89d9gupfh3kjtfg5u321d.apps.googleusercontent.com", // ID IOS
     
-    clientSecret: isWeb ? "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" : null, 
+    // El client secret de la app web vive solo en el backend: en web el código se canjea
+    // con POST /auth/oauth/google/token (ver processCallback).
+    exchangeOnServer: isWeb,
     authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
     tokenEndpoint: "https://oauth2.googleapis.com/token",
     scope: "openid email profile",
   },
   microsoft: {
     clientId: "14ad6951-16cc-405e-83a0-fa28655bbc46",
-    clientSecret: null, 
     authorizationEndpoint: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
     tokenEndpoint: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
     scope: "openid email profile offline_access User.Read",
@@ -108,6 +110,23 @@ async function processCallback(queryParams) {
 
   const provider = providers[session.provider];
 
+  // Google web: el backend canjea el código con el client secret (nunca llega al navegador).
+  if (provider.exchangeOnServer) {
+    let res;
+    try {
+      res = await api.post("/auth/oauth/google/token", {
+        code: queryParams.code,
+        code_verifier: session.verifier,
+        redirect_uri: URIS[session.provider],
+      });
+    } catch (e) {
+      throw new Error(e?.response?.data?.message || "Error al canjear el token con el servidor");
+    }
+    const data = res.data?.data || res.data;
+    localStorage.removeItem("web_auth_session");
+    return { accessToken: data.access_token, idToken: data.id_token, refreshToken: null };
+  }
+
   const bodyParams = {
     grant_type: "authorization_code",
     client_id: provider.clientId,
@@ -115,10 +134,6 @@ async function processCallback(queryParams) {
     code: queryParams.code,
     code_verifier: session.verifier,
   };
-
-  if (provider.clientSecret) {
-    bodyParams.client_secret = provider.clientSecret;
-  }
 
   const body = new URLSearchParams(bodyParams);
 

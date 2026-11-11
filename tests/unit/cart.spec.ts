@@ -83,6 +83,26 @@ describe('carrito del Marketplace', () => {
     expect(cart.subtotal.value).toBe(50)
   })
 
+  it('las tiendas que cobran con PayPal se pagan en línea; el resto se aparta', async () => {
+    const paypalStore = { id: 4, name: 'Librería Cuscatlán', slug: 'libreria', logo_url: 'http://x/l.svg', accepts_paypal: true }
+    await cart.add(product({ id: 1, user_id: 9, store_id: 4, store: paypalStore }))
+    await cart.add(product({ id: 2, user_id: 7, name: 'Sudadera', user: { id: 7, name: 'Beto' } }))
+
+    const groups = cart.bySeller.value
+    const store = groups.find(g => g.seller_id === 9)!
+    expect(store.accepts_paypal).toBe(true)
+    expect(store.seller_name).toBe('Librería Cuscatlán')
+    expect(store.store_logo_url).toBe('http://x/l.svg')
+    expect(groups.find(g => g.seller_id === 7)!.accepts_paypal).toBe(false)
+
+    // Si la tienda deja de cobrar con PayPal, al revalidar su grupo vuelve a apartado.
+    api.get
+      .mockResolvedValueOnce({ data: { success: true, data: product({ id: 1, user_id: 9, store_id: 4, store: { ...paypalStore, accepts_paypal: false } }) } })
+      .mockResolvedValueOnce({ data: { success: true, data: product({ id: 2, user_id: 7, name: 'Sudadera' }) } })
+    await cart.revalidate()
+    expect(cart.bySeller.value.find(g => g.seller_id === 9)!.accepts_paypal).toBe(false)
+  })
+
   it('al revalidar avisa de cambios de precio y recorta la cantidad al stock real', async () => {
     await cart.add(product({ stock: 5 }))
     await cart.setQuantity(1, 4)

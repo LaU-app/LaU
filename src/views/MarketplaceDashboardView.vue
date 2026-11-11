@@ -8,13 +8,35 @@
         <p v-if="loading && !data" class="study-empty" role="status">Cargando tu panel…</p>
 
         <template v-if="data">
-          <!-- Sin tienda: el panel invita a crearla en vez de mostrar métricas vacías. -->
-          <div v-if="!data.store" class="study-empty">
-            <span class="study-symbol tone-blue"><ion-icon :icon="storefrontOutline"/></span>
-            <h2>Armá tu emprendimiento</h2>
-            <p>Con una tienda tus productos se agrupan, tenés vitrina propia y un panel con tus ventas.</p>
-            <button class="study-button create-store" @click="openWizard()"><ion-icon :icon="addOutline"/>Crear mi tienda</button>
-          </div>
+          <!-- Sin tienda: panel personal. Cualquier estudiante puede vender a su nombre; la tienda
+               con nombre propio es para comercios verificados (necesaria para cobrar con PayPal). -->
+          <template v-if="!data.store">
+            <header class="store-hero study-card">
+              <span class="store-logo personal">
+                <img v-if="me?.imagen_url && !avatarFailed" :src="me.imagen_url" alt="" @error="avatarFailed = true"/>
+                <b v-else>{{ initials }}</b>
+              </span>
+              <div>
+                <span class="eyebrow">TU PANEL DE VENTAS</span>
+                <h1>{{ me?.name || 'Tu panel' }}</h1>
+                <p>Vendés como estudiante, a tu nombre.</p>
+              </div>
+            </header>
+
+            <div class="hero-actions">
+              <button class="study-button secondary-button" @click="publish"><ion-icon :icon="addOutline"/>Publicar producto</button>
+              <button class="study-button secondary-button" :disabled="!me?.username" @click="router.push(`/tabs/perfil/${me?.username}`)"><ion-icon :icon="eyeOutline"/>Mi perfil</button>
+            </div>
+
+            <button class="verify-card study-card" @click="router.push('/tabs/marketplace/empresa')">
+              <span class="study-symbol tone-purple"><ion-icon :icon="ribbonOutline"/></span>
+              <span>
+                <b>¿Tenés un negocio inscrito?</b>
+                <small class="study-muted">Verificalo en LaU. Los pagos en línea son opcionales.</small>
+              </span>
+              <ion-icon :icon="arrowForwardOutline" aria-hidden="true"/>
+            </button>
+          </template>
 
           <template v-else>
             <header class="store-hero study-card">
@@ -34,6 +56,20 @@
               <button class="study-button secondary-button" @click="router.push(`/tabs/marketplace/store/${data.store.slug}`)"><ion-icon :icon="eyeOutline"/>Ver vitrina</button>
             </div>
 
+            <button class="verify-card study-card" @click="router.push('/tabs/marketplace/empresa')">
+              <span class="study-symbol" :class="data.store.accepts_paypal ? 'tone-green' : 'tone-purple'">
+                <ion-icon :icon="data.store.accepts_paypal ? shieldCheckmarkOutline : ribbonOutline"/>
+              </span>
+              <span>
+                <b>{{ data.store.accepts_paypal ? 'Negocio verificado · cobrás con PayPal' : data.store.is_verified ? 'Negocio verificado' : 'Tu negocio en LaU' }}</b>
+                <small class="study-muted">{{ data.store.accepts_paypal ? 'Tus productos muestran el distintivo de LaU.' : data.store.is_verified ? 'Si querés, pedí pagos en línea.' : 'Verificación legal y pagos en línea, cuando estés listo.' }}</small>
+              </span>
+              <ion-icon :icon="arrowForwardOutline" aria-hidden="true"/>
+            </button>
+          </template>
+
+          <!-- Métricas, acciones y pedidos: iguales para el panel personal y el de tienda. -->
+          <template v-if="data">
             <!-- El hero del mockup era una tarjeta morada a sangre; aquí es la misma
                  today-card del módulo de Estudio: número grande en negro. -->
             <div class="today-card study-card">
@@ -123,10 +159,11 @@ import { IonPage, IonContent, IonIcon, IonRefresher, IonRefresherContent, modalC
 import {
   storefrontOutline, addOutline, createOutline, eyeOutline, trendingUpOutline, trendingDownOutline,
   checkmarkCircleOutline, checkmarkDoneOutline, timeOutline, cubeOutline, receiptOutline,
-  arrowForwardOutline, imageOutline,
+  arrowForwardOutline, imageOutline, shieldCheckmarkOutline, ribbonOutline,
 } from 'ionicons/icons'
 import AppHeader from '@/components/AppHeader.vue'
 import StudyAvatar from '@/components/study/StudyAvatar.vue'
+import { AuthService } from '@/services/auth'
 import MarketplaceBottomNav from '@/components/marketplace/MarketplaceBottomNav.vue'
 import StoreWizardModal from '@/components/marketplace/StoreWizardModal.vue'
 import marketplaceService, { marketplaceError } from '@/services/marketplaceService'
@@ -139,6 +176,10 @@ import '@/theme/study.css'
 import '@/theme/marketplace.css'
 
 const router = useRouter()
+// Datos del estudiante para el panel personal (sin tienda): su nombre es el de su panel.
+const me = AuthService.getUser() as { name?: string; username?: string; imagen_url?: string | null } | null
+const avatarFailed = ref(false)
+const initials = computed(() => (me?.name ?? 'Tú').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase()).join(''))
 const { isDarkMode, toggleDarkMode } = useDarkMode()
 
 const STATUS: Record<string, string> = { pending: 'Pendiente', delivered: 'Entregado', cancelled: 'Cancelado' }
@@ -193,8 +234,16 @@ useStudyScreen(load, ['marketplace'])
 .hero-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px; }
 .hero-actions .study-button { min-height: 46px; font-size: 13px; }
 .create-store { max-width: 260px; margin-top: 8px; }
+.verify-card { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-bottom: 24px; border-radius: 20px; color: var(--study-text); text-align: left; font: inherit; cursor: pointer; }
+.verify-card > span:nth-child(2) { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.verify-card b { font-size: 14px; line-height: 18px; }
+.verify-card > ion-icon { color: var(--study-faint); font-size: 18px; }
 .history-right { flex: 0 0 auto !important; display: grid !important; gap: 5px; justify-items: end; text-align: right; }
 .history-right .status-chip { font-size: 10px; padding: 2px 8px; }
 .store-logo.small { width: 44px; height: 44px; border-radius: 12px; font-size: 18px; }
+/* Panel personal: la foto del estudiante ocupa el lugar del logo */
+.store-logo.personal { border-radius: 50%; background: linear-gradient(135deg, #8b45ec, #2853e0); color: #fff; }
+.store-logo.personal img { width: 100%; height: 100%; object-fit: cover; }
+.store-logo.personal b { font-size: 22px; font-weight: 800; letter-spacing: .02em; }
 .study-history li > div:not(.history-right) { display: grid; gap: 5px; }
 </style>

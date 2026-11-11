@@ -92,4 +92,9 @@
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
+    <!-- Ubicación (@capacitor/geolocation): saber en qué campus está el estudiante y fijar el punto de entrega -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+
 </manifest>

@@ -7,6 +7,10 @@
   },
   "include": [
     "src/types/marketplace.ts", "src/services/marketplaceService.ts",
+    "src/services/paypalCheckoutService.ts", "src/utils/paypalSdk.ts",
+    "src/services/smartShoppingService.ts", "src/services/merchantService.ts",
+    "src/services/agentService.ts", "src/services/adminService.ts", "src/views/admin/*.vue",
+    "src/views/BusinessLandingView.vue",
     "src/utils/useCart.ts", "src/utils/imageOptimizer.ts", "src/utils/categoryIcon.ts",
     "src/components/marketplace/**/*.vue", "src/components/ImagePickerGrid.vue",
     "src/views/Marketplace*.vue"

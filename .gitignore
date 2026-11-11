@@ -43,6 +43,10 @@ service-account.json
 firebase-adminsdk.json
 **/firebase/*-adminsdk-*.json
 
+# Variables locales (pueden contener valores propios de cada máquina)
+.env.local
+.env.*.local
+
 # Artefactos de Cypress
 /tests/e2e/screenshots
 /tests/e2e/videos

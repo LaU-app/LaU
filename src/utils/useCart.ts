@@ -77,7 +77,28 @@ function snapshot(product: Product): CartItem {
         seller_id: product.user_id,
         seller_name: product.user?.name || product.store?.name || 'Vendedor',
         delivery_point: product.delivery_point,
+        ...storeSnapshot(product),
     }
+}
+
+/** Datos de la tienda que decide cómo se paga el grupo del carrito (PayPal o apartado). */
+function storeSnapshot(product: Product): Pick<CartItem, 'store_id' | 'store_name' | 'store_logo_url' | 'accepts_paypal'> {
+    return {
+        store_id: product.store?.id ?? product.store_id ?? null,
+        store_name: product.store?.name ?? null,
+        store_logo_url: product.store?.logo_url ?? null,
+        accepts_paypal: !!product.store?.accepts_paypal,
+    }
+}
+
+export interface CartGroup {
+    seller_id: number
+    seller_name: string
+    store_id: number | null
+    store_logo_url: string | null
+    accepts_paypal: boolean
+    items: CartItem[]
+    subtotal: number
 }
 
 export const cart = {
@@ -90,12 +111,23 @@ export const cart = {
     subtotal: computed(() => items.reduce((total, item) => total + item.price * item.quantity, 0)),
     isEmpty: computed(() => items.length === 0),
 
-    /** El carrito se muestra agrupado para que se vea de antemano que saldrán N apartados. */
+    /**
+     * El carrito se muestra agrupado por vendedor. Los grupos de tiendas que cobran con PayPal
+     * se pagan en línea (un pago por tienda); el resto se aparta y se paga al entregar.
+     */
     bySeller: computed(() => {
-        const groups = new Map<number, { seller_id: number; seller_name: string; items: CartItem[]; subtotal: number }>()
+        const groups = new Map<number, CartGroup>()
         for (const item of items) {
             const group = groups.get(item.seller_id)
-                ?? { seller_id: item.seller_id, seller_name: item.seller_name, items: [], subtotal: 0 }
+                ?? {
+                    seller_id: item.seller_id,
+                    seller_name: item.store_name || item.seller_name,
+                    store_id: item.store_id ?? null,
+                    store_logo_url: item.store_logo_url ?? null,
+                    accepts_paypal: !!item.accepts_paypal && !!item.store_id,
+                    items: [],
+                    subtotal: 0,
+                }
             group.items.push(item)
             group.subtotal += item.price * item.quantity
             groups.set(item.seller_id, group)
@@ -214,6 +246,7 @@ export const cart = {
                     item.name = product.name
                     item.image_url = product.images?.[0]?.url ?? item.image_url
                     item.delivery_point = product.delivery_point
+                    Object.assign(item, storeSnapshot(product))
                 })
 
                 issues.splice(0, issues.length, ...found)

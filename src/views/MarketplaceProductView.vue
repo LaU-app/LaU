@@ -37,9 +37,15 @@
             <span v-if="product.delivery_point" class="status-chip"><i class="dot-orange"/>{{ product.delivery_point }}</span>
           </div>
 
+          <!-- Entrega dentro del campus (y punto exacto en el mapa, si el vendedor lo marcó) -->
+          <DeliveryMapCard v-if="product.universidad" :key="product.id" :campus="product.universidad"
+            :point="deliveryPoint" :delivery-point="product.delivery_point"/>
+
           <button v-if="product.store" class="seller-card study-card" @click="router.push(`/tabs/marketplace/store/${product.store.slug}`)">
             <span class="store-logo"><img v-if="product.store.logo_url" :src="product.store.logo_url" :alt="product.store.name"/><ion-icon v-else :icon="storefrontOutline"/></span>
-            <div><b>{{ product.store.name }}</b><span class="study-muted">Ver la tienda</span></div>
+            <div><b>{{ product.store.name }}</b>
+              <VerifiedBadge v-if="product.store.is_verified" :paypal="product.store.accepts_paypal"/>
+              <span v-else class="study-muted">Emprendimiento · ver la tienda</span></div>
             <span class="round-arrow"><ion-icon :icon="arrowForwardOutline"/></span>
           </button>
           <div v-else-if="product.user" class="seller-card study-card">
@@ -53,9 +59,12 @@
           </section>
 
           <div class="product-cta-bar">
-            <button v-if="!mine" class="study-button" :disabled="!product.is_available || busy" @click="add">
+            <button v-if="!mine && payable" class="study-button paypal-buy" :disabled="!product.is_available" @click="checkoutOpen = true">
+              <ion-icon :icon="logoPaypal"/>{{ product.is_available ? 'Comprar con PayPal' : 'Agotado' }}
+            </button>
+            <button v-if="!mine" class="study-button" :class="{ 'secondary-button': payable }" :disabled="!product.is_available || busy" @click="add">
               <ion-icon :icon="inCart ? checkmarkOutline : cartOutline"/>
-              {{ !product.is_available ? 'Agotado' : inCart ? 'En tu carrito' : 'Agregar al carrito' }}
+              {{ !product.is_available ? 'Agotado' : inCart ? 'En tu carrito' : payable ? 'Al carrito' : 'Agregar al carrito' }}
             </button>
             <p v-else class="study-muted mine-note">Este producto es tuyo.</p>
             <button v-if="!mine && product.user" class="order-icon-btn" aria-label="Escribir al vendedor" @click="chat">
@@ -66,18 +75,26 @@
       </main>
     </ion-content>
 
+    <ion-modal :is-open="checkoutOpen" :initial-breakpoint="1" :breakpoints="[0, 1]" @didDismiss="checkoutOpen = false">
+      <PayPalCheckoutSheet v-if="checkoutOpen && product" :product-id="product.id"
+        @close="checkoutOpen = false" @paid="load" @orders="goToOrders"/>
+    </ion-modal>
   </ion-page>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { IonPage, IonContent, IonIcon, toastController } from '@ionic/vue'
+import { IonPage, IonContent, IonIcon, IonModal, toastController } from '@ionic/vue'
 import { Share } from '@capacitor/share'
 import {
   arrowBackOutline, arrowForwardOutline, createOutline, shareOutline, imageOutline, cubeOutline,
   chevronBackOutline, chevronForwardOutline, cartOutline, checkmarkOutline, storefrontOutline, chatbubbleEllipsesOutline,
+  logoPaypal,
 } from 'ionicons/icons'
+import VerifiedBadge from '@/components/marketplace/VerifiedBadge.vue'
+import PayPalCheckoutSheet from '@/components/marketplace/PayPalCheckoutSheet.vue'
+import DeliveryMapCard from '@/components/marketplace/DeliveryMapCard.vue'
 import AppHeader from '@/components/AppHeader.vue'
 import StudyAvatar from '@/components/study/StudyAvatar.vue'
 import MarketplaceBottomNav from '@/components/marketplace/MarketplaceBottomNav.vue'
@@ -108,8 +125,21 @@ const CONDITIONS: Record<string, string> = {
 const current = computed(() => product.value?.images?.[index.value] ?? null)
 const price = computed(() => Number(product.value?.price ?? 0).toFixed(2))
 const conditionLabel = computed(() => product.value?.condition ? CONDITIONS[product.value.condition] : null)
+// Punto exacto de entrega, si el vendedor lo marcó (si no, la tarjeta usa el centro del campus).
+const deliveryPoint = computed(() => {
+  const p = product.value
+  return p?.delivery_lat != null && p?.delivery_lng != null ? { lat: Number(p.delivery_lat), lng: Number(p.delivery_lng) } : null
+})
 const mine = computed(() => product.value?.user_id === AuthService.getUser()?.id)
 const inCart = computed(() => !!product.value && cart.has(product.value.id))
+// Comercio verificado por LaU con PayPal habilitado: se puede pagar en línea.
+const payable = computed(() => !!product.value?.store?.accepts_paypal)
+const checkoutOpen = ref(false)
+
+function goToOrders() {
+  checkoutOpen.value = false
+  router.push('/tabs/marketplace/orders')
+}
 
 function step(direction: number) {
   const total = product.value?.images.length ?? 0
@@ -143,8 +173,8 @@ async function add() {
   })).present()
 }
 
-/** El chat real de LaU sustituye al chat simulado del prototipo. */
-const chat = () => router.push(`/chat/${product.value?.user_id}`)
+/** Abre el chat con el vendedor citando este producto (se envía como vista previa encima del mensaje). */
+const chat = () => router.push({ path: `/chat/${product.value?.user_id}`, query: { product: String(product.value?.id) } })
 
 async function share() {
   try {
@@ -162,4 +192,13 @@ watch(() => route.params.id, load, { immediate: true })
 
 <style scoped>
 .mine-note { flex: 1; text-align: center; }
+.paypal-buy { background: #ffc439; color: #003087; }
+.product-cta-bar .study-button { font-size: 13px; padding-inline: 12px; }
+.seller-card > div :deep(.verified-badge) { margin-top: 2px; }
+.campus-delivery { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin: 14px 0; border-radius: 20px; color: inherit; text-decoration: none; }
+.campus-delivery.static { cursor: default; }
+.campus-delivery > span:nth-child(2) { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.campus-delivery b { font-size: 14px; }
+.campus-delivery > ion-icon { color: var(--study-purple); font-size: 20px; }
+.campus-dot { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; color: #fff; font-size: 19px; flex-shrink: 0; }
 </style>

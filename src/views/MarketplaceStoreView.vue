@@ -17,8 +17,9 @@
               <ion-icon v-else :icon="storefrontOutline"/>
             </span>
             <div>
-              <span class="eyebrow">EMPRENDIMIENTO LaU</span>
+              <span class="eyebrow">{{ store.is_verified ? 'NEGOCIO VERIFICADO' : 'EMPRENDIMIENTO LaU' }}</span>
               <h1>{{ store.name }}</h1>
+              <VerifiedBadge v-if="store.is_verified" :paypal="store.accepts_paypal"/>
               <p v-if="store.description">{{ store.description }}</p>
             </div>
           </header>
@@ -64,6 +65,7 @@ import {
 import AppHeader from '@/components/AppHeader.vue'
 import StudyAvatar from '@/components/study/StudyAvatar.vue'
 import ProductCard from '@/components/marketplace/ProductCard.vue'
+import VerifiedBadge from '@/components/marketplace/VerifiedBadge.vue'
 import MarketplaceBottomNav from '@/components/marketplace/MarketplaceBottomNav.vue'
 import marketplaceService, { marketplaceError } from '@/services/marketplaceService'
 import { useDarkMode } from '@/utils/useDarkMode'

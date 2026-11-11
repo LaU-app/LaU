@@ -1,11 +1,15 @@
 //importaciones axios para hacer peticiones HTTP
 import axios from "axios";
 
-export const BASE_URL = "https://api.lauapp.es" ; // Verificar URL base de la API
+// Por defecto se usa la API de producción. Para probar con un backend local, define una
+// URL absoluta en .env.development.local, p. ej. VITE_API_URL=http://127.0.0.1:8000/api
+const configuredApiUrl = (import.meta.env.VITE_API_URL || "").trim();
+export const API_URL = /^https?:\/\//.test(configuredApiUrl)
+  ? configuredApiUrl.replace(/\/+$/, "")
+  : "https://api.lauapp.es/api";
+export const BASE_URL = API_URL.replace(/\/api$/, ""); // Verificar URL base de la API
 // http://127.0.0.1:8000
 // https://api.lauapp.es
-
-export const API_URL = `${BASE_URL}/api`;
 
 //Creamos una instancia de axios para configuracion basica
 const api = axios.create({

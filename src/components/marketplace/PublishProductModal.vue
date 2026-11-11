@@ -77,12 +77,25 @@
             <textarea v-model="form.description" rows="3" maxlength="400" placeholder="Estado, detalles, por qué lo vendés…" :disabled="saving"/>
           </label>
 
+          <!-- En LaU todo se entrega dentro de un campus -->
+          <div class="sheet-field">
+            <label class="sheet-label" for="delivery-campus">CAMPUS DE ENTREGA</label>
+            <select id="delivery-campus" v-model.number="campusId" class="campus-select" :disabled="saving || !campuses.length">
+              <option v-if="!campuses.length" :value="campusId">{{ campusesError ? 'No pudimos cargar los campus' : 'Cargando campus…' }}</option>
+              <option v-else-if="campusId === null" :value="null" disabled>Elegí el campus</option>
+              <option v-for="c in campuses" :key="c.id" :value="c.id">{{ c.nombre }}{{ c.id === myCampusId ? ' (tu campus)' : '' }}</option>
+            </select>
+            <small class="campus-hint">Solo se entrega dentro del campus: así nadie tiene que ir a otro lugar.</small>
+          </div>
+
           <div class="sheet-field">
             <label class="sheet-label" for="delivery-point">PUNTO DE ENTREGA</label>
             <input id="delivery-point" v-model="form.delivery_point" maxlength="120" placeholder="¿Dónde lo entregás?" autocomplete="off" enterkeyhint="done" :disabled="saving"/>
             <div class="quick-chips" role="group" aria-label="Lugares frecuentes">
               <button v-for="place in quickPlaces" :key="place" type="button" :aria-pressed="form.delivery_point === place" :class="{ selected: form.delivery_point === place }" :disabled="saving" @click="form.delivery_point = form.delivery_point === place ? '' : place">{{ place }}</button>
             </div>
+            <!-- Punto exacto dentro del campus (opcional) -->
+            <DeliveryPointPicker v-model="deliveryPin" :campus="selectedCampus" :disabled="saving"/>
           </div>
 
           <div class="sheet-field stock-field">
@@ -126,7 +139,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import DeliveryPointPicker from '@/components/marketplace/DeliveryPointPicker.vue'
+import campusService, { type Campus } from '@/services/campusService'
 import { IonPage, IonHeader, IonContent, IonFooter, IonIcon, IonSpinner, alertController } from '@ionic/vue'
 import { arrowBackOutline, arrowForwardOutline, closeOutline, checkmarkOutline, bulbOutline, alertCircleOutline } from 'ionicons/icons'
 import ImagePickerGrid from '@/components/ImagePickerGrid.vue'
@@ -171,11 +186,44 @@ const form = reactive({
 })
 const initialForm = JSON.stringify(form)
 
+// Campus de entrega (por defecto, el del estudiante) y punto exacto opcional dentro de él.
+const campuses = ref<Campus[]>([])
+const campusesError = ref(false)
+const myCampusId = ref<number | null>(null)
+const campusId = ref<number | null>(props.product?.universidad_id ?? null)
+let initialCampusId: number | null = campusId.value
+const initialPin = props.product?.delivery_lat != null && props.product?.delivery_lng != null
+  ? { lat: Number(props.product.delivery_lat), lng: Number(props.product.delivery_lng) }
+  : null
+const deliveryPin = ref<{ lat: number; lng: number } | null>(initialPin)
+const selectedCampus = computed(() => campuses.value.find(c => c.id === campusId.value) ?? null)
+
+async function loadCampuses() {
+  campusesError.value = false
+  try {
+    const map = await campusService.map()
+    campuses.value = map.campuses
+    myCampusId.value = map.my_campus_id
+    if (campusId.value === null && map.my_campus_id) {
+      campusId.value = map.my_campus_id
+      initialCampusId = map.my_campus_id
+    }
+  } catch {
+    campusesError.value = true
+  }
+}
+
+// Al cambiar de campus, el punto marcado (que era del otro campus) se borra.
+watch(campusId, (next, previous) => { if (previous !== null && next !== previous) deliveryPin.value = null })
+
 const photosChanged = computed(() =>
   photos.value.some(photo => photo.blob) ||
   photos.value.map(photo => photo.filename).join('|') !== initialPhotos.map(photo => photo.filename).join('|')
 )
-const dirty = computed(() => photosChanged.value || JSON.stringify(form) !== initialForm)
+const dirty = computed(() =>
+  photosChanged.value || JSON.stringify(form) !== initialForm ||
+  campusId.value !== initialCampusId || JSON.stringify(deliveryPin.value) !== JSON.stringify(initialPin)
+)
 
 // Al editar un producto que ya no tenía fotos se puede guardar sin agregar (como antes);
 // si tenía, al menos una debe quedar.
@@ -188,7 +236,8 @@ const step1Valid = computed(() =>
   Number(form.price) > 0 &&
   !!form.category_id
 )
-const valid = computed(() => step1Valid.value && form.stock >= 1 && form.stock <= 100)
+// Si los campus no cargaron, decide el servidor (usa el campus del estudiante).
+const valid = computed(() => step1Valid.value && form.stock >= 1 && form.stock <= 100 && (campusId.value !== null || !campuses.value.length))
 
 const missing = computed(() => {
   if (step1Valid.value) return ''
@@ -259,7 +308,10 @@ async function submit() {
       category_id: form.category_id,
       condition: form.condition || null,
       delivery_point: form.delivery_point.trim() || null,
+      delivery_lat: deliveryPin.value?.lat ?? null,
+      delivery_lng: deliveryPin.value?.lng ?? null,
     }
+    if (campusId.value !== null) payload.universidad_id = campusId.value
     if (images) payload.images = images
 
     const product = editMode
@@ -282,6 +334,7 @@ async function loadCategories() {
 
 onMounted(() => {
   void loadCategories()
+  void loadCampuses()
   modalEl = pageRef.value?.$el.closest('ion-modal') ?? null
   if (!modalEl) return
   // Cerrar con la X, el fondo o el botón atrás de Android pide confirmación si hay cambios
@@ -343,6 +396,8 @@ onMounted(() => {
 .category-chips button ion-icon { font-size: 17px; }
 .category-chips button.selected { background: var(--study-cta); border-color: var(--study-cta); color: var(--study-on-cta); }
 .quick-chips button { min-height: 44px; }
+.campus-select { width: 100%; appearance: auto; }
+.campus-hint { display: block; margin-top: 6px; font-size: 12px; color: var(--study-muted); }
 /* En oscuro el CTA casi negro se confunde con el fondo de los chips: borde claro en el seleccionado */
 .ion-palette-dark .category-chips button.selected, .ion-palette-dark .quick-chips button.selected { border-color: var(--study-text); }
 
