@@ -62,7 +62,8 @@
                 <dl class="info-list">
                   <div><dt>Razón social</dt><dd>{{ merchant.legal_name }}</dd></div>
                   <div><dt>Tipo</dt><dd>{{ merchant.business_type_label || merchant.business_type }}</dd></div>
-                  <div><dt>NIT</dt><dd>{{ merchant.nit }}</dd></div>
+                  <div><dt>País</dt><dd>{{ merchant.country_label || 'El Salvador' }}</dd></div>
+                  <div><dt>{{ !merchant.country || merchant.country === 'SV' ? 'NIT' : 'Id. fiscal' }}</dt><dd>{{ merchant.nit }}</dd></div>
                   <div><dt>NRC</dt><dd>{{ merchant.nrc || '—' }}</dd></div>
                   <div><dt>Representante</dt><dd>{{ merchant.legal_representative }}</dd></div>
                 </dl>
@@ -117,14 +118,43 @@
               </section>
 
               <section class="info-card study-card" aria-labelledby="sec-doc">
-                <header class="info-head"><span class="study-symbol"><ion-icon :icon="documentTextOutline"/></span><h2 id="sec-doc">Documento legal</h2></header>
-                <button v-if="merchant.has_document" type="button" class="doc-button" :disabled="busy !== null" @click="openDocument">
-                  <span class="study-symbol tone-blue"><ion-icon :icon="documentAttachOutline"/></span>
-                  <span><b>Ver documento</b><small>{{ merchant.document_name || 'Archivo adjunto' }}</small></span>
-                  <ion-spinner v-if="busy === 'document'" name="crescent"/>
-                  <ion-icon v-else :icon="openOutline" aria-hidden="true"/>
-                </button>
-                <p v-else class="study-muted">El comercio no adjuntó documento.</p>
+                <header class="info-head"><span class="study-symbol"><ion-icon :icon="documentTextOutline"/></span><h2 id="sec-doc">Documentos legales</h2></header>
+                <div class="doc-list">
+                  <template v-for="doc in documents" :key="doc.kind">
+                    <button v-if="doc.sent" type="button" class="doc-button" :disabled="busy !== null" @click="openDocument(doc.kind)">
+                      <span class="study-symbol tone-blue"><ion-icon :icon="documentAttachOutline"/></span>
+                      <span><b>{{ doc.label }}</b><small>{{ doc.name || 'Archivo adjunto' }}</small></span>
+                      <ion-spinner v-if="busy === 'document' && openingDoc === doc.kind" name="crescent"/>
+                      <ion-icon v-else :icon="openOutline" aria-hidden="true"/>
+                    </button>
+                    <div v-else class="doc-button is-missing">
+                      <span class="study-symbol"><ion-icon :icon="ellipseOutline"/></span>
+                      <span><b>{{ doc.label }}</b><small>No enviado</small></span>
+                    </div>
+                  </template>
+                </div>
+              </section>
+
+              <!-- Pasarelas: se revisan aparte de la verificación legal -->
+              <section class="info-card study-card" aria-labelledby="sec-gw">
+                <header class="info-head"><span class="study-symbol"><ion-icon :icon="cardOutline"/></span><h2 id="sec-gw">Pagos en línea</h2></header>
+                <p v-if="!merchant.gateways?.length" class="study-muted">No pidió pasarelas. Vende con apartado.</p>
+                <article v-for="gw in merchant.gateways" :key="gw.id" class="gw-row" :class="`is-${gw.status}`">
+                  <div class="gw-top">
+                    <ion-icon :icon="gw.gateway === 'paypal' ? logoPaypal : cardOutline" aria-hidden="true"/>
+                    <b>{{ gw.label }}</b>
+                    <span class="gw-status">{{ gw.status_label }}</span>
+                  </div>
+                  <p v-if="gw.note" class="long-text">{{ gw.note }}</p>
+                  <p v-if="gw.review_notes" class="study-muted">{{ gw.review_notes }}</p>
+                  <div v-if="gw.status === 'requested'" class="gw-actions">
+                    <button type="button" class="study-button approve-button" :disabled="busy !== null || (gw.gateway === 'paypal' && merchant.status !== 'approved')" @click="approveGateway(gw)">
+                      <ion-spinner v-if="busy === 'gateway' && gatewayId === gw.id" name="crescent"/><ion-icon v-else :icon="checkmarkCircleOutline"/>{{ gw.gateway === 'paypal' ? 'Aprobar PayPal' : 'Anotada' }}
+                    </button>
+                    <button type="button" class="study-button secondary-button" :disabled="busy !== null" @click="rejectGateway(gw)">No aprobar</button>
+                  </div>
+                  <small v-if="gw.status === 'requested' && gw.gateway === 'paypal' && merchant.status !== 'approved'" class="hint">Primero aprobá la verificación legal.</small>
+                </article>
               </section>
 
               <section v-if="hasReview" class="info-card study-card" aria-labelledby="sec-review">
@@ -191,15 +221,15 @@ import {
 import {
   logOutOutline, arrowBackOutline, logoPaypal, calendarOutline, businessOutline, callOutline, openOutline,
   pricetagsOutline, storefrontOutline, documentTextOutline, documentAttachOutline, clipboardOutline,
-  checkmarkCircleOutline, ellipseOutline, createOutline, banOutline,
+  checkmarkCircleOutline, ellipseOutline, createOutline, banOutline, cardOutline,
 } from 'ionicons/icons'
 import {
-  AdminService, adminErrorMessage, type ActionResult, type MerchantDetail, type VerificationStatus,
+  AdminService, adminErrorMessage, type ActionResult, type AdminDocument, type AdminGateway, type MerchantDetail, type VerificationStatus,
 } from '@/services/adminService'
 import '@/theme/study.css'
 import '@/theme/marketplace.css'
 
-type Busy = 'approve' | 'reject' | 'suspend' | 'paypal' | 'document'
+type Busy = 'approve' | 'reject' | 'suspend' | 'paypal' | 'document' | 'gateway'
 
 const STATUS_LABELS: Record<VerificationStatus, string> = {
   submitted: 'En revisión', approved: 'Aprobada', rejected: 'Requiere cambios', suspended: 'Suspendida',
@@ -222,6 +252,12 @@ const notes = ref('')
 const notesError = ref('')
 const notesInput = ref<HTMLTextAreaElement | null>(null)
 const logoFailed = ref(false)
+const openingDoc = ref<AdminDocument['kind'] | null>(null)
+const gatewayId = ref<number | null>(null)
+
+// Solicitudes viejas sin la lista de documentos: solo el documento fiscal.
+const documents = computed<AdminDocument[]>(() => merchant.value?.documents
+  ?? [{ kind: 'document', label: 'Documento legal', sent: !!merchant.value?.has_document, name: merchant.value?.document_name ?? null }])
 
 const storeDetail = computed(() => merchant.value?.store_detail ?? null)
 const hasReview = computed(() => !!(merchant.value?.reviewed_at || merchant.value?.reviewed_by || merchant.value?.review_notes))
@@ -239,10 +275,10 @@ const statusHint = computed(() => {
   const m = merchant.value
   if (!m) return ''
   switch (m.status) {
-    case 'submitted': return 'Revisá los datos y el documento antes de decidir.'
-    case 'rejected': return 'Pediste cambios. Esperá a que el comercio corrija su solicitud.'
+    case 'submitted': return 'Revisá los datos y los tres documentos antes de decidir.'
+    case 'rejected': return 'Pediste cambios. Esperá a que el negocio corrija su solicitud.'
     case 'suspended': return 'Suspendido: no puede recibir pagos.'
-    default: return storeDetail.value?.accepts_paypal ? 'Aprobado y cobrando con PayPal.' : 'Aprobado. Falta que conecte PayPal.'
+    default: return storeDetail.value?.accepts_paypal ? 'Verificado y cobrando con PayPal.' : 'Verificado. Los pagos en línea se revisan aparte.'
   }
 })
 
@@ -337,7 +373,7 @@ async function run(action: Exclude<Busy, 'document'>, call: () => Promise<Action
 
 async function approve() {
   const m = merchant.value
-  if (!m || !(await confirmAction('¿Aprobar este comercio?', 'Le enviaremos un correo para que conecte PayPal.', 'Aprobar'))) return
+  if (!m || !(await confirmAction('¿Verificar este negocio?', 'Recibe el distintivo de LaU y un correo de aviso.', 'Aprobar'))) return
   const value = notes.value.trim()
   await run('approve', () => AdminService.approve(m.id, value || undefined))
 }
@@ -363,18 +399,37 @@ async function refreshPayPal() {
   if (m) await run('paypal', () => AdminService.refreshPayPal(m.id))
 }
 
-async function openDocument() {
+async function openDocument(kind: AdminDocument['kind']) {
   const m = merchant.value
   if (!m) return
   busy.value = 'document'
+  openingDoc.value = kind
   try {
-    await AdminService.openDocument(m.id)
+    await AdminService.openDocument(m.id, kind)
   } catch (e) {
     if (statusOf(e) === 401) return toLogin()
     await toast(adminErrorMessage(e, 'No se pudo abrir el documento.'), 'danger')
   } finally {
     busy.value = null
+    openingDoc.value = null
   }
+}
+
+async function approveGateway(gw: AdminGateway) {
+  const paypal = gw.gateway === 'paypal'
+  if (paypal && !(await confirmAction('¿Aprobar PayPal?', 'El negocio podrá conectar su cuenta PayPal Business y cobrar en línea.', 'Aprobar'))) return
+  gatewayId.value = gw.id
+  await run('gateway', () => AdminService.approveGateway(gw.id, notes.value.trim() || undefined))
+  gatewayId.value = null
+}
+
+async function rejectGateway(gw: AdminGateway) {
+  const value = requiredNotes('Explicá al negocio por qué no se aprueba (al menos 10 caracteres).')
+  if (value === null) return
+  if (!(await confirmAction(`¿No aprobar ${gw.label}?`, 'El negocio verá tus notas.', 'No aprobar'))) return
+  gatewayId.value = gw.id
+  await run('gateway', () => AdminService.rejectGateway(gw.id, value))
+  gatewayId.value = null
 }
 
 function back() {
@@ -468,6 +523,19 @@ onIonViewWillEnter(() => {
 .doc-button small { font-size: 12px; line-height: 16px; color: var(--study-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .doc-button > ion-icon { font-size: 18px; color: var(--study-faint); }
 .doc-button ion-spinner { width: 18px; height: 18px; color: var(--study-muted); }
+.doc-list { display: grid; gap: 8px; }
+.doc-button.is-missing { border-style: dashed; opacity: .7; }
+.gw-row { display: grid; gap: 8px; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--study-border); background: var(--study-bg); }
+.gw-row + .gw-row { margin-top: 8px; }
+.gw-row.is-requested { border-color: var(--admin-amber, #d97706); }
+.gw-top { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.gw-top ion-icon { font-size: 18px; color: var(--study-muted); }
+.gw-status { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--study-muted); }
+.gw-row.is-approved .gw-status { color: var(--study-green-ink); }
+.gw-row.is-requested .gw-status { color: var(--admin-amber, #d97706); }
+.gw-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.gw-actions .study-button { flex: 1 1 140px; min-height: 40px; font-size: 13px; }
+.gw-actions ion-spinner { width: 16px; height: 16px; color: currentColor; }
 
 /* Distintivos de estado y de PayPal */
 .admin-status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: var(--study-track); color: var(--study-muted); font-size: 11px; line-height: 16px; font-weight: 700; white-space: nowrap; }

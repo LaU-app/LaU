@@ -25,7 +25,7 @@
 
         <button class="market-entry study-card" @click="router.push('/tabs/marketplace/empresa')">
           <span class="study-symbol tone-green"><ion-icon :icon="shieldCheckmarkOutline"/></span>
-          <span><b>¿Tenés un comercio?</b><small class="study-muted">Verificalo en LaU y cobrá con PayPal</small></span>
+          <span><b>¿Tenés un negocio?</b><small class="study-muted">Tienda, verificación y pagos en línea</small></span>
           <ion-icon :icon="chevronForwardOutline" aria-hidden="true"/>
         </button>
 

@@ -96,6 +96,7 @@
                 <span class="admin-status" :class="`is-${item.status}`">{{ item.status_label || STATUS_LABELS[item.status] }}</span>
                 <span v-if="item.store?.paypal_status === 'enabled'" class="paypal-badge is-enabled"><ion-icon :icon="logoPaypal" aria-hidden="true"/>PayPal activo</span>
                 <span v-else-if="item.store?.paypal_status === 'pending'" class="paypal-badge is-pending"><ion-icon :icon="logoPaypal" aria-hidden="true"/>PayPal pendiente</span>
+                <span v-if="item.pending_gateways" class="paypal-badge is-pending">{{ item.pending_gateways }} pasarela{{ item.pending_gateways === 1 ? '' : 's' }} por revisar</span>
               </span>
               <ion-icon :icon="chevronForwardOutline" class="merchant-chevron" aria-hidden="true"/>
             </button>
@@ -132,7 +133,8 @@ import {
 import '@/theme/study.css'
 import '@/theme/marketplace.css'
 
-type Filter = VerificationStatus | ''
+// 'pagos': negocios con pasarelas pedidas que esperan revisión (aparte de la verificación).
+type Filter = VerificationStatus | 'pagos' | ''
 
 const STATUS_LABELS: Record<VerificationStatus, string> = {
   submitted: 'En revisión', approved: 'Aprobada', rejected: 'Requiere cambios', suspended: 'Suspendida',
@@ -144,6 +146,7 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'rejected', label: 'Requiere cambios' },
   { value: 'approved', label: 'Aprobadas' },
   { value: 'suspended', label: 'Suspendidas' },
+  { value: 'pagos', label: 'Pagos en línea' },
 ]
 
 const router = useRouter()
@@ -166,7 +169,7 @@ const hasFilters = computed(() => filter.value !== '' || query.value !== '')
 function countFor(value: Filter): number {
   const counts = data.value?.counts
   if (!counts) return 0
-  return value ? counts[value] ?? 0 : Object.values(counts).reduce((sum, n) => sum + (n || 0), 0)
+  return value ? counts[value] ?? 0 : Object.entries(counts).reduce((sum, [key, n]) => key === 'pagos' ? sum : sum + (n || 0), 0)
 }
 
 const initials = (name?: string | null) =>

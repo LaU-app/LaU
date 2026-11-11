@@ -38,19 +38,14 @@
           </div>
 
           <!-- Entrega dentro del campus (y punto exacto en el mapa, si el vendedor lo marcó) -->
-          <a v-if="product.universidad" class="campus-delivery study-card" :href="deliveryMapUrl ?? undefined" target="_blank" rel="noopener noreferrer"
-            :class="{ static: !deliveryMapUrl }" @click="!deliveryMapUrl && $event.preventDefault()">
-            <span class="campus-dot" :style="{ background: product.universidad.color_primario || 'var(--study-purple)' }"><ion-icon :icon="schoolOutline"/></span>
-            <span><b>Se entrega en {{ product.universidad.siglas || product.universidad.nombre }}</b>
-              <small class="study-muted">{{ deliveryMapUrl ? 'Ver el punto de entrega en el mapa' : 'Dentro del campus' }}</small></span>
-            <ion-icon v-if="deliveryMapUrl" :icon="mapOutline" aria-hidden="true"/>
-          </a>
+          <DeliveryMapCard v-if="product.universidad" :key="product.id" :campus="product.universidad"
+            :point="deliveryPoint" :delivery-point="product.delivery_point"/>
 
           <button v-if="product.store" class="seller-card study-card" @click="router.push(`/tabs/marketplace/store/${product.store.slug}`)">
             <span class="store-logo"><img v-if="product.store.logo_url" :src="product.store.logo_url" :alt="product.store.name"/><ion-icon v-else :icon="storefrontOutline"/></span>
             <div><b>{{ product.store.name }}</b>
               <VerifiedBadge v-if="product.store.is_verified" :paypal="product.store.accepts_paypal"/>
-              <span v-else class="study-muted">Ver la tienda</span></div>
+              <span v-else class="study-muted">Emprendimiento · ver la tienda</span></div>
             <span class="round-arrow"><ion-icon :icon="arrowForwardOutline"/></span>
           </button>
           <div v-else-if="product.user" class="seller-card study-card">
@@ -95,10 +90,11 @@ import { Share } from '@capacitor/share'
 import {
   arrowBackOutline, arrowForwardOutline, createOutline, shareOutline, imageOutline, cubeOutline,
   chevronBackOutline, chevronForwardOutline, cartOutline, checkmarkOutline, storefrontOutline, chatbubbleEllipsesOutline,
-  logoPaypal, schoolOutline, mapOutline,
+  logoPaypal,
 } from 'ionicons/icons'
 import VerifiedBadge from '@/components/marketplace/VerifiedBadge.vue'
 import PayPalCheckoutSheet from '@/components/marketplace/PayPalCheckoutSheet.vue'
+import DeliveryMapCard from '@/components/marketplace/DeliveryMapCard.vue'
 import AppHeader from '@/components/AppHeader.vue'
 import StudyAvatar from '@/components/study/StudyAvatar.vue'
 import MarketplaceBottomNav from '@/components/marketplace/MarketplaceBottomNav.vue'
@@ -129,12 +125,10 @@ const CONDITIONS: Record<string, string> = {
 const current = computed(() => product.value?.images?.[index.value] ?? null)
 const price = computed(() => Number(product.value?.price ?? 0).toFixed(2))
 const conditionLabel = computed(() => product.value?.condition ? CONDITIONS[product.value.condition] : null)
-// Punto exacto de entrega (si el vendedor lo marcó) en Google Maps; si no, el campus.
-const deliveryMapUrl = computed(() => {
+// Punto exacto de entrega, si el vendedor lo marcó (si no, la tarjeta usa el centro del campus).
+const deliveryPoint = computed(() => {
   const p = product.value
-  const lat = p?.delivery_lat ?? p?.universidad?.latitud
-  const lng = p?.delivery_lng ?? p?.universidad?.longitud
-  return lat != null && lng != null ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}` : null
+  return p?.delivery_lat != null && p?.delivery_lng != null ? { lat: Number(p.delivery_lat), lng: Number(p.delivery_lng) } : null
 })
 const mine = computed(() => product.value?.user_id === AuthService.getUser()?.id)
 const inCart = computed(() => !!product.value && cart.has(product.value.id))

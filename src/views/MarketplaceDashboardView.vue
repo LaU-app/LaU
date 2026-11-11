@@ -31,8 +31,8 @@
             <button class="verify-card study-card" @click="router.push('/tabs/marketplace/empresa')">
               <span class="study-symbol tone-purple"><ion-icon :icon="ribbonOutline"/></span>
               <span>
-                <b>¿Tenés un negocio formal?</b>
-                <small class="study-muted">Verificalo en LaU para tener tienda propia y cobrar con PayPal.</small>
+                <b>¿Tenés un negocio inscrito?</b>
+                <small class="study-muted">Verificalo en LaU. Los pagos en línea son opcionales.</small>
               </span>
               <ion-icon :icon="arrowForwardOutline" aria-hidden="true"/>
             </button>
@@ -61,8 +61,8 @@
                 <ion-icon :icon="data.store.accepts_paypal ? shieldCheckmarkOutline : ribbonOutline"/>
               </span>
               <span>
-                <b>{{ data.store.accepts_paypal ? 'Comercio verificado · cobrás con PayPal' : 'Verificá tu comercio y cobrá con PayPal' }}</b>
-                <small class="study-muted">{{ data.store.accepts_paypal ? 'Tus productos muestran el distintivo de LaU.' : 'Enviá tus datos legales y conectá tu cuenta PayPal.' }}</small>
+                <b>{{ data.store.accepts_paypal ? 'Negocio verificado · cobrás con PayPal' : data.store.is_verified ? 'Negocio verificado' : 'Tu negocio en LaU' }}</b>
+                <small class="study-muted">{{ data.store.accepts_paypal ? 'Tus productos muestran el distintivo de LaU.' : data.store.is_verified ? 'Si querés, pedí pagos en línea.' : 'Verificación legal y pagos en línea, cuando estés listo.' }}</small>
               </span>
               <ion-icon :icon="arrowForwardOutline" aria-hidden="true"/>
             </button>

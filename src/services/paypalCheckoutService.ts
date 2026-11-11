@@ -12,7 +12,21 @@ export interface CheckoutQuote {
     currency: string
     /** Merchant ID público del comercio: el SDK de PayPal lo necesita para mostrar el botón. */
     merchant_id: string
+    /** Todos los productos del pago (uno, o el carrito de un comercio). */
+    items?: CheckoutQuoteItem[]
 }
+
+export interface CheckoutQuoteItem {
+    product_id: number
+    name: string
+    image_url: string | null
+    unit_price: string
+    quantity: number
+    subtotal: string
+}
+
+/** Productos de un mismo comercio que se pagan juntos (carrito). */
+export type CheckoutLine = { product_id: number; quantity: number }
 
 export interface PayPalCapture {
     order_id: string
@@ -83,6 +97,15 @@ export const paypalCheckoutService = {
             checkout_attempt_id: attemptId,
             assistant_decision_id: decisionId ?? null,
         }, { timeout: TIMEOUT }))
+    },
+
+    /** Resumen de varios productos de un mismo comercio (carrito): un solo pago. */
+    quoteItems(items: CheckoutLine[]): Promise<CheckoutQuote> {
+        return call(() => api.post('/marketplace/paypal/quote', { items }, { timeout: TIMEOUT }))
+    },
+
+    createOrderItems(items: CheckoutLine[], attemptId: string): Promise<{ order_id: string; status: string; total: string; currency: string }> {
+        return call(() => api.post('/marketplace/paypal/orders', { items, checkout_attempt_id: attemptId }, { timeout: TIMEOUT }))
     },
 
     /** Solo resuelve si PayPal confirmó la captura como COMPLETED. */

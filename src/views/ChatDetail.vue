@@ -351,8 +351,9 @@ const loadData = async () => {
         // Si no está en contactos, obtener datos directamente del usuario
         if (!user) {
             try {
+                // La API responde { success, data }: se desenvuelve como en el resto de la app.
                 const userRes = await api.get(`/users/${userId}`);
-                user = userRes.data;
+                user = userRes.data?.data || userRes.data;
                 // Asegurar que tenga imagen_url
                 if (user && !user.imagen_url && user.imagen) {
                     user.imagen_url = `${BASE_URL}/perfiles/${user.imagen}`;

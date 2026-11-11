@@ -40,6 +40,17 @@ export const merchantService = {
         }
     },
 
+    /** Pedir una pasarela: PayPal (la revisa LaU) u otra que el negocio ya usa. */
+    async requestGateway(payload: { gateway: 'paypal' | 'otra'; gateway_name?: string; note?: string }): Promise<MerchantStatus> {
+        try {
+            return (await api.post('/marketplace/my/payment-gateways', payload)).data.data
+        } catch (error: any) {
+            const errors = error?.response?.status === 422 ? error.response.data?.errors : null
+            if (errors) throw new FieldErrors(Object.fromEntries(Object.entries(errors).map(([field, list]) => [field, String((list as string[])[0])])))
+            throw toCheckoutError(error)
+        }
+    },
+
     /** Enlace de PayPal para conectar la cuenta del comercio (de un solo uso). */
     connectPayPal(): Promise<{ action_url: string }> {
         return call(() => api.post('/marketplace/my/paypal/connect', {}, { timeout: 30000 }))

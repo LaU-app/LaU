@@ -19,6 +19,8 @@ export interface MerchantSummary {
   legal_name: string
   nit: string
   submitted_at: string | null
+  /** Pasarelas pedidas que esperan revisión del equipo. */
+  pending_gateways?: number
   store: {
     name: string
     slug: string
@@ -40,6 +42,10 @@ export interface MerchantDetail extends MerchantSummary {
   offer_description: string
   has_document: boolean
   document_name: string | null
+  country?: string
+  country_label?: string
+  documents?: AdminDocument[]
+  gateways?: AdminGateway[]
   reviewed_at: string | null
   reviewed_by: string | null
   review_notes: string | null
@@ -56,9 +62,28 @@ export interface MerchantDetail extends MerchantSummary {
   } | null
 }
 
+export interface AdminDocument {
+  kind: 'document' | 'registration_document' | 'id_document'
+  label: string
+  sent: boolean
+  name: string | null
+}
+
+export interface AdminGateway {
+  id: number
+  gateway: 'paypal' | 'otra'
+  label: string
+  status: 'requested' | 'approved' | 'rejected'
+  status_label: string
+  note: string | null
+  requested_at: string | null
+  reviewed_by: string | null
+  review_notes: string | null
+}
+
 export interface MerchantList {
   items: MerchantSummary[]
-  counts: Record<VerificationStatus, number>
+  counts: Record<VerificationStatus | 'pagos', number>
   with_paypal: number
   page: number
   last_page: number
@@ -164,7 +189,7 @@ export const AdminService = {
     sessionStorage.removeItem(SESSION_KEY)
   },
 
-  async merchants(params: { estado?: VerificationStatus | ''; q?: string; page?: number } = {}): Promise<MerchantList> {
+  async merchants(params: { estado?: VerificationStatus | 'pagos' | ''; q?: string; page?: number } = {}): Promise<MerchantList> {
     const clean = Object.fromEntries(Object.entries(params).filter(([, v]) => v !== '' && v !== undefined))
     return unwrap<MerchantList>(await http.get('/merchants', { params: clean }))
   },
@@ -187,6 +212,15 @@ export const AdminService = {
 
   async refreshPayPal(id: number): Promise<ActionResult> {
     return (await http.post(`/merchants/${id}/paypal`)).data
+  },
+
+  // ── Pasarelas de pago (aparte de la verificación) ──────────────────
+  async approveGateway(id: number, notes?: string): Promise<ActionResult> {
+    return (await http.post(`/merchants/gateways/${id}/approve`, { notes: notes || null })).data
+  },
+
+  async rejectGateway(id: number, notes: string): Promise<ActionResult> {
+    return (await http.post(`/merchants/gateways/${id}/reject`, { notes })).data
   },
 
   // ── Campus: ubicación y área de entrega ─────────────────────────────
@@ -219,10 +253,10 @@ export const AdminService = {
    * Abre el documento legal (privado) en una pestaña nueva, sin exponer el token en la URL.
    * La pestaña se abre antes de descargar (si no, Safari y los WebView la bloquean).
    */
-  async openDocument(id: number): Promise<void> {
+  async openDocument(id: number, kind: AdminDocument['kind'] = 'document'): Promise<void> {
     const tab = window.open('', '_blank')
     try {
-      const res = await http.get(`/merchants/${id}/document`, { responseType: 'blob' })
+      const res = await http.get(`/merchants/${id}/documents/${kind}`, { responseType: 'blob' })
       const url = URL.createObjectURL(res.data as Blob)
       if (tab) {
         tab.opener = null

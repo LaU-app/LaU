@@ -20,13 +20,22 @@
               <VerifiedBadge paypal/>
             </div>
           </div>
-          <div class="summary-product">
+          <template v-if="isCart">
+            <div v-for="item in quote.items" :key="item.product_id" class="summary-product">
+              <span class="thumb"><img v-if="item.image_url" :src="item.image_url" alt=""/><ion-icon v-else :icon="cubeOutline"/></span>
+              <span class="line-name">{{ item.name }}<small>{{ item.quantity }} × ${{ item.unit_price }}</small></span>
+              <b>${{ item.subtotal }}</b>
+            </div>
+          </template>
+          <div v-else class="summary-product">
             <span class="thumb"><img v-if="quote.product.image_url" :src="quote.product.image_url" alt=""/><ion-icon v-else :icon="cubeOutline"/></span>
             <span>{{ quote.product.name }}</span>
           </div>
           <dl class="summary-lines">
-            <div><dt>Precio unitario</dt><dd>${{ quote.unit_price }}</dd></div>
-            <div><dt>Cantidad</dt><dd>{{ quote.quantity }}</dd></div>
+            <template v-if="!isCart">
+              <div><dt>Precio unitario</dt><dd>${{ quote.unit_price }}</dd></div>
+              <div><dt>Cantidad</dt><dd>{{ quote.quantity }}</dd></div>
+            </template>
             <div class="total"><dt>Total</dt><dd>${{ quote.total }} <small>{{ quote.currency }}</small></dd></div>
           </dl>
         </section>
@@ -34,7 +43,7 @@
         <template v-if="phase !== 'completed'">
           <label class="confirm-row" :class="{ checked: confirmed }">
             <input v-model="confirmed" type="checkbox" :disabled="phase === 'processing'"/>
-            <span>Confirmo que quiero comprar <b>{{ quote.product.name }}</b> a <b>{{ quote.store.name }}</b> por <b>${{ quote.total }} {{ quote.currency }}</b>.</span>
+            <span>Confirmo que quiero comprar <b>{{ isCart ? `${quote.items?.length} productos` : quote.product.name }}</b> a <b>{{ quote.store.name }}</b> por <b>${{ quote.total }} {{ quote.currency }}</b>.</span>
           </label>
 
           <div v-if="phase !== 'idle' || buttonsReady" class="checkout-status" :class="`is-${phase}`" role="status" aria-live="polite">
@@ -82,12 +91,14 @@ import {
 import VerifiedBadge from '@/components/marketplace/VerifiedBadge.vue'
 import { loadPayPalSdk, paypalClientId, type PayPalButtons, type PayPalButtonsActions } from '@/utils/paypalSdk'
 import paypalCheckoutService, {
-  CheckoutError, maskId, newAttemptId, type CheckoutQuote, type PayPalCapture,
+  CheckoutError, maskId, newAttemptId, type CheckoutLine, type CheckoutQuote, type PayPalCapture,
 } from '@/services/paypalCheckoutService'
 
 type Phase = 'idle' | 'preparing' | 'awaiting' | 'processing' | 'completed' | 'cancelled' | 'error'
 
-const props = defineProps<{ productId: number; quantity?: number; decisionId?: number | null }>()
+// Un producto (productId + quantity) o el carrito de un comercio (items): siempre un solo pago.
+const props = defineProps<{ productId?: number; quantity?: number; decisionId?: number | null; items?: CheckoutLine[] }>()
+const isCart = computed(() => (props.items?.length ?? 0) > 1)
 const emit = defineEmits<{ close: []; orders: []; paid: [capture: PayPalCapture] }>()
 
 const quote = ref<CheckoutQuote | null>(null)
@@ -124,7 +135,9 @@ async function loadQuote() {
   quoteError.value = ''
   quote.value = null
   try {
-    quote.value = await paypalCheckoutService.quote(props.productId, props.quantity ?? 1)
+    quote.value = props.items?.length
+      ? await paypalCheckoutService.quoteItems(props.items)
+      : await paypalCheckoutService.quote(props.productId!, props.quantity ?? 1)
   } catch (error) {
     quoteError.value = error instanceof CheckoutError ? error.message : 'No pudimos preparar el pago.'
   }
@@ -168,7 +181,9 @@ async function setupButtons() {
 async function createOrder(): Promise<string> {
   phase.value = 'preparing'
   try {
-    const order = await paypalCheckoutService.createOrder(props.productId, props.quantity ?? 1, newAttemptId(), props.decisionId)
+    const order = props.items?.length
+      ? await paypalCheckoutService.createOrderItems(props.items, newAttemptId())
+      : await paypalCheckoutService.createOrder(props.productId!, props.quantity ?? 1, newAttemptId(), props.decisionId)
     // El total que cobra PayPal debe ser exactamente el que el estudiante confirmó.
     if (order.total !== quote.value?.total || order.currency !== quote.value?.currency) {
       throw new CheckoutError('amount_changed', 'El precio cambió desde que lo confirmaste. Revisá el resumen e intentá de nuevo.')
@@ -218,6 +233,9 @@ onBeforeUnmount(() => { buttons?.close().catch(() => undefined) })
 .summary-product { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; background: var(--study-bg); font-weight: 600; font-size: 14px; }
 .summary-product .thumb { width: 44px; height: 44px; border-radius: 12px; overflow: hidden; flex-shrink: 0; display: grid; place-items: center; background: var(--study-track); color: var(--study-faint); }
 .summary-product img { width: 100%; height: 100%; object-fit: cover; }
+.summary-product .line-name { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.summary-product .line-name small { color: var(--study-muted); font-weight: 500; font-size: 12px; }
+.summary-product > b { font-size: 14px; }
 .summary-lines { display: grid; gap: 8px; margin: 0; font-size: 14px; }
 .summary-lines div { display: flex; justify-content: space-between; gap: 12px; }
 .summary-lines dt { color: var(--study-muted); }

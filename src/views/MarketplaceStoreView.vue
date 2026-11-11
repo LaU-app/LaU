@@ -17,7 +17,7 @@
               <ion-icon v-else :icon="storefrontOutline"/>
             </span>
             <div>
-              <span class="eyebrow">{{ store.is_verified ? 'COMERCIO VERIFICADO' : 'EMPRENDIMIENTO LaU' }}</span>
+              <span class="eyebrow">{{ store.is_verified ? 'NEGOCIO VERIFICADO' : 'EMPRENDIMIENTO LaU' }}</span>
               <h1>{{ store.name }}</h1>
               <VerifiedBadge v-if="store.is_verified" :paypal="store.accepts_paypal"/>
               <p v-if="store.description">{{ store.description }}</p>

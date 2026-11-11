@@ -62,10 +62,36 @@ export interface StoreVerification {
     offer_description: string;
     document_original_name: string | null;
     has_document: boolean;
+    /** País del negocio (ISO alfa-2). En El Salvador se valida NIT/NRC. */
+    country?: string;
+    country_label?: string;
+    /** Documentos legales (sin rutas): cuáles ya se enviaron. */
+    documents?: VerificationDocument[];
     status: Exclude<VerificationStatus, 'none'>;
     status_label: string;
     submitted_at: string | null;
     reviewed_at: string | null;
+    review_notes: string | null;
+}
+
+export type VerificationDocumentKind = 'document' | 'registration_document' | 'id_document';
+
+export interface VerificationDocument {
+    kind: VerificationDocumentKind;
+    label: string;
+    sent: boolean;
+    name: string | null;
+}
+
+export interface PaymentGatewayRequest {
+    id: number;
+    gateway: 'paypal' | 'otra';
+    gateway_name: string | null;
+    label: string;
+    status: 'requested' | 'approved' | 'rejected';
+    status_label: string;
+    note: string | null;
+    requested_at: string | null;
     review_notes: string | null;
 }
 
@@ -79,7 +105,11 @@ export interface MerchantStatus {
         accepts_paypal: boolean;
     }) | null;
     verification: StoreVerification | null;
+    /** Pasarelas pedidas: aparte de la verificación y opcionales. */
+    gateways?: PaymentGatewayRequest[];
     business_types: Record<string, string>;
+    countries?: Record<string, string>;
+    documents?: { kind: VerificationDocumentKind; label: string }[];
     paypal?: { state: 'habilitado' | 'pendiente' | 'error'; checks: { label: string; ok: boolean }[]; reasons: string[] };
 }
 
@@ -200,6 +230,11 @@ export interface CartItem {
     seller_id: number;
     seller_name: string;
     delivery_point: string | null;
+    /** Tienda del producto: si cobra con PayPal, su grupo del carrito se paga en línea. */
+    store_id?: number | null;
+    store_name?: string | null;
+    store_logo_url?: string | null;
+    accepts_paypal?: boolean;
 }
 
 /** Diferencias detectadas al revalidar el carrito contra el servidor. */
