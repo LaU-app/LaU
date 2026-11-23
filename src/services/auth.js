@@ -323,7 +323,7 @@ export const AuthService = {
       formData.append("_method", "PUT");
 
       // Campos obligatorios - siempre deben enviarse
-      const requiredFields = ["id", "name", "username", "email"];
+      const requiredFields = ["name", "username", "email"];
       requiredFields.forEach((field) => {
         if (data[field]) {
           formData.append(field, String(data[field]));
