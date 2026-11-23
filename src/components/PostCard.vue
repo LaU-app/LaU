@@ -170,11 +170,11 @@
                     <h2 v-if="post.titulo" class="post-title">{{ post.titulo }}</h2>
                     
                     <p v-if="post.descripcion" class="post-text">
-                        <span v-html="formatTextWithLinks(post.descripcion)" @click="handleLinkClick"></span>
+                        {{ post.descripcion }}
                     </p>
                     
                     <p v-if="post.texto && !post.descripcion" class="post-text">
-                        <span v-html="formatTextWithLinks(post.texto)" @click="handleLinkClick"></span>
+                        {{ post.texto }}
                     </p>
                 </div>
 
@@ -225,10 +225,7 @@
                     {{ post.user.username }}
                 </strong>
 
-                <span
-                    v-html="formatTextWithLinks(post.descripcion)"
-                    @click="handleLinkClick"
-                ></span>
+                {{ post.descripcion }}
             </p>
             
             <p
@@ -242,10 +239,7 @@
                     {{ post.user.username }}
                 </strong>
 
-                <span
-                    v-html="formatTextWithLinks(post.texto)"
-                    @click="handleLinkClick"
-                ></span>
+                {{ post.texto }}
             </p>
         </div>
 
@@ -358,7 +352,6 @@ import { useRouter } from 'vue-router'
 import { Share } from '@capacitor/share'
 import PostActions from './PostActions.vue'
 import { ref } from 'vue'
-import { Browser } from '@capacitor/browser'
 import { openNativeFile } from '@/services/FileService'
 import { getFullImageUrl } from '@/utils/imageUtils'
 import FullScreenImageViewer from './FullScreenImageViewer.vue'
@@ -590,48 +583,6 @@ export default {
         const openImageModal = () => {
             isImageModalOpen.value = true
         }
-        
-        const formatTextWithLinks = (text) => {
-            if (!text) {
-                return ''
-            }
-
-            const urlRegex =
-                /(https?:\/\/[^\s]+)/g
-
-            return text.replace(
-                urlRegex,
-                (url) => {
-                    return `<a href="${url}" class="post-link">${url}</a>`
-                }
-            )
-        }
-
-        const handleLinkClick = async (event) => {
-            const link =
-                event.target.closest('a')
-
-            if (
-                link &&
-                link.classList.contains(
-                    'post-link'
-                )
-            ) {
-                event.preventDefault()
-                event.stopPropagation()
-
-                try {
-                    await Browser.open({
-                        url: link.href
-                    })
-                } catch (error) {
-                    console.error(
-                        'Error al abrir el enlace:',
-                        error
-                    )
-                }
-            }
-        }
 
         return {
             personCircle,
@@ -660,8 +611,6 @@ export default {
             getFileColor,
 
             getFullImageUrl,
-            formatTextWithLinks,
-            handleLinkClick,
 
             isImageModalOpen,
             openImageModal,

@@ -1322,8 +1322,6 @@ export default {
         // IMPORTANTE: Laravel requiere _method=PUT para procesar FormData como PUT
         formData.append("_method", "PUT");
 
-        // IMPORTANTE: El backend requiere todos los campos obligatorios
-        formData.append("id", this.user.id.toString());
         formData.append("name", this.user.name);
         formData.append("username", this.user.username);
         formData.append("email", this.user.email);
